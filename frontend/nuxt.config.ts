@@ -1,8 +1,9 @@
 import Aura from "@primeuix/themes/aura";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
   modules: ["@primevue/nuxt-module"],
-
+  css: ["~/assets/css/main.css"],
   app: {
     head: {
       title: "Maini in Lut",
@@ -40,6 +41,10 @@ export default defineNuxtConfig({
         },
       },
     },
+  },
+
+  vite: {
+    plugins: [tailwindcss()],
   },
 
   compatibilityDate: "2025-04-02",
