@@ -1,3 +1,5 @@
+$base-font-size-px: 16px;
+
 @function rem($value) {
   $rem-value: calc($value / $base-font-size-px);
   @return #{$rem-value}rem;

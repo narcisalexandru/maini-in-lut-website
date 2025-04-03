@@ -44,6 +44,11 @@ const items = ref([
     icon: "ph ph-envelope",
     to: "/contact",
   },
+  {
+    label: "",
+    icon: "ph ph-user",
+    to: "/profil",
+  },
 ]);
 </script>
 

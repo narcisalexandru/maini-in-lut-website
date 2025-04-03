@@ -1,0 +1,31 @@
+@use "../_functions" as *;
+
+.maini-ui {
+  &__section {
+    padding-top: rem(64px);
+    padding-bottom: rem(64px);
+
+    @media screen and (max-width: 768px) {
+      padding-top: rem(32px);
+      padding-bottom: rem(32px);
+    }
+  }
+  &__small-container {
+    max-width: rem(746px);
+    margin: 0 auto;
+    padding-left: rem(15px);
+    padding-right: rem(15px);
+  }
+  &__medium-container {
+    max-width: rem(810px);
+    margin: 0 auto;
+    padding-left: rem(15px);
+    padding-right: rem(15px);
+  }
+  &__container {
+    max-width: rem(1200px);
+    margin: 0 auto;
+    padding-left: rem(15px);
+    padding-right: rem(15px);
+  }
+}

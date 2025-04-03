@@ -1,7 +1,5 @@
 <template>
-  <div>
-    <h1>{{ t("profil") }}</h1>
-  </div>
+  <section class="maini__section"></section>
 </template>
 
 <script setup>
