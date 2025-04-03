@@ -1,5 +1,11 @@
 <template>
-  <section class="maini__section"></section>
+  <section class="maini-ui__section">
+    <div class="maini-ui__container">
+      <h2 class="h-font-size-48 flex items-center justify-center">
+        {{ t("hello-message") }} Narcis
+      </h2>
+    </div>
+  </section>
 </template>
 
 <script setup>
@@ -18,9 +24,11 @@ const { t } = useI18n({
 <i18n lang="json">
 {
   "en": {
+    "hello-message": "Hello",
     "profil": "Profile"
   },
   "ro": {
+    "hello-message": "Bună",
     "profil": "Profil"
   }
 }
