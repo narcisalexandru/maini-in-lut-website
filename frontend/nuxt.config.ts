@@ -2,7 +2,16 @@ import Aura from "@primeuix/themes/aura";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
-  modules: ["@primevue/nuxt-module"],
+  imports: {
+    autoImport: true,
+  },
+  modules: [
+    "@primevue/nuxt-module",
+    "@nuxt/image",
+    "@nuxtjs/i18n",
+    "@vueuse/nuxt",
+    "@pinia/nuxt",
+  ],
   css: ["~/assets/css/main.css"],
   app: {
     head: {
@@ -45,6 +54,25 @@ export default defineNuxtConfig({
 
   vite: {
     plugins: [tailwindcss()],
+  },
+
+  i18n: {
+    locales: [
+      { code: "ro", language: "ro-RO" },
+      { code: "en", language: "en-US" },
+    ],
+    defaultLocale: "ro",
+    strategy: "prefix_except_default",
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: "i18n_redirected",
+      redirectOn: "root",
+      alwaysRedirect: true,
+      fallbackLocale: "ro",
+    },
+    bundle: {
+      optimizeTranslationDirective: false,
+    },
   },
 
   compatibilityDate: "2025-04-02",
