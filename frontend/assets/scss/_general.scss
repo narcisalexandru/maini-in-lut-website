@@ -1,0 +1,22 @@
+@use "fonts" as *;
+@use "variables" as *;
+body {
+  height: 100%;
+  width: 100%;
+  background-color: $color-secondary !important;
+  margin: 0;
+  font-family: $serif-fontface !important;
+  font-smooth: antialiased;
+  -webkit-font-smoothing: antialiased;
+}
+html {
+  font-family: $serif-fontface !important;
+  font-smooth: antialiased;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+.img-responsive {
+  max-width: 100%;
+  height: auto;
+}

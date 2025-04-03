@@ -1,0 +1,28 @@
+@use "functions" as *;
+
+$thin: 300;
+$regular: 400;
+$semibold: 600;
+$bold: 700;
+$ultrathin: 100;
+
+@include webfont(
+  "Noto_Serif",
+  "noto_serif_variable",
+  $regular,
+  normal,
+  "U+0000-007F"
+);
+
+@include webfont(
+  "Noto_Serif",
+  "noto_serif_variable",
+  $bold,
+  normal,
+  "U+0000-007F"
+);
+
+$serif-fontface: "Noto_Serif";
+$serif-fontface-stack: $serif-fontface, "Noto_Serif", "Times New Roman", Times,
+  serif;
+$system-serif-fontface-stack: "Noto_Serif", "Times New Roman", Times, serif;

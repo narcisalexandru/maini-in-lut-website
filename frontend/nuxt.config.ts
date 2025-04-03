@@ -12,7 +12,7 @@ export default defineNuxtConfig({
     "@vueuse/nuxt",
     "@pinia/nuxt",
   ],
-  css: ["~/assets/css/main.css"],
+  css: ["~/assets/css/main.css", "~/assets/scss/index.scss"],
   app: {
     head: {
       title: "Maini in Lut",
@@ -58,18 +58,13 @@ export default defineNuxtConfig({
 
   i18n: {
     locales: [
-      { code: "ro", language: "ro-RO" },
-      { code: "en", language: "en-US" },
+      { code: "ro", language: "ro-RO", iso: "ro-RO", name: "Română" },
+      { code: "en", language: "en-US", iso: "en-US", name: "English" },
     ],
-    defaultLocale: "ro",
     strategy: "prefix_except_default",
-    detectBrowserLanguage: {
-      useCookie: true,
-      cookieKey: "i18n_redirected",
-      redirectOn: "root",
-      alwaysRedirect: true,
-      fallbackLocale: "ro",
-    },
+    defaultLocale: "ro",
+    lazy: true,
+    detectBrowserLanguage: false,
     bundle: {
       optimizeTranslationDirective: false,
     },

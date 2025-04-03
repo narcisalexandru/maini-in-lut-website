@@ -1,0 +1,22 @@
+@use "variables" as *;
+
+@mixin generate-font-size-classes($size) {
+  .h-font-size-#{$size} {
+    font-size: #{$size}px;
+  }
+  @each $breakpoint, $min-width in $breakpoints {
+    @media (min-width: $min-width) {
+      .#{$breakpoint}\:h-font-size-#{$size} {
+        font-size: #{$size}px;
+      }
+    }
+  }
+}
+
+@mixin hover-helper($class-name, $property, $value) {
+  .hover\:#{$class-name} {
+    &:hover {
+      #{$property}: $value !important;
+    }
+  }
+}

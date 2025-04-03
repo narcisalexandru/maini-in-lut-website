@@ -1,1 +1,6 @@
-@use "_variables" as *;
+@use "variables";
+@use "general";
+@use "mixin";
+@use "functions";
+@use "helpers";
+@use "fonts";

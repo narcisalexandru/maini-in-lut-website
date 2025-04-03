@@ -1,2 +1,11 @@
-$primary-color: #546a50;
-$secondary-color: #ece4d4;
+$color-primary: #546a50;
+$color-secondary: #ece4d4;
+
+$base-font-size-px: 16px;
+
+$breakpoints: (
+  "xl": 1200px,
+  "lg": 992px,
+  "md": 768px,
+  "sm": 576px,
+);
