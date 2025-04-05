@@ -6,7 +6,27 @@ import {
   IsNotEmpty,
   IsOptional,
   IsBoolean,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
+
+@ValidatorConstraint({ name: 'password', async: false })
+export class PasswordValidator implements ValidatorConstraintInterface {
+  validate(password: string, args: ValidationArguments) {
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasTwoNumbers = /.*\d.*\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*]/.test(password);
+    const hasMinLength = password.length >= 8;
+
+    return hasUpperCase && hasTwoNumbers && hasSpecialChar && hasMinLength;
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'Password must contain at least one uppercase letter, two numbers, one special character, and be at least 8 characters long';
+  }
+}
 
 export class CreateUserDto {
   @IsEmail({}, { message: 'Please provide a valid email address' })
@@ -14,15 +34,8 @@ export class CreateUserDto {
   email: string;
 
   @IsString()
-  @MinLength(8, { message: 'Password must be at least 8 characters long' })
-  @Matches(/(?=.*[A-Z])/, {
-    message: 'Password must contain at least one uppercase letter',
-  })
-  @Matches(/(?=.*\d)/, { message: 'Password must contain at least one number' })
-  @Matches(/(?=.*[!@#$%^&*])/, {
-    message: 'Password must contain at least one special character',
-  })
   @IsNotEmpty({ message: 'Password is required' })
+  @Validate(PasswordValidator)
   password: string;
 
   @IsString()

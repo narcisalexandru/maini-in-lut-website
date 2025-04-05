@@ -11,23 +11,26 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column()
+  first_name: string;
+
+  @Column()
   email: string;
 
   @Column()
-  password: string;
-
-  @Column({ nullable: true })
-  first_name: string;
-
-  @Column({ nullable: true })
   last_name: string;
+
+  @Column({ type: 'text', nullable: true })
+  address: string;
+
+  @Column({ type: 'text', nullable: true })
+  phone: string;
 
   @Column({ nullable: true })
   picture?: string;
 
-  @Column({ type: 'text', nullable: true })
-  address: string;
+  @Column()
+  password: string;
 
   @Column({ default: false })
   is_email_verified: boolean;

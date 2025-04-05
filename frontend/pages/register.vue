@@ -47,6 +47,18 @@
             />
           </div>
           <div>
+            <label for="phone" class="sr-only">Phone</label>
+            <input
+              id="phone"
+              v-model="phone"
+              name="phone"
+              type="text"
+              required
+              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+              placeholder="Phone"
+            />
+          </div>
+          <div>
             <label for="email-address" class="sr-only">Email address</label>
             <input
               id="email-address"
@@ -66,10 +78,28 @@
               name="password"
               type="password"
               required
-              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
               placeholder="Password"
             />
           </div>
+          <div>
+            <label for="confirmPassword" class="sr-only"
+              >Confirm Password</label
+            >
+            <input
+              id="confirmPassword"
+              v-model="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+              placeholder="Confirm Password"
+            />
+          </div>
+        </div>
+
+        <div v-if="passwordError" class="text-red-500 text-sm">
+          {{ passwordError }}
         </div>
 
         <div>
@@ -95,17 +125,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
 const email = ref("");
 const password = ref("");
+const confirmPassword = ref("");
 const first_name = ref("");
 const last_name = ref("");
 const address = ref("");
+const phone = ref("");
+
+const passwordError = computed(() => {
+  if (
+    password.value &&
+    confirmPassword.value &&
+    password.value !== confirmPassword.value
+  ) {
+    return "Passwords do not match";
+  }
+  if (password.value && password.value.length < 8) {
+    return "Password must be at least 8 characters long";
+  }
+  if (password.value && !/(?=.*[A-Z])/.test(password.value)) {
+    return "Password must contain at least one uppercase letter";
+  }
+  if (password.value && !/(?=.*\d.*\d)/.test(password.value)) {
+    return "Password must contain at least two numbers";
+  }
+  if (password.value && !/(?=.*[!@#$%^&*])/.test(password.value)) {
+    return "Password must contain at least one special character";
+  }
+  return "";
+});
 
 const handleRegister = async () => {
+  if (passwordError.value) {
+    return;
+  }
+
   try {
     const response = await fetch("http://localhost:4000/auth/register", {
       method: "POST",
@@ -118,6 +177,7 @@ const handleRegister = async () => {
         first_name: first_name.value,
         last_name: last_name.value,
         address: address.value,
+        phone: phone.value,
       }),
     });
 

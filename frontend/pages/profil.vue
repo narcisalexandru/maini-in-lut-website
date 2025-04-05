@@ -52,6 +52,22 @@
                 {{ user.email }}
               </dd>
             </div>
+            <div
+              class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
+            >
+              <dt class="text-sm font-medium text-gray-500">Address</dt>
+              <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {{ user.address }}
+              </dd>
+            </div>
+            <div
+              class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6"
+            >
+              <dt class="text-sm font-medium text-gray-500">Phone</dt>
+              <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {{ user.phone }}
+              </dd>
+            </div>
           </dl>
         </div>
       </div>
@@ -77,7 +93,9 @@ const user = ref({
   email: "",
   first_name: "",
   last_name: "",
+  address: "",
   picture: "",
+  phone: "",
 });
 
 onMounted(() => {
