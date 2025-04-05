@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Verificare Email</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #ece4d4;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        background-color: #ece4d4;
+        border-radius: 5px;
+        padding: 20px;
+        margin-top: 20px;
+      }
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #546a50;
+        color: #ece4d4 !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      a {
+        color: #ece4d4;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 16px;
+        background-color: #546a50;
+        border-radius: 5px;
+        padding: 10px 20px;
+        margin: 20px 0;
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Bună <%= first_name %>!</h1>
+      <p>
+        Îți mulțumim pentru înregistrare. Te rugăm să confirmi adresa ta de
+        email făcând click pe butonul de mai jos:
+      </p>
+
+      <a href="<%= verificationLink %>" class="button"
+        >Verifică Adresa de Email</a
+      >
+
+      <p>Dacă nu tu ai creat acest cont, te rugăm să ignori acest email.</p>
+
+      <div class="footer">
+        <p>Acest link va expira în 24 de ore.</p>
+        <p>
+          Dacă butonul nu funcționează, copiază și lipește următorul link în
+          browser:
+        </p>
+        <p><%= verificationLink %></p>
+      </div>
+    </div>
+  </body>
+</html>
