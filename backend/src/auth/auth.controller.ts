@@ -49,7 +49,9 @@ export class AuthController {
       <script>
         window.location.href = '${
           process.env.FRONTEND_URL
-        }/google-callback?token=${encodeURIComponent(JSON.stringify(result))}';
+        }/auth/google-callback?token=${encodeURIComponent(
+      JSON.stringify(result),
+    )}';
       </script>
     `;
   }

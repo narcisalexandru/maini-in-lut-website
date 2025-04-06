@@ -13,6 +13,7 @@ export default defineNuxtConfig({
     "@pinia/nuxt",
   ],
   css: ["~/assets/css/main.css", "~/assets/scss/index.scss"],
+
   app: {
     head: {
       title: "Maini in Lut",
@@ -53,7 +54,11 @@ export default defineNuxtConfig({
   },
 
   vite: {
+    cacheDir: "node_modules/.vite_cache",
     plugins: [tailwindcss()],
+    optimizeDeps: {
+      exclude: ["primevue/menubar"],
+    },
   },
 
   i18n: {
@@ -72,7 +77,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE_URL || "http://localhost:4000",
+      apiBase: import.meta.env.API_BASE_URL || "http://localhost:4000",
     },
   },
 
