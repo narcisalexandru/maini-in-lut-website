@@ -5,6 +5,13 @@
 </template>
 
 <script setup>
+defineI18nRoute({
+  paths: {
+    ro: "/favorite",
+    en: "/favourite",
+  },
+});
+
 const { t } = useI18n({
   useScope: "local",
 });

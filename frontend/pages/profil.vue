@@ -88,6 +88,8 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
+const { locale } = useI18n();
+
 const router = useRouter();
 const user = ref({
   email: "",
@@ -102,6 +104,8 @@ onMounted(() => {
   const storedUser = localStorage.getItem("user");
   if (storedUser) {
     user.value = JSON.parse(storedUser);
+  } else if (locale.value === "en") {
+    router.push("/en/login");
   } else {
     router.push("/login");
   }

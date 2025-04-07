@@ -10,6 +10,12 @@
       padding-bottom: rem(32px);
     }
   }
+  &__extra-small-container {
+    max-width: rem(420px);
+    margin: 0 auto;
+    padding-left: rem(15px);
+    padding-right: rem(15px);
+  }
   &__small-container {
     max-width: rem(746px);
     margin: 0 auto;

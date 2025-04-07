@@ -5,6 +5,13 @@
 </template>
 
 <script setup>
+defineI18nRoute({
+  paths: {
+    ro: "/cos",
+    en: "/cart",
+  },
+});
+
 const { t } = useI18n({
   useScope: "local",
 });

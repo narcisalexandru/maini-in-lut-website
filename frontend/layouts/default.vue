@@ -2,11 +2,18 @@
   <div>
     <Navbar />
     <slot />
-    <Footer />
+    <Footer v-if="!isAuthRoute" />
   </div>
 </template>
 
 <script setup>
 import Navbar from "~/components/Navbar.vue";
 import Footer from "~/components/Footer.vue";
+import { useRoute } from "vue-router";
+import { computed } from "vue";
+
+const route = useRoute();
+const isAuthRoute = computed(() => {
+  return ["/login", "/register"].includes(route.path);
+});
 </script>

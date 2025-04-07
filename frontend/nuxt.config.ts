@@ -5,6 +5,10 @@ export default defineNuxtConfig({
   imports: {
     autoImport: true,
   },
+  devServer: {
+    host: "0.0.0.0",
+    port: 3000,
+  },
   modules: [
     "@primevue/nuxt-module",
     "@nuxt/image",

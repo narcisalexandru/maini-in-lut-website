@@ -1,4 +1,8 @@
 <script setup lang="ts">
+definePageMeta({
+  layout: "empty",
+});
+
 const route = useRoute();
 const router = useRouter();
 const config = useRuntimeConfig();

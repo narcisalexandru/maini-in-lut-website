@@ -15,6 +15,12 @@
     &secondary {
       background-color: $color-secondary;
     }
+    &white {
+      background-color: $white;
+    }
+    &alto {
+      background-color: $alto;
+    }
   }
 
   &font-weight {
@@ -41,6 +47,9 @@
     &-secondary {
       border-color: $color-secondary !important;
     }
+    &-dusty-gray {
+      border-color: $dusty-gray !important;
+    }
   }
   &color {
     &-white {
@@ -57,6 +66,15 @@
     }
     &-transparent {
       color: transparent !important;
+    }
+    &-palm-leaf {
+      color: $palm-leaf;
+    }
+    &-alto {
+      color: $alto;
+    }
+    &-lunar-green {
+      color: $lunar-green;
     }
   }
   &border-radius {

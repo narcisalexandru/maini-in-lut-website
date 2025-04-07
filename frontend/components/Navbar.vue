@@ -14,7 +14,7 @@
 
         <!-- Logo -->
         <div class="flex-shrink-0">
-          <NuxtLink to="/">
+          <NuxtLink :to="$localePath('/')">
             <nuxt-img
               src="/images/logo.png"
               alt="logo"
@@ -28,7 +28,7 @@
           <nuxt-link
             v-for="item in menuItems"
             :key="item.to"
-            :to="item.to"
+            :to="$localePath(item.to)"
             class="h-color-secondary hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
           >
             {{ item.label }}
@@ -37,15 +37,21 @@
 
         <div class="flex items-center space-x-4">
           <nuxt-link
-            to="/favorite"
+            :to="$localePath('/favorite')"
             class="h-color-secondary hover:text-gray-900"
           >
             <i class="ph ph-heart text-xl"></i>
           </nuxt-link>
-          <nuxt-link to="/cos" class="h-color-secondary hover:text-gray-900">
+          <nuxt-link
+            :to="$localePath('/cos')"
+            class="h-color-secondary hover:text-gray-900"
+          >
             <i class="ph ph-shopping-cart text-xl"></i>
           </nuxt-link>
-          <nuxt-link to="/profil" class="h-color-secondary hover:text-gray-900">
+          <nuxt-link
+            :to="$localePath('/profil')"
+            class="h-color-secondary hover:text-gray-900"
+          >
             <i class="ph ph-user text-xl"></i>
           </nuxt-link>
         </div>
@@ -57,7 +63,7 @@
         <nuxt-link
           v-for="item in menuItems"
           :key="item.to"
-          :to="item.to"
+          :to="$localePath(item.to)"
           class="text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium"
         >
           {{ item.label }}

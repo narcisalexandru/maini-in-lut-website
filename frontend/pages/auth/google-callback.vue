@@ -16,6 +16,10 @@ import { useRouter, useRoute } from "vue-router";
 const router = useRouter();
 const route = useRoute();
 
+definePageMeta({
+  layout: "empty",
+});
+
 onMounted(() => {
   try {
     const tokenParam = route.query.token as string;

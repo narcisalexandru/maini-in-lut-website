@@ -1,44 +1,81 @@
+@use "../_functions" as *;
+@use "../_variables" as *;
+
 .maini-ui-button {
+  font-size: rem(16px);
+  border-radius: rem(6px);
+  padding: rem(8px) rem(16px);
+  transition: all 0.3s ease;
+
   &__primary {
-    font-size: rem(16px);
     color: $white;
-    background-color: $color-secondary;
-    border-color: $color-secondary;
-    border-radius: rem(12px);
-    padding: rem(12px) rem(16px);
-    transition: all 0.3s ease;
+    background-color: $color-primary;
+    border-color: $color-primary;
 
     &:enabled:hover {
-      background-color: $haiti;
-      border-color: $haiti;
+      background-color: $lunar-green;
+      border-color: $lunar-green;
       transition: all 0.3s ease;
     }
     &:enabled:active {
-      background-color: $haiti;
-      border-color: $haiti;
+      background-color: $lunar-green;
+      border-color: $lunar-green;
       transition: all 0.3s ease;
     }
   }
-  &__link-primary {
-    font-size: rem(16px);
-    color: $haiti;
+
+  &__google {
+    color: #1f1f1f;
+    background-color: $white;
+    border-color: $dusty-gray;
+    font-family: "Roboto", arial, sans-serif;
+    font-size: rem(14px);
     font-weight: 500;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    &:hover {
-      text-decoration: underline !important;
+    -webkit-transition: background-color 0.218s, border-color 0.218s,
+      box-shadow 0.218s;
+    transition: background-color 0.218s, border-color 0.218s, box-shadow 0.218s;
+
+    &:enabled:hover {
+      color: #1f1f1f;
+      background-color: #f2f2f2;
+      border-color: $dusty-gray;
       transition: all 0.3s ease;
+      -webkit-box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3),
+        0 1px 3px 1px rgba(60, 64, 67, 0.15);
+      box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3),
+        0 1px 3px 1px rgba(60, 64, 67, 0.15);
+    }
+    &:enabled:active {
+      color: $black;
+      background-color: #f2f2f2;
+      border-color: $dusty-gray;
+      transition: all 0.3s ease;
+      -webkit-box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3),
+        0 1px 3px 1px rgba(60, 64, 67, 0.15);
+      box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3),
+        0 1px 3px 1px rgba(60, 64, 67, 0.15);
     }
   }
-  &__link-primary-white {
-    font-size: rem(16px);
-    color: $white;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    &:hover {
-      text-decoration: underline !important;
-      transition: all 0.3s ease;
-    }
-  }
+  //   &__link-primary {
+  //     font-size: rem(16px);
+  //     color: $haiti;
+  //     font-weight: 500;
+  //     transition: all 0.3s ease;
+  //     cursor: pointer;
+  //     &:hover {
+  //       text-decoration: underline !important;
+  //       transition: all 0.3s ease;
+  //     }
+  //   }
+  //   &__link-primary-white {
+  //     font-size: rem(16px);
+  //     color: $white;
+  //     font-weight: 500;
+  //     transition: all 0.3s ease;
+  //     cursor: pointer;
+  //     &:hover {
+  //       text-decoration: underline !important;
+  //       transition: all 0.3s ease;
+  //     }
+  //   }
 }
