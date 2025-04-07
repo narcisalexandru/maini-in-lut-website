@@ -5,10 +5,6 @@ export default defineNuxtConfig({
   imports: {
     autoImport: true,
   },
-  devServer: {
-    host: "0.0.0.0",
-    port: 3000,
-  },
   modules: [
     "@primevue/nuxt-module",
     "@nuxt/image",
@@ -16,7 +12,7 @@ export default defineNuxtConfig({
     "@vueuse/nuxt",
     "@pinia/nuxt",
   ],
-  css: ["~/assets/css/main.css", "~/assets/scss/index.scss"],
+  css: ["~/assets/scss/index.scss", "~/assets/css/main.css"],
 
   app: {
     head: {
@@ -24,7 +20,7 @@ export default defineNuxtConfig({
       meta: [
         { charset: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
-        { name: "description", content: "Maini in LUT - Website" },
+        { name: "description", content: "Maini in Lut" },
       ],
       link: [
         { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
@@ -64,7 +60,6 @@ export default defineNuxtConfig({
       exclude: ["primevue/menubar"],
     },
   },
-
   i18n: {
     locales: [
       { code: "ro", language: "ro-RO", iso: "ro-RO", name: "Română" },

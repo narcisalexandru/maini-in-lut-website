@@ -1,5 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div
+    v-if="isAuthenticated"
+    class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
+  >
     <div class="max-w-3xl mx-auto">
       <div class="bg-white shadow overflow-hidden sm:rounded-lg">
         <div class="px-4 py-5 sm:px-6">
@@ -85,35 +88,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted } from "vue";
+import { useAuth } from "~/composables/useAuth";
 
-const { locale } = useI18n();
-
-const router = useRouter();
-const user = ref({
-  email: "",
-  first_name: "",
-  last_name: "",
-  address: "",
-  picture: "",
-  phone: "",
-});
+const { user, isAuthenticated, checkAuth, loadUser, logout } = useAuth();
 
 onMounted(() => {
-  const storedUser = localStorage.getItem("user");
-  if (storedUser) {
-    user.value = JSON.parse(storedUser);
-  } else if (locale.value === "en") {
-    router.push("/en/login");
-  } else {
-    router.push("/login");
+  if (checkAuth()) {
+    loadUser();
   }
 });
 
 const handleLogout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  router.push("/login");
+  logout();
 };
 </script>
