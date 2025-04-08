@@ -13,6 +13,7 @@
         <Button
           class="maini-ui-button__google h-color-black h-bg-white w-full flex items-center justify-center gap-2"
           @click="handleGoogleLogin"
+          :disabled="isLoading"
         >
           <nuxt-img
             src="images/google-logo.svg"
@@ -37,119 +38,102 @@
         <div class="text-left h-font-size-12 h-color-lunar-green mb-2">
           <span class="text-red-500">*</span> {{ t("required-fields") }}
         </div>
-        <form @submit.prevent="handleRegister">
+        <form @submit.prevent="handleSubmit">
           <div class="flex flex-col gap-2">
             <div class="flex flex-row justify-center gap-4">
               <div class="flex flex-col w-1/2">
-                <label class="h-font-size-14 text-left"
-                  >{{ t("first-name") }}
-                  <span class="text-red-500">*</span></label
-                >
-                <input
-                  type="text"
-                  autocomplete="given-name"
+                <FormInput
                   id="first_name"
-                  class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                  :class="{ 'border border-red-500': formErrors.first_name }"
-                  v-model="first_name"
+                  name="first_name"
+                  :label="t('first-name')"
+                  type="text"
+                  v-model="formData.first_name"
+                  :error="formErrors.first_name"
+                  :error-message="errorMessages.first_name"
+                  autocomplete="given-name"
+                  required
+                  @blur="() => validateField('first_name', formData.first_name)"
                 />
               </div>
               <div class="flex flex-col w-1/2">
-                <label class="h-font-size-14 text-left"
-                  >{{ t("last-name") }}
-                  <span class="text-red-500">*</span></label
-                >
-                <input
-                  type="text"
-                  autocomplete="family-name"
+                <FormInput
                   id="last_name"
-                  class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                  :class="{ 'border border-red-500': formErrors.last_name }"
-                  v-model="last_name"
+                  name="last_name"
+                  :label="t('last-name')"
+                  type="text"
+                  v-model="formData.last_name"
+                  :error="formErrors.last_name"
+                  :error-message="errorMessages.last_name"
+                  autocomplete="family-name"
+                  required
+                  @blur="() => validateField('last_name', formData.last_name)"
                 />
               </div>
             </div>
-            <div class="flex flex-col">
-              <label class="h-font-size-14 text-left"
-                >{{ t("phone") }} <span class="text-red-500">*</span></label
-              >
-              <input
-                type="text"
-                autocomplete="tel"
-                id="phone"
-                class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                :class="{ 'border border-red-500': formErrors.phone }"
-                v-model="phone"
-              />
-              <div
-                v-if="errorMessages.phone"
-                class="h-font-size-12 text-red-500 text-left mt-1"
-              >
-                {{ errorMessages.phone }}
-              </div>
-              <div class="h-font-size-10 text-left h-color-lunar-green mt-1">
-                {{ t("phone-message") }} *
-              </div>
-            </div>
-            <div class="flex flex-col">
-              <label class="h-font-size-14 text-left"
-                >{{ t("address") }} <span class="text-red-500">*</span></label
-              >
-              <input
-                type="text"
-                autocomplete="address"
-                id="address"
-                class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                :class="{ 'border border-red-500': formErrors.address }"
-                v-model="address"
-              />
-            </div>
-            <div class="flex flex-col">
-              <label class="h-font-size-14 text-left"
-                >{{ t("email") }} <span class="text-red-500">*</span></label
-              >
-              <input
-                type="email"
-                autocomplete="email"
-                id="email"
-                class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                :class="{ 'border border-red-500': formErrors.email }"
-                v-model="email"
-              />
-              <div
-                v-if="errorMessages.email"
-                class="h-font-size-12 text-red-500 text-left mt-1"
-              >
-                {{ errorMessages.email }}
-              </div>
-            </div>
-            <div class="flex flex-col">
-              <label class="h-font-size-14 text-left"
-                >{{ t("password") }} <span class="text-red-500">*</span></label
-              >
-              <input
-                type="password"
-                autocomplete="new-password"
-                id="password"
-                class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                :class="{ 'border border-red-500': formErrors.password }"
-                v-model="password"
-              />
-            </div>
-            <div class="flex flex-col">
-              <label class="h-font-size-14 text-left"
-                >{{ t("confirm-password") }}
-                <span class="text-red-500">*</span></label
-              >
-              <input
-                type="password"
-                autocomplete="new-password"
-                id="confirm_password"
-                class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                :class="{ 'border border-red-500': formErrors.confirmPassword }"
-                v-model="confirmPassword"
-              />
-            </div>
+            <FormInput
+              id="phone"
+              name="phone"
+              :label="t('phone')"
+              type="tel"
+              v-model="formData.phone"
+              :error="formErrors.phone"
+              :error-message="errorMessages.phone"
+              autocomplete="tel"
+              required
+              :help-text="t('phone-message')"
+              @blur="() => validateField('phone', formData.phone)"
+            />
+            <FormInput
+              id="address"
+              name="address"
+              :label="t('address')"
+              type="text"
+              v-model="formData.address"
+              :error="formErrors.address"
+              :error-message="errorMessages.address"
+              autocomplete="address"
+              required
+              @blur="() => validateField('address', formData.address)"
+            />
+            <FormInput
+              id="email"
+              name="email"
+              :label="t('email')"
+              type="email"
+              v-model="formData.email"
+              :error="formErrors.email"
+              :error-message="errorMessages.email"
+              autocomplete="email"
+              required
+              @blur="() => validateField('email', formData.email)"
+            />
+            <FormInput
+              id="password"
+              name="password"
+              :label="t('password')"
+              type="password"
+              v-model="formData.password"
+              :error="formErrors.password"
+              :error-message="errorMessages.password"
+              autocomplete="new-password"
+              required
+              @blur="() => validateField('password', formData.password)"
+            />
+            <FormInput
+              id="confirm_password"
+              name="confirm_password"
+              :label="t('confirm-password')"
+              type="password"
+              v-model="formData.confirm_password"
+              :error="formErrors.confirm_password"
+              :error-message="errorMessages.confirm_password"
+              autocomplete="new-password"
+              required
+              @blur="
+                () =>
+                  validateField('confirm_password', formData.confirm_password)
+              "
+            />
             <div class="flex flex-col gap-1 mt-2">
               <div
                 v-for="(requirement, index) in passwordRequirements"
@@ -180,7 +164,14 @@
                   type="checkbox"
                   id="accept_terms"
                   class="h-font-size-14"
-                  v-model="acceptTerms"
+                  v-model="formData.acceptTerms"
+                  @change="
+                    () =>
+                      validateField(
+                        'acceptTerms',
+                        formData.acceptTerms.toString()
+                      )
+                  "
                 />
                 <div
                   class="h-font-size-12 text-left h-color-lunar-green"
@@ -192,9 +183,10 @@
             </div>
             <Button
               class="maini-ui-button__primary w-full"
-              @click="handleRegister"
+              type="submit"
+              :disabled="isLoading"
             >
-              {{ t("sign-up-button") }}
+              {{ isLoading ? t("loading") : t("sign-up-button") }}
             </Button>
           </div>
         </form>
@@ -203,58 +195,123 @@
   </section>
 </template>
 
-<script setup>
-import { ref, computed, watch } from "vue";
+<script setup lang="ts">
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
+import FormInput from "~/components/FormInput.vue";
+import { useAuth } from "~/composables/useAuth";
+import { useFormValidation } from "~/composables/useFormValidation";
 
 const { t } = useI18n({
   useScope: "local",
 });
 
 const router = useRouter();
-const email = ref("");
-const password = ref("");
-const confirmPassword = ref("");
-const first_name = ref("");
-const last_name = ref("");
-const address = ref("");
-const phone = ref("");
-const acceptTerms = ref(false);
+const { register, googleAuth, isLoading, error } = useAuth();
 
-const formErrors = ref({
-  first_name: false,
-  last_name: false,
-  phone: false,
-  address: false,
-  email: false,
-  password: false,
-  confirmPassword: false,
+const formData = ref({
+  first_name: "",
+  last_name: "",
+  phone: "",
+  address: "",
+  email: "",
+  password: "",
+  confirm_password: "",
   acceptTerms: false,
 });
 
-const errorMessages = ref({
-  email: "",
-  phone: "",
-});
+const validationRules = {
+  first_name: [
+    {
+      required: true,
+      message: t("required-field"),
+    },
+  ],
+  last_name: [
+    {
+      required: true,
+      message: t("required-field"),
+    },
+  ],
+  phone: [
+    {
+      required: true,
+      message: t("required-field"),
+    },
+    {
+      pattern: /^[0-9]{10}$/,
+      message: t("phone-must-be-10-digits"),
+    },
+  ],
+  address: [
+    {
+      required: true,
+      message: t("required-field"),
+    },
+  ],
+  email: [
+    {
+      required: true,
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      message: t("invalid-email"),
+    },
+  ],
+  password: [
+    {
+      required: true,
+      minLength: 8,
+      message: t("password-too-short"),
+    },
+    {
+      pattern: /[A-Z]/,
+      message: t("password-uppercase"),
+    },
+    {
+      pattern: /[0-9]/,
+      message: t("password-numbers"),
+    },
+    {
+      pattern: /[!@#$%^&*]/,
+      message: t("password-special-characters"),
+    },
+  ],
+  confirm_password: [
+    {
+      required: true,
+      message: t("required-field"),
+    },
+    {
+      custom: (value: string) => value === formData.value.password,
+      message: t("passwords-do-not-match"),
+    },
+  ],
+  acceptTerms: [
+    {
+      required: true,
+      message: t("required-field"),
+    },
+  ],
+};
 
-const hasMinLength = computed(() => (password.value?.length || 0) >= 8);
-const hasUppercase = computed(() => /[A-Z]/.test(password.value || ""));
-const hasNumber = computed(() => /[0-9]/.test(password.value || ""));
-const hasSpecialChar = computed(() => /[!@#$%^&*]/.test(password.value || ""));
+const { formErrors, errorMessages, validateField, validateForm } =
+  useFormValidation(validationRules);
+
+const hasMinLength = computed(
+  () => (formData.value.password?.length || 0) >= 8
+);
+const hasUppercase = computed(() =>
+  /[A-Z]/.test(formData.value.password || "")
+);
+const hasNumber = computed(() => /[0-9]/.test(formData.value.password || ""));
+const hasSpecialChar = computed(() =>
+  /[!@#$%^&*]/.test(formData.value.password || "")
+);
 const passwordsMatch = computed(
   () =>
-    password.value &&
-    confirmPassword.value &&
-    password.value === confirmPassword.value
-);
-
-const isPasswordValid = computed(
-  () =>
-    hasMinLength.value &&
-    hasUppercase.value &&
-    hasNumber.value &&
-    hasSpecialChar.value
+    formData.value.password &&
+    formData.value.confirm_password &&
+    formData.value.password === formData.value.confirm_password
 );
 
 const passwordRequirements = computed(() => [
@@ -280,125 +337,28 @@ const passwordRequirements = computed(() => [
   },
 ]);
 
-const resetFormErrors = () => {
-  Object.keys(formErrors.value).forEach((key) => {
-    formErrors.value[key] = false;
-  });
-};
+const handleSubmit = async () => {
+  const formDataToValidate = {
+    ...formData.value,
+    acceptTerms: formData.value.acceptTerms.toString(),
+  };
 
-const validateForm = () => {
-  resetFormErrors();
-
-  let isValid = true;
-
-  if (!first_name.value?.trim()) {
-    formErrors.value.first_name = true;
-    isValid = false;
-  }
-  if (!last_name.value?.trim()) {
-    formErrors.value.last_name = true;
-    isValid = false;
-  }
-  if (!phone.value?.trim()) {
-    formErrors.value.phone = true;
-    isValid = false;
-  }
-  if (!address.value?.trim()) {
-    formErrors.value.address = true;
-    isValid = false;
-  }
-  if (!email.value?.trim()) {
-    formErrors.value.email = true;
-    isValid = false;
-  }
-
-  if (!password.value?.trim()) {
-    formErrors.value.password = true;
-    isValid = false;
-  } else if (!isPasswordValid.value) {
-    formErrors.value.password = true;
-    isValid = false;
-  }
-
-  if (!confirmPassword.value?.trim()) {
-    formErrors.value.confirmPassword = true;
-    isValid = false;
-  } else if (!passwordsMatch.value) {
-    formErrors.value.confirmPassword = true;
-    isValid = false;
-  }
-
-  if (!acceptTerms.value) {
-    formErrors.value.acceptTerms = true;
-    isValid = false;
-  }
-
-  return isValid;
-};
-
-const handleRegister = async () => {
-  if (!validateForm()) {
+  if (!validateForm(formDataToValidate)) {
     return;
   }
 
-  errorMessages.value.email = "";
-  errorMessages.value.phone = "";
-  formErrors.value.email = false;
-  formErrors.value.phone = false;
+  const { confirm_password, acceptTerms, ...registerData } = formData.value;
+  const result = await register(registerData);
 
-  try {
-    const response = await fetch("http://localhost:4000/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value,
-        first_name: first_name.value,
-        last_name: last_name.value,
-        address: address.value,
-        phone: phone.value,
-      }),
-    });
-
-    const data = await response.json();
-    console.log("Response data:", data);
-
-    if (!response.ok) {
-      console.log("Error response:", data);
-      if (data.message === "Email already exists") {
-        formErrors.value.email = true;
-        errorMessages.value.email = t("email-already-exists");
-      } else if (data.message === "Phone number already exists") {
-        formErrors.value.phone = true;
-        errorMessages.value.phone = t("phone-already-exists");
-      }
-      return;
-    }
-
-    if (data.access_token) {
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      router.push("/profile");
-    }
-  } catch (error) {
-    console.error("Registration failed:", error);
-    if (error.response?.data?.message) {
-      const errorMessage = error.response.data.message;
-      if (errorMessage === "Email already exists") {
-        formErrors.value.email = true;
-        errorMessages.value.email = t("email-already-exists");
-      } else if (errorMessage === "Phone number already exists") {
-        formErrors.value.phone = true;
-        errorMessages.value.phone = t("phone-already-exists");
-      }
-    }
+  // Handle specific field errors
+  if (result && "field" in result) {
+    formErrors.value[result.field] = true;
+    errorMessages.value[result.field] = result.message;
   }
 };
 
 const handleGoogleLogin = () => {
-  window.location.href = "http://localhost:4000/auth/google";
+  googleAuth();
 };
 </script>
 
@@ -418,18 +378,20 @@ const handleGoogleLogin = () => {
     "password": "Password",
     "confirm-password": "Confirm Password",
     "sign-up-button": "Create Account",
-    "already-have-account": "Already have an account? Sign in",
     "required-fields": "Required fields",
     "required-field": "This field is required",
+    "password-too-short": "Password must be at least 8 characters long",
     "password-characters": "Password must be at least 8 characters long",
     "password-uppercase": "Password must contain at least one uppercase letter",
     "password-numbers": "Password must contain at least one number",
     "password-special-characters": "Password must contain at least one special character",
     "passwords-do-not-match": "Password confirmation should match the password",
-    "accept-terms": "Accept Terms and Conditions",
     "accept-terms-message": "By registering, you agree to the Terms and Conditions of the site",
     "email-already-exists": "This email address is already in use",
-    "phone-already-exists": "This phone number is already in use"
+    "phone-already-exists": "This phone number is already in use",
+    "loading": "Loading...",
+    "invalid-email": "Please enter a valid email address",
+    "phone-must-be-10-digits": "Phone number must be 10 digits"
   },
   "ro": {
     "heading": "Creează-ți Contul",
@@ -445,18 +407,20 @@ const handleGoogleLogin = () => {
     "password": "Parolă",
     "confirm-password": "Confirmă Parola",
     "sign-up-button": "Creează Cont",
-    "already-have-account": "Ai deja un cont? Conectează-te",
     "required-fields": "Câmpuri obligatorii",
     "required-field": "Acest câmp este obligatoriu",
+    "password-too-short": "Parola trebuie să aibă cel puțin 8 caractere",
     "password-characters": "Parola trebuie să aibă cel puțin 8 caractere",
     "password-uppercase": "Parola trebuie să conțină cel puțin o literă mare",
     "password-numbers": "Parola trebuie să conțină cel puțin un număr",
     "password-special-characters": "Parola trebuie să conțină cel puțin un caracter special",
     "passwords-do-not-match": "Confirmarea parolei trebuie sa coincida cu parola",
-    "accept-terms": "Acceptă Termeni și Condiții",
     "accept-terms-message": "Prin înregistrare, acceptă Termenii și Condițiile de utilizare a site-ului",
     "email-already-exists": "Această adresă de email este deja utilizată",
-    "phone-already-exists": "Acest număr de telefon este deja utilizat"
+    "phone-already-exists": "Acest număr de telefon este deja utilizat",
+    "loading": "Se încarcă...",
+    "invalid-email": "Vă rugăm să introduceți o adresă de email validă",
+    "phone-must-be-10-digits": "Numărul de telefon trebuie să aibă 10 cifre"
   }
 }
 </i18n>
