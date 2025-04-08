@@ -178,6 +178,11 @@
                   :class="{ 'text-red-500': formErrors.acceptTerms }"
                 >
                   {{ t("accept-terms-message") }}
+                  <nuxt-link
+                    to="/terms-and-conditions"
+                    class="underline h-color-palm-leaf"
+                    >{{ t("terms-and-conditions") }}</nuxt-link
+                  >
                 </div>
               </div>
             </div>
@@ -190,6 +195,16 @@
             </Button>
           </div>
         </form>
+        <div
+          class="flex justify-center h-font-size-12 h-color-lunar-green mt-4"
+        >
+          {{ t("already-have-account") }} &nbsp;
+          <nuxt-link
+            to="/login"
+            class="h-font-size-12 underline h-color-palm-leaf"
+            >{{ t("sign-in") }}</nuxt-link
+          >
+        </div>
       </div>
     </div>
   </section>
@@ -386,12 +401,15 @@ const handleGoogleLogin = () => {
     "password-numbers": "Password must contain at least one number",
     "password-special-characters": "Password must contain at least one special character",
     "passwords-do-not-match": "Password confirmation should match the password",
-    "accept-terms-message": "By registering, you agree to the Terms and Conditions of the site",
+    "accept-terms-message": "By registering, you agree to the",
+    "terms-and-conditions": "Terms and Conditions",
     "email-already-exists": "This email address is already in use",
     "phone-already-exists": "This phone number is already in use",
     "loading": "Loading...",
     "invalid-email": "Please enter a valid email address",
-    "phone-must-be-10-digits": "Phone number must be 10 digits"
+    "phone-must-be-10-digits": "Phone number must be 10 digits",
+    "already-have-account": "Already have an account?",
+    "sign-in": "Sign in"
   },
   "ro": {
     "heading": "Creează-ți Contul",
@@ -415,12 +433,15 @@ const handleGoogleLogin = () => {
     "password-numbers": "Parola trebuie să conțină cel puțin un număr",
     "password-special-characters": "Parola trebuie să conțină cel puțin un caracter special",
     "passwords-do-not-match": "Confirmarea parolei trebuie sa coincida cu parola",
-    "accept-terms-message": "Prin înregistrare, acceptă Termenii și Condițiile de utilizare a site-ului",
+    "accept-terms-message": "Prin înregistrare, accepți",
+    "terms-and-conditions": "Termenii și Condițiile",
     "email-already-exists": "Această adresă de email este deja utilizată",
     "phone-already-exists": "Acest număr de telefon este deja utilizat",
     "loading": "Se încarcă...",
     "invalid-email": "Vă rugăm să introduceți o adresă de email validă",
-    "phone-must-be-10-digits": "Numărul de telefon trebuie să aibă 10 cifre"
+    "phone-must-be-10-digits": "Numărul de telefon trebuie să aibă 10 cifre",
+    "already-have-account": "Aveți deja un cont?",
+    "sign-in": "Autentificare"
   }
 }
 </i18n>
