@@ -35,134 +35,120 @@
           </div>
         </div>
         <div class="text-left h-font-size-12 h-color-lunar-green mb-2">
-          *{{ t("required-fields") }}
+          <span class="text-red-500">*</span> {{ t("required-fields") }}
         </div>
         <form @submit.prevent="handleRegister">
           <div class="flex flex-col gap-2">
             <div class="flex flex-row justify-center gap-4">
               <div class="flex flex-col w-1/2">
                 <label class="h-font-size-14 text-left"
-                  >{{ t("first-name") }} *</label
+                  >{{ t("first-name") }}
+                  <span class="text-red-500">*</span></label
                 >
-                <Input
+                <input
                   type="text"
                   autocomplete="given-name"
                   id="first_name"
                   class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                  :class="{ 'border-red-500': formErrors.first_name }"
+                  :class="{ 'border border-red-500': formErrors.first_name }"
                   v-model="first_name"
                 />
-                <span
-                  v-if="formErrors.first_name"
-                  class="text-red-500 text-sm mt-1"
-                >
-                  {{ t("required-field") }}
-                </span>
               </div>
               <div class="flex flex-col w-1/2">
                 <label class="h-font-size-14 text-left"
-                  >{{ t("last-name") }} *</label
+                  >{{ t("last-name") }}
+                  <span class="text-red-500">*</span></label
                 >
-                <Input
+                <input
                   type="text"
                   autocomplete="family-name"
                   id="last_name"
                   class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                  :class="{ 'border-red-500': formErrors.last_name }"
+                  :class="{ 'border border-red-500': formErrors.last_name }"
                   v-model="last_name"
                 />
-                <span
-                  v-if="formErrors.last_name"
-                  class="text-red-500 text-sm mt-1"
-                >
-                  {{ t("required-field") }}
-                </span>
               </div>
             </div>
             <div class="flex flex-col">
-              <label class="h-font-size-14 text-left">{{ t("phone") }} *</label>
-              <Input
+              <label class="h-font-size-14 text-left"
+                >{{ t("phone") }} <span class="text-red-500">*</span></label
+              >
+              <input
                 type="text"
                 autocomplete="tel"
                 id="phone"
                 class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                :class="{ 'border-red-500': formErrors.phone }"
+                :class="{ 'border border-red-500': formErrors.phone }"
                 v-model="phone"
               />
-              <span v-if="formErrors.phone" class="text-red-500 text-sm mt-1">
-                {{ t("required-field") }}
-              </span>
+              <div
+                v-if="errorMessages.phone"
+                class="h-font-size-12 text-red-500 text-left mt-1"
+              >
+                {{ errorMessages.phone }}
+              </div>
               <div class="h-font-size-10 text-left h-color-lunar-green mt-1">
                 {{ t("phone-message") }} *
               </div>
             </div>
             <div class="flex flex-col">
               <label class="h-font-size-14 text-left"
-                >{{ t("address") }} *</label
+                >{{ t("address") }} <span class="text-red-500">*</span></label
               >
-              <Input
+              <input
                 type="text"
                 autocomplete="address"
                 id="address"
                 class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                :class="{ 'border-red-500': formErrors.address }"
+                :class="{ 'border border-red-500': formErrors.address }"
                 v-model="address"
               />
-              <span v-if="formErrors.address" class="text-red-500 text-sm mt-1">
-                {{ t("required-field") }}
-              </span>
             </div>
             <div class="flex flex-col">
-              <label class="h-font-size-14 text-left">{{ t("email") }} *</label>
-              <Input
+              <label class="h-font-size-14 text-left"
+                >{{ t("email") }} <span class="text-red-500">*</span></label
+              >
+              <input
                 type="email"
                 autocomplete="email"
                 id="email"
                 class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                :class="{ 'border-red-500': formErrors.email }"
+                :class="{ 'border border-red-500': formErrors.email }"
                 v-model="email"
               />
-              <span v-if="formErrors.email" class="text-red-500 text-sm mt-1">
-                {{ t("required-field") }}
-              </span>
+              <div
+                v-if="errorMessages.email"
+                class="h-font-size-12 text-red-500 text-left mt-1"
+              >
+                {{ errorMessages.email }}
+              </div>
             </div>
             <div class="flex flex-col">
               <label class="h-font-size-14 text-left"
-                >{{ t("password") }} *</label
+                >{{ t("password") }} <span class="text-red-500">*</span></label
               >
-              <Input
+              <input
                 type="password"
                 autocomplete="new-password"
                 id="password"
                 class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                :class="{ 'border-red-500': formErrors.password }"
+                :class="{ 'border border-red-500': formErrors.password }"
                 v-model="password"
               />
-              <span
-                v-if="formErrors.password"
-                class="text-red-500 text-sm mt-1"
-              >
-                {{ t("required-field") }}
-              </span>
             </div>
             <div class="flex flex-col">
               <label class="h-font-size-14 text-left"
-                >{{ t("confirm-password") }} *</label
+                >{{ t("confirm-password") }}
+                <span class="text-red-500">*</span></label
               >
-              <Input
+              <input
                 type="password"
                 autocomplete="new-password"
                 id="confirm_password"
                 class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
-                :class="{ 'border-red-500': formErrors.confirmPassword }"
+                :class="{ 'border border-red-500': formErrors.confirmPassword }"
                 v-model="confirmPassword"
               />
-              <span
-                v-if="formErrors.confirmPassword"
-                class="text-red-500 text-sm mt-1"
-              >
-                {{ t("required-field") }}
-              </span>
             </div>
             <div class="flex flex-col gap-1 mt-2">
               <div
@@ -178,33 +164,31 @@
                       : 'ph ph-x-circle text-red-500'
                   "
                 />
-                <span
-                  class="h-font-size-12"
-                  :class="requirement.valid ? 'text-green-500' : 'text-red-500'"
-                  >{{ t(requirement.message) }}</span
-                >
+                <span class="h-font-size-12 h-color-lunar-green">{{
+                  t(requirement.message)
+                }}</span>
               </div>
             </div>
-            <div class="flex flex-col gap-2">
-              <div class="flex flex-row gap-1">
-                <Input
+            <div class="flex flex-col gap-2 my-4">
+              <div
+                class="flex flex-row gap-1"
+                :class="{
+                  'border border-red-500 p-1 rounded': formErrors.acceptTerms,
+                }"
+              >
+                <input
                   type="checkbox"
                   id="accept_terms"
+                  class="h-font-size-14"
                   v-model="acceptTerms"
                 />
                 <div
-                  class="h-font-size-10 text-left h-color-lunar-green mt-1"
+                  class="h-font-size-12 text-left h-color-lunar-green"
                   :class="{ 'text-red-500': formErrors.acceptTerms }"
                 >
                   {{ t("accept-terms-message") }}
                 </div>
               </div>
-              <span
-                v-if="formErrors.acceptTerms"
-                class="text-red-500 text-sm mt-1"
-              >
-                {{ t("required-field") }}
-              </span>
             </div>
             <Button
               class="maini-ui-button__primary w-full"
@@ -220,7 +204,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 
@@ -247,6 +231,11 @@ const formErrors = ref({
   password: false,
   confirmPassword: false,
   acceptTerms: false,
+});
+
+const errorMessages = ref({
+  email: "",
+  phone: "",
 });
 
 const hasMinLength = computed(() => (password.value?.length || 0) >= 8);
@@ -291,15 +280,17 @@ const passwordRequirements = computed(() => [
   },
 ]);
 
-const validateForm = () => {
-  // Reset all errors first
+const resetFormErrors = () => {
   Object.keys(formErrors.value).forEach((key) => {
     formErrors.value[key] = false;
   });
+};
+
+const validateForm = () => {
+  resetFormErrors();
 
   let isValid = true;
 
-  // Basic field validation
   if (!first_name.value?.trim()) {
     formErrors.value.first_name = true;
     isValid = false;
@@ -321,7 +312,6 @@ const validateForm = () => {
     isValid = false;
   }
 
-  // Password validation
   if (!password.value?.trim()) {
     formErrors.value.password = true;
     isValid = false;
@@ -330,7 +320,6 @@ const validateForm = () => {
     isValid = false;
   }
 
-  // Confirm password validation
   if (!confirmPassword.value?.trim()) {
     formErrors.value.confirmPassword = true;
     isValid = false;
@@ -339,7 +328,6 @@ const validateForm = () => {
     isValid = false;
   }
 
-  // Terms validation
   if (!acceptTerms.value) {
     formErrors.value.acceptTerms = true;
     isValid = false;
@@ -352,6 +340,11 @@ const handleRegister = async () => {
   if (!validateForm()) {
     return;
   }
+
+  errorMessages.value.email = "";
+  errorMessages.value.phone = "";
+  formErrors.value.email = false;
+  formErrors.value.phone = false;
 
   try {
     const response = await fetch("http://localhost:4000/auth/register", {
@@ -370,6 +363,20 @@ const handleRegister = async () => {
     });
 
     const data = await response.json();
+    console.log("Response data:", data);
+
+    if (!response.ok) {
+      console.log("Error response:", data);
+      if (data.message === "Email already exists") {
+        formErrors.value.email = true;
+        errorMessages.value.email = t("email-already-exists");
+      } else if (data.message === "Phone number already exists") {
+        formErrors.value.phone = true;
+        errorMessages.value.phone = t("phone-already-exists");
+      }
+      return;
+    }
+
     if (data.access_token) {
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
@@ -377,7 +384,21 @@ const handleRegister = async () => {
     }
   } catch (error) {
     console.error("Registration failed:", error);
+    if (error.response?.data?.message) {
+      const errorMessage = error.response.data.message;
+      if (errorMessage === "Email already exists") {
+        formErrors.value.email = true;
+        errorMessages.value.email = t("email-already-exists");
+      } else if (errorMessage === "Phone number already exists") {
+        formErrors.value.phone = true;
+        errorMessages.value.phone = t("phone-already-exists");
+      }
+    }
   }
+};
+
+const handleGoogleLogin = () => {
+  window.location.href = "http://localhost:4000/auth/google";
 };
 </script>
 
@@ -404,9 +425,11 @@ const handleRegister = async () => {
     "password-uppercase": "Password must contain at least one uppercase letter",
     "password-numbers": "Password must contain at least one number",
     "password-special-characters": "Password must contain at least one special character",
-    "passwords-do-not-match": "Passwords do not match",
+    "passwords-do-not-match": "Password confirmation should match the password",
     "accept-terms": "Accept Terms and Conditions",
-    "accept-terms-message": "By registering, you agree to the Terms and Conditions of the site"
+    "accept-terms-message": "By registering, you agree to the Terms and Conditions of the site",
+    "email-already-exists": "This email address is already in use",
+    "phone-already-exists": "This phone number is already in use"
   },
   "ro": {
     "heading": "Creează-ți Contul",
@@ -429,9 +452,11 @@ const handleRegister = async () => {
     "password-uppercase": "Parola trebuie să conțină cel puțin o literă mare",
     "password-numbers": "Parola trebuie să conțină cel puțin un număr",
     "password-special-characters": "Parola trebuie să conțină cel puțin un caracter special",
-    "passwords-do-not-match": "Parolele nu coincid",
+    "passwords-do-not-match": "Confirmarea parolei trebuie sa coincida cu parola",
     "accept-terms": "Acceptă Termeni și Condiții",
-    "accept-terms-message": "Prin înregistrare, acceptă Termenii și Condițiile de utilizare a site-ului"
+    "accept-terms-message": "Prin înregistrare, acceptă Termenii și Condițiile de utilizare a site-ului",
+    "email-already-exists": "Această adresă de email este deja utilizată",
+    "phone-already-exists": "Acest număr de telefon este deja utilizat"
   }
 }
 </i18n>

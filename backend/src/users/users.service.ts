@@ -47,6 +47,10 @@ export class UsersService {
     return this.usersRepository.findOneBy({ email });
   }
 
+  findOneByPhone(phone: string): Promise<User | null> {
+    return this.usersRepository.findOneBy({ phone });
+  }
+
   findByVerificationToken(token: string): Promise<User | null> {
     return this.usersRepository.findOneBy({ email_verification_token: token });
   }

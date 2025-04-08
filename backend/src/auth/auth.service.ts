@@ -61,7 +61,22 @@ export class AuthService {
         createUserDto.email,
       );
       if (existingUser) {
-        throw new ConflictException('Email already exists');
+        throw new ConflictException({
+          message: 'Email already exists',
+          statusCode: 409,
+        });
+      }
+
+      if (createUserDto.phone) {
+        const existingPhone = await this.usersService.findOneByPhone(
+          createUserDto.phone,
+        );
+        if (existingPhone) {
+          throw new ConflictException({
+            message: 'Phone number already exists',
+            statusCode: 409,
+          });
+        }
       }
 
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
