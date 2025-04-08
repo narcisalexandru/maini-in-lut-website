@@ -19,7 +19,7 @@
               type="email"
               autocomplete="email"
               id="email"
-              class="h-bg-alto h-font-weight-400 h-font-size-16 rounded-md p-1 inset-shadow-sm"
+              class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
               v-model="email"
             />
           </div>
@@ -31,7 +31,7 @@
               type="password"
               autocomplete="current-password"
               id="password"
-              class="h-bg-alto h-font-weight-400 h-font-size-16 rounded-md p-1 inset-shadow-sm"
+              class="h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm"
               v-model="password"
             />
             <div class="flex justify-start mt-1">
@@ -70,7 +70,7 @@
             alt="Google"
             class="w-4 h-4 mr-1"
           />
-          {{ t("sign-in-with-google") }}
+          {{ t("sign-in-with-google-cta") }}
         </Button>
         <div class="flex flex-row justify-center mt-6">
           <div class="mr-1 h-font-size-12 h-color-lunar-green">
@@ -88,7 +88,7 @@
   </section>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
@@ -139,7 +139,7 @@ const handleGoogleLogin = () => {
     "sub-heading": "Sign in to your account",
     "password": "Password",
     "sign-in-cta": "Sign in",
-    "sign-in-with-google": "Sign in with Google",
+    "sign-in-with-google-cta": "Sign in with Google",
     "forgot-password": "Forgot your password?",
     "dont-have-account": "Don't have an account?",
     "sign-up": "Sign up",
@@ -150,7 +150,7 @@ const handleGoogleLogin = () => {
     "sub-heading": "Autentificare în contul dvs.",
     "password": "Parola",
     "sign-in-cta": "Autentificare",
-    "sign-in-with-google": "Autentificare cu Google",
+    "sign-in-with-google-cta": "Autentificare cu Google",
     "forgot-password": "Ai uitat parola?",
     "dont-have-account": "Nu ai un cont?",
     "sign-up": "Înregistrează-te",
