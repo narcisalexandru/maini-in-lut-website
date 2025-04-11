@@ -57,7 +57,29 @@ export class CreateUserDto {
 
   @IsString()
   @IsOptional()
-  address?: string;
+  @Matches(/^[a-zA-Z\s]*$/, {
+    message: 'County must contain only letters and spaces',
+  })
+  county?: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(/^[a-zA-Z\s]*$/, {
+    message: 'City must contain only letters and spaces',
+  })
+  city?: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(/^[a-zA-Z0-9\s]*$/, {
+    message: 'Street must contain only letters, numbers and spaces',
+  })
+  street?: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(/^[0-9]{6}$/, { message: 'Postal code must be exactly 6 digits' })
+  postal_code?: string;
 
   @IsBoolean()
   @IsOptional()

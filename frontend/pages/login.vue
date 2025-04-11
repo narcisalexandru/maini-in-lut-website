@@ -17,10 +17,9 @@
             :label="t('email')"
             type="email"
             v-model="formData.email"
-            :error="formErrors.email"
-            :error-message="errorMessages.email"
+            :error="showError"
+            :error-message="errorMessage"
             autocomplete="email"
-            required
             @blur="() => validateField('email', formData.email)"
           />
           <FormInput
@@ -29,10 +28,9 @@
             :label="t('password')"
             type="password"
             v-model="formData.password"
-            :error="formErrors.password"
-            :error-message="errorMessages.password"
+            :error="showError"
+            :error-message="errorMessage"
             autocomplete="current-password"
-            required
             @blur="() => validateField('password', formData.password)"
           />
           <div class="flex justify-start mt-1">
@@ -45,9 +43,8 @@
           <Button
             class="maini-ui-button__primary h-font-size-14 mt-4 w-full"
             type="submit"
-            :disabled="isLoading"
           >
-            {{ isLoading ? t("loading") : t("sign-in-cta") }}
+            {{ t("sign-in-cta") }}
           </Button>
         </form>
         <div class="my-6">
@@ -80,7 +77,7 @@
             {{ t("dont-have-account") }}
           </div>
           <NuxtLink
-            to="/register"
+            :to="$localePath('/inregistrare')"
             class="h-font-weight-400 h-font-size-12 h-color-lunar-green underline"
           >
             {{ t("sign-up") }}
@@ -100,6 +97,14 @@ import { useAuth } from "~/composables/useAuth";
 import { useFormValidation } from "~/composables/useFormValidation";
 
 const router = useRouter();
+
+defineI18nRoute({
+  paths: {
+    ro: "/login",
+    en: "/login",
+  },
+});
+
 const { t } = useI18n({
   useScope: "local",
 });
@@ -110,6 +115,9 @@ const formData = ref({
   email: "",
   password: "",
 });
+
+const showError = ref(false);
+const errorMessage = ref("");
 
 const validationRules = {
   email: [
@@ -128,15 +136,35 @@ const validationRules = {
   ],
 };
 
-const { formErrors, errorMessages, validateField, validateForm } =
-  useFormValidation(validationRules);
+const { validateField, validateForm } = useFormValidation(validationRules);
 
 const handleSubmit = async () => {
-  if (!validateForm(formData.value)) {
+  const formDataToValidate = {
+    email: formData.value.email,
+    password: formData.value.password,
+  };
+
+  if (!validateForm(formDataToValidate)) {
+    showError.value = true;
+    errorMessage.value = t("invalid-credentials");
     return;
   }
 
-  await login(formData.value.email, formData.value.password);
+  try {
+    const result = await login(formData.value.email, formData.value.password);
+
+    if (!result.success) {
+      showError.value = true;
+      errorMessage.value = t("invalid-credentials");
+      return;
+    }
+
+    showError.value = false;
+    router.push("/");
+  } catch (error) {
+    showError.value = true;
+    errorMessage.value = t("invalid-credentials");
+  }
 };
 
 const handleGoogleLogin = () => {
@@ -159,7 +187,8 @@ const handleGoogleLogin = () => {
     "or-continue-with": "Or continue with",
     "loading": "Loading...",
     "invalid-email": "Please enter a valid email address",
-    "password-too-short": "Password must be at least 8 characters long"
+    "password-too-short": "Password must be at least 8 characters long",
+    "invalid-credentials": "Invalid email or password"
   },
   "ro": {
     "heading": "Bine ai revenit!",
@@ -174,7 +203,8 @@ const handleGoogleLogin = () => {
     "or-continue-with": "Sau continuă cu",
     "loading": "Se încarcă...",
     "invalid-email": "Vă rugăm să introduceți o adresă de email validă",
-    "password-too-short": "Parola trebuie să aibă cel puțin 8 caractere"
+    "password-too-short": "Parola trebuie să aibă cel puțin 8 caractere",
+    "invalid-credentials": "Adresa de email sau parola gresite"
   }
 }
 </i18n>

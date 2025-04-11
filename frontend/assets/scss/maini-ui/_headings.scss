@@ -1,0 +1,11 @@
+@use "../_functions" as *;
+@use "../_variables" as *;
+
+.maini-ui__heading {
+  font-size: rem(32px);
+  font-weight: 700;
+  margin-bottom: rem(16px);
+  margin-top: rem(16px);
+  color: $palm-leaf;
+  text-align: center;
+}

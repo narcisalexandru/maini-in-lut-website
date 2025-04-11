@@ -5,10 +5,14 @@ import { useI18n } from "vue-i18n";
 interface User {
   id: string;
   email: string;
-  first_name?: string;
-  last_name?: string;
-  address?: string;
-  phone?: string;
+  first_name: string;
+  last_name: string;
+  county: string;
+  locality: string;
+  street: string;
+  street_number: string;
+  phone: string;
+  picture?: string;
 }
 
 interface AuthResponse {
@@ -27,21 +31,28 @@ export const useAuth = () => {
   const isLoading = ref(false);
   const error = ref<AuthError | null>(null);
 
-  const user = ref({
+  const user = ref<User>({
+    id: "",
     email: "",
     first_name: "",
     last_name: "",
-    address: "",
-    picture: "",
+    county: "",
+    locality: "",
+    street: "",
+    street_number: "",
     phone: "",
+    picture: "",
   });
 
   const isAuthenticated = ref(false);
 
   const setAuthData = (data: AuthResponse) => {
-    localStorage.setItem("token", data.access_token);
-    localStorage.setItem("user", JSON.stringify(data.user));
-    isAuthenticated.value = true;
+    if (data.access_token) {
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      user.value = data.user;
+      isAuthenticated.value = true;
+    }
   };
 
   const handleAuthError = (err: any): AuthError => {
@@ -69,11 +80,15 @@ export const useAuth = () => {
         throw new Error(data.message || "Login failed");
       }
 
+      if (!data.access_token) {
+        throw new Error("No access token received");
+      }
+
       setAuthData(data);
-      router.push("/");
-      return data;
+      return { success: true, data };
     } catch (err) {
-      return handleAuthError(err);
+      const error = handleAuthError(err);
+      return { success: false, error };
     } finally {
       isLoading.value = false;
     }
@@ -84,7 +99,10 @@ export const useAuth = () => {
     password: string;
     first_name: string;
     last_name: string;
-    address: string;
+    county: string;
+    city: string;
+    street: string;
+    postal_code: string;
     phone: string;
   }) => {
     try {
@@ -100,7 +118,6 @@ export const useAuth = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle specific error cases
         if (data.message === "Email already exists") {
           error.value = {
             message: t("email-already-exists"),
@@ -119,7 +136,11 @@ export const useAuth = () => {
       }
 
       setAuthData(data);
-      router.push("/profile");
+      router.push(
+        locale.value === "en"
+          ? "/en/auth/email-verification"
+          : "/auth/email-verification"
+      );
       return data;
     } catch (err) {
       if (err instanceof Error) {
@@ -136,12 +157,19 @@ export const useAuth = () => {
   };
 
   const checkAuth = () => {
-    if (!isAuthenticated.value) {
-      const loginPath = locale.value === "en" ? "/en/login" : "/login";
-      router.push(loginPath);
-      return false;
+    const token = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
+
+    if (token && storedUser) {
+      isAuthenticated.value = true;
+      user.value = JSON.parse(storedUser);
+      return true;
     }
-    return true;
+
+    isAuthenticated.value = false;
+    const loginPath = locale.value === "en" ? "/en/login" : "/login";
+    router.push(loginPath);
+    return false;
   };
 
   const loadUser = () => {

@@ -12,7 +12,6 @@
           </button>
         </div>
 
-        <!-- Logo -->
         <div class="flex-shrink-0">
           <NuxtLink :to="$localePath('/')">
             <nuxt-img
@@ -23,7 +22,6 @@
           </NuxtLink>
         </div>
 
-        <!-- Desktop menu -->
         <div class="hidden md:flex md:items-center md:space-x-4">
           <nuxt-link
             v-for="item in menuItems"

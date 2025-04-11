@@ -79,22 +79,89 @@
               :error="formErrors.phone"
               :error-message="errorMessages.phone"
               autocomplete="tel"
-              required
               :help-text="t('phone-message')"
               @blur="() => validateField('phone', formData.phone)"
             />
-            <FormInput
-              id="address"
-              name="address"
-              :label="t('address')"
-              type="text"
-              v-model="formData.address"
-              :error="formErrors.address"
-              :error-message="errorMessages.address"
-              autocomplete="address"
-              required
-              @blur="() => validateField('address', formData.address)"
-            />
+            <div ref="addressSection" class="text-left">
+              <span
+                class="text-left h-font-size-18 cursor-pointer select-none flex flex-row items-center gap-1"
+                @click="isAddressCollapsed = !isAddressCollapsed"
+              >
+                {{ t("address") }}
+                <i
+                  class="ph h-font-size-18 select-none"
+                  :class="
+                    isAddressCollapsed ? 'ph-caret-right' : 'ph-caret-down'
+                  "
+                ></i>
+              </span>
+              <div
+                v-if="!isAddressCollapsed"
+                class="flex flex-col gap-2 mt-4 pb-8"
+              >
+                <div class="flex flex-row justify-center gap-4">
+                  <div class="flex flex-col w-1/2">
+                    <FormInput
+                      id="county"
+                      name="county"
+                      :label="t('county')"
+                      type="text"
+                      v-model="formData.county"
+                      :error="formErrors.county"
+                      :error-message="errorMessages.county"
+                      autocomplete="address-level2"
+                      @blur="() => validateField('county', formData.county)"
+                    />
+                  </div>
+                  <div class="flex flex-col w-1/2">
+                    <FormInput
+                      id="city"
+                      name="city"
+                      :label="t('city')"
+                      type="text"
+                      v-model="formData.city"
+                      :error="formErrors.city"
+                      :error-message="errorMessages.city"
+                      autocomplete="address-level1"
+                      @blur="() => validateField('city', formData.city)"
+                    />
+                  </div>
+                </div>
+                <div class="flex flex-row justify-center gap-4">
+                  <div class="flex flex-col w-1/2">
+                    <FormInput
+                      id="street"
+                      name="street"
+                      :label="t('street')"
+                      type="text"
+                      v-model="formData.street"
+                      :error="formErrors.street"
+                      :error-message="errorMessages.street"
+                      autocomplete="street-address"
+                      @blur="() => validateField('street', formData.street)"
+                    />
+                  </div>
+                  <div class="flex flex-col w-1/2">
+                    <FormInput
+                      id="postal_code"
+                      name="postal_code"
+                      :label="t('postal-code')"
+                      type="text"
+                      v-model="formData.postal_code"
+                      :error="formErrors.postal_code"
+                      :error-message="errorMessages.postal_code"
+                      autocomplete="postal-code"
+                      @blur="
+                        () => validateField('postal_code', formData.postal_code)
+                      "
+                    />
+                  </div>
+                </div>
+                <div class="text-left h-font-size-10 h-color-lunar-green">
+                  {{ t("address-message") }}
+                </div>
+              </div>
+            </div>
             <FormInput
               id="email"
               name="email"
@@ -200,7 +267,7 @@
         >
           {{ t("already-have-account") }} &nbsp;
           <nuxt-link
-            to="/login"
+            :to="$localePath('/login')"
             class="h-font-size-12 underline h-color-palm-leaf"
             >{{ t("sign-in") }}</nuxt-link
           >
@@ -217,6 +284,14 @@ import { useI18n } from "vue-i18n";
 import FormInput from "~/components/FormInput.vue";
 import { useAuth } from "~/composables/useAuth";
 import { useFormValidation } from "~/composables/useFormValidation";
+import autoAnimate from "@formkit/auto-animate";
+
+defineI18nRoute({
+  paths: {
+    ro: "/inregistrare",
+    en: "/register",
+  },
+});
 
 const { t } = useI18n({
   useScope: "local",
@@ -225,11 +300,17 @@ const { t } = useI18n({
 const router = useRouter();
 const { register, googleAuth, isLoading, error } = useAuth();
 
+const isAddressCollapsed = ref(true);
+const addressSection = ref();
+
 const formData = ref({
   first_name: "",
   last_name: "",
   phone: "",
-  address: "",
+  county: "",
+  city: "",
+  street: "",
+  postal_code: "",
   email: "",
   password: "",
   confirm_password: "",
@@ -251,18 +332,8 @@ const validationRules = {
   ],
   phone: [
     {
-      required: true,
-      message: t("required-field"),
-    },
-    {
       pattern: /^[0-9]{10}$/,
       message: t("phone-must-be-10-digits"),
-    },
-  ],
-  address: [
-    {
-      required: true,
-      message: t("required-field"),
     },
   ],
   email: [
@@ -307,7 +378,29 @@ const validationRules = {
       message: t("required-field"),
     },
   ],
+  county: [
+    {
+      pattern: /^[a-zA-Z\s]*$/,
+      message: t("invalid-county"),
+    },
+  ],
+  city: [
+    {
+      pattern: /^[a-zA-Z\s.]*$/,
+      message: t("invalid-city"),
+    },
+  ],
+  postal_code: [
+    {
+      pattern: /^[0-9]{6}$/,
+      message: t("postal-code-must-be-6-digits"),
+    },
+  ],
 };
+
+onMounted(() => {
+  autoAnimate(addressSection.value);
+});
 
 const { formErrors, errorMessages, validateField, validateForm } =
   useFormValidation(validationRules);
@@ -362,10 +455,21 @@ const handleSubmit = async () => {
     return;
   }
 
+  if (formData.value.password !== formData.value.confirm_password) {
+    formErrors.value.confirm_password = true;
+    errorMessages.value.confirm_password = t("passwords-do-not-match");
+    return;
+  }
+
+  if (!formData.value.acceptTerms) {
+    formErrors.value.acceptTerms = true;
+    errorMessages.value.acceptTerms = t("required-field");
+    return;
+  }
+
   const { confirm_password, acceptTerms, ...registerData } = formData.value;
   const result = await register(registerData);
 
-  // Handle specific field errors
   if (result && "field" in result) {
     formErrors.value[result.field] = true;
     errorMessages.value[result.field] = result.message;
@@ -390,6 +494,11 @@ const handleGoogleLogin = () => {
     "phone-message": "We'll only use this to contact you about orders",
     "email": "Email",
     "address": "Address",
+    "county": "County",
+    "city": "City",
+    "street": "Street and Number",
+    "postal-code": "Postal Code",
+    "address-message": "You can complete your address later in your profile",
     "password": "Password",
     "confirm-password": "Confirm Password",
     "sign-up-button": "Create Account",
@@ -409,7 +518,11 @@ const handleGoogleLogin = () => {
     "invalid-email": "Please enter a valid email address",
     "phone-must-be-10-digits": "Phone number must be 10 digits",
     "already-have-account": "Already have an account?",
-    "sign-in": "Sign in"
+    "sign-in": "Sign in",
+    "postal-code-must-be-6-digits": "Postal code must be 6 digits",
+    "invalid-county": "Invalid county",
+    "invalid-city": "Invalid city",
+    "invalid-postal-code": "Invalid postal code"
   },
   "ro": {
     "heading": "Creează-ți Contul",
@@ -422,6 +535,11 @@ const handleGoogleLogin = () => {
     "phone-message": "Vom folosi acest număr doar pentru a te contacta despre comenzi",
     "email": "Email",
     "address": "Adresă",
+    "county": "Județ",
+    "city": "Oraș",
+    "street": "Stradă și Număr",
+    "postal-code": "Cod Postal",
+    "address-message": "Poți completa adresa mai târziu în profilul tău",
     "password": "Parolă",
     "confirm-password": "Confirmă Parola",
     "sign-up-button": "Creează Cont",
@@ -441,7 +559,11 @@ const handleGoogleLogin = () => {
     "invalid-email": "Vă rugăm să introduceți o adresă de email validă",
     "phone-must-be-10-digits": "Numărul de telefon trebuie să aibă 10 cifre",
     "already-have-account": "Aveți deja un cont?",
-    "sign-in": "Autentificare"
+    "sign-in": "Autentificare",
+    "postal-code-must-be-6-digits": "Codul postal trebuie să aibă 6 cifre",
+    "invalid-county": "Județ invalid",
+    "invalid-city": "Oraș invalid",
+    "invalid-postal-code": "Cod postal invalid"
   }
 }
 </i18n>

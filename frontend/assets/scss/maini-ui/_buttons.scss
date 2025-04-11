@@ -13,8 +13,8 @@
     border-color: $color-primary;
 
     &:enabled:hover {
-      background-color: $lunar-green;
-      border-color: $lunar-green;
+      background-color: darken($color-primary, 10%);
+      border-color: $color-primary;
       transition: all 0.3s ease;
     }
     &:enabled:active {

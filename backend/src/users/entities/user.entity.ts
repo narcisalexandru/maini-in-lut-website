@@ -21,7 +21,16 @@ export class User {
   last_name: string;
 
   @Column({ type: 'text', nullable: true })
-  address: string;
+  county: string;
+
+  @Column({ type: 'text', nullable: true })
+  city: string;
+
+  @Column({ type: 'text', nullable: true })
+  street: string;
+
+  @Column({ type: 'text', nullable: true })
+  postal_code: string;
 
   @Column({ type: 'text', nullable: true })
   phone: string;

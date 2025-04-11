@@ -49,7 +49,10 @@ export class AuthService {
         last_name: user.last_name,
         email: user.email,
         phone: user.phone,
-        address: user.address,
+        county: user.county,
+        city: user.city,
+        street: user.street,
+        postal_code: user.postal_code,
         picture: user.picture,
       },
     };

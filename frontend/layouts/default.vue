@@ -14,6 +14,11 @@ import { computed } from "vue";
 
 const route = useRoute();
 const isAuthRoute = computed(() => {
-  return ["/login", "/register", "/profil"].includes(route.path);
+  return [
+    "/login",
+    "/register",
+    "/profile",
+    "/auth/email-verification",
+  ].includes(route.path);
 });
 </script>
