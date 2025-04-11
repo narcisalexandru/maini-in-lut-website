@@ -96,7 +96,8 @@ const mailLinks = [
 </i18n>
 
 <style scoped lang="scss">
-@import "~/assets/scss/_variables.scss";
+@use "sass:color";
+@use "~/assets/scss/_variables.scss" as *;
 
 .maini-ui-button {
   &__mail {
@@ -105,11 +106,11 @@ const mailLinks = [
     border-color: $color-primary;
     &:hover {
       color: $white;
-      background-color: darken($color-secondary, 10%);
+      background-color: color.adjust($color-secondary, $lightness: -10%);
     }
     &:active {
       color: $white;
-      background-color: darken($color-secondary, 20%);
+      background-color: color.adjust($color-secondary, $lightness: -20%);
     }
   }
 }

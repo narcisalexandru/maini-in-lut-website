@@ -1,5 +1,6 @@
 @use "../_functions" as *;
 @use "../_variables" as *;
+@use "sass:color";
 
 .maini-ui-button {
   font-size: rem(16px);
