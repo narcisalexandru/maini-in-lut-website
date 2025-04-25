@@ -57,81 +57,84 @@
                   class="ph ph-plus h-color-lunar-green cursor-pointer hover:text-gray-700 ml-1 items-center"
                 />
               </div>
-              <div v-if="!isEditingAddress" class="h-font-size-16">
-                {{
-                  user.county && user.city && user.street && user.postal_code
-                    ? `${user.county}, ${user.city}, ${user.street}, ${user.postal_code}`
-                    : t("no-address")
-                }}
-              </div>
-              <div v-else class="space-y-4 mt-2">
-                <FormInput
-                  id="county"
-                  name="county"
-                  :label="t('county')"
-                  type="text"
-                  v-model="addressForm.county"
-                  :error="formErrors.county"
-                  :error-message="errorMessages.county"
-                  autocomplete="address-level2"
-                  @blur="() => validateField('county', addressForm.county)"
-                />
+              <div ref="addressContainer" class="mt-2">
+                <div v-if="!isEditingAddress" class="h-font-size-16">
+                  {{
+                    user.county && user.city && user.street && user.postal_code
+                      ? `${user.county}, ${user.city}, ${user.street}, ${user.postal_code}`
+                      : t("no-address")
+                  }}
+                </div>
+                <div v-if="isEditingAddress" class="space-y-4">
+                  <FormInput
+                    id="county"
+                    name="county"
+                    :label="t('county')"
+                    type="text"
+                    v-model="addressForm.county"
+                    :error="formErrors.county"
+                    :error-message="errorMessages.county"
+                    autocomplete="address-level2"
+                    @blur="() => validateField('county', addressForm.county)"
+                  />
 
-                <FormInput
-                  id="city"
-                  name="city"
-                  :label="t('city')"
-                  type="text"
-                  v-model="addressForm.city"
-                  :error="formErrors.city"
-                  :error-message="errorMessages.city"
-                  autocomplete="address-level1"
-                  @blur="() => validateField('city', addressForm.city)"
-                />
+                  <FormInput
+                    id="city"
+                    name="city"
+                    :label="t('city')"
+                    type="text"
+                    v-model="addressForm.city"
+                    :error="formErrors.city"
+                    :error-message="errorMessages.city"
+                    autocomplete="address-level1"
+                    @blur="() => validateField('city', addressForm.city)"
+                  />
 
-                <FormInput
-                  id="street"
-                  name="street"
-                  :label="t('street')"
-                  type="text"
-                  v-model="addressForm.street"
-                  :error="formErrors.street"
-                  :error-message="errorMessages.street"
-                  autocomplete="street-address"
-                  @blur="() => validateField('street', addressForm.street)"
-                />
+                  <FormInput
+                    id="street"
+                    name="street"
+                    :label="t('street')"
+                    type="text"
+                    v-model="addressForm.street"
+                    :error="formErrors.street"
+                    :error-message="errorMessages.street"
+                    autocomplete="street-address"
+                    @blur="() => validateField('street', addressForm.street)"
+                  />
 
-                <FormInput
-                  id="postal_code"
-                  name="postal_code"
-                  :label="t('postal-code')"
-                  type="text"
-                  v-model="addressForm.postal_code"
-                  :error="formErrors.postal_code"
-                  :error-message="errorMessages.postal_code"
-                  autocomplete="postal-code"
-                  @blur="
-                    () => validateField('postal_code', addressForm.postal_code)
-                  "
-                />
+                  <FormInput
+                    id="postal_code"
+                    name="postal_code"
+                    :label="t('postal-code')"
+                    type="text"
+                    v-model="addressForm.postal_code"
+                    :error="formErrors.postal_code"
+                    :error-message="errorMessages.postal_code"
+                    autocomplete="postal-code"
+                    @blur="
+                      () =>
+                        validateField('postal_code', addressForm.postal_code)
+                    "
+                  />
 
-                <div class="flex justify-end space-x-4 mt-4">
-                  <Button
-                    type="button"
-                    class="maini-ui-button__secondary"
-                    severity="danger"
-                    @click="cancelAddressEdit"
-                  >
-                    {{ t("cancel") }}
-                  </Button>
-                  <Button
-                    type="button"
-                    class="maini-ui-button__primary"
-                    @click="saveAddress"
-                    :disabled="isLoading"
-                  >
-                    {{ isLoading ? t("saving") : t("save") }}
-                  </Button>
+                  <div class="flex justify-end space-x-4 mt-4">
+                    <Button
+                      type="button"
+                      class="maini-ui-button__secondary"
+                      severity="danger"
+                      @click="cancelAddressEdit"
+                    >
+                      {{ t("cancel") }}
+                    </Button>
+                    <Button
+                      type="button"
+                      class="maini-ui-button__primary"
+                      @click="saveAddress"
+                      :disabled="isLoading"
+                    >
+                      {{ isLoading ? t("saving") : t("save") }}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -146,57 +149,166 @@
                   class="ph ph-plus h-color-lunar-green cursor-pointer hover:text-gray-700 ml-1 items-center"
                 />
               </div>
-              <div v-if="!isEditingPhone" class="h-font-size-16">
-                {{ user.phone || `${t("no-phone")}` }}
-              </div>
-              <div v-else class="space-y-4 mt-2">
-                <FormInput
-                  id="phone"
-                  name="phone"
-                  :label="t('phone')"
-                  type="text"
-                  v-model="phoneForm.phone"
-                  :error="formErrors.phone"
-                  :error-message="errorMessages.phone"
-                  autocomplete="tel"
-                  @blur="() => validateField('phone', phoneForm.phone)"
-                />
+              <div ref="phoneContainer" class="mt-2">
+                <div v-if="!isEditingPhone" class="h-font-size-16">
+                  {{ user.phone || `${t("no-phone")}` }}
+                </div>
+                <div v-if="isEditingPhone" class="space-y-4">
+                  <FormInput
+                    id="phone"
+                    name="phone"
+                    :label="t('phone')"
+                    type="text"
+                    v-model="phoneForm.phone"
+                    :error="formErrors.phone"
+                    :error-message="errorMessages.phone"
+                    autocomplete="tel"
+                    @blur="() => validateField('phone', phoneForm.phone)"
+                  />
 
-                <div class="flex justify-end space-x-4 mt-4">
-                  <Button
-                    type="button"
-                    class="maini-ui-button__secondary"
-                    severity="danger"
-                    @click="cancelPhoneEdit"
-                  >
-                    {{ t("cancel") }}
-                  </Button>
-                  <Button
-                    type="button"
-                    class="maini-ui-button__primary"
-                    @click="savePhone"
-                    :disabled="isLoading"
-                  >
-                    {{ isLoading ? t("saving") : t("save") }}
-                  </Button>
+                  <div class="flex justify-end space-x-4 mt-4">
+                    <Button
+                      type="button"
+                      class="maini-ui-button__secondary"
+                      severity="danger"
+                      @click="cancelPhoneEdit"
+                    >
+                      {{ t("cancel") }}
+                    </Button>
+                    <Button
+                      type="button"
+                      class="maini-ui-button__primary"
+                      @click="savePhone"
+                      :disabled="isLoading"
+                    >
+                      {{ isLoading ? t("saving") : t("save") }}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+      <div class="h-bg-white p-8 rounded-xl shadow-md mt-8">
+        <h2
+          class="h-font-size-18 text-left h-color-palm-leaf h-font-weight-700 mb-4"
+        >
+          {{ t("orders-histroy") }}
+        </h2>
+        <div ref="ordersContainer">
+          <div
+            v-for="order in displayedOrders"
+            :key="order.id"
+            class="flex flex-col p-4 border-1 h-border-color-dusty-gray rounded-lg mb-4"
+          >
+            <div class="flex flex-row justify-between items-center">
+              <div class="h-font-weight-600">{{ order.id }}</div>
+              <div
+                class="flex items-center rounded-xl px-4 py-1"
+                :class="{
+                  'h-bg-aero-blue h-color-castleton-green':
+                    order.status === 'Delivered',
+                  'bg-yellow-100 text-yellow-800':
+                    order.status === 'Processing',
+                  'bg-red-100 text-red-800': order.status === 'Cancelled',
+                }"
+              >
+                {{ order.status }}
+              </div>
+            </div>
+            <div class="flex flex-col h-color-lunar-green">
+              <div class="flex">{{ order.date }}</div>
+              <div class="flex">
+                {{ order.items }} {{ t("items") }} | {{ order.currency
+                }}{{ order.total.toFixed(2) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="mockOrders.length > 2" class="flex justify-center mt-4">
+          <Button
+            type="button"
+            class="maini-ui-button__primary"
+            @click="showAllOrders = !showAllOrders"
+          >
+            {{ showAllOrders ? t("show-less") : t("show-more") }}
+          </Button>
+        </div>
+      </div>
+      <div class="h-bg-white p-8 rounded-xl shadow-md mt-8">
+        <h2
+          class="h-font-size-18 text-left h-color-palm-leaf h-font-weight-700 mb-4"
+        >
+          {{ t("account-settings") }}
+        </h2>
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-2">
+            <div class="h-color-lunar-green">{{ t("logout-message") }}</div>
+            <Button
+              type="button"
+              severity="danger"
+              class="w-3xs justify-start"
+              @click="handleLogout"
+            >
+              {{ t("logout-cta") }}
+            </Button>
+          </div>
+          <div class="flex flex-col gap-2">
+            <div class="h-color-lunar-green">
+              {{ t("delete-account-message") }}
+            </div>
+            <Button
+              type="button"
+              severity="danger"
+              class="w-3xs justify-start"
+              @click="showDeleteAccountDialog"
+            >
+              {{ t("delete-account-cta") }}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <Dialog
+      v-model:visible="deleteAccountDialogVisible"
+      modal
+      :draggable="false"
+      :header="t('delete-account-cta')"
+      :style="{ width: '450px' }"
+    >
+      <div class="flex flex-col gap-4">
+        <div class="h-color-lunar-green">
+          {{ t("delete-account-confirmation") }}
+        </div>
+        <div class="flex justify-end gap-2">
+          <Button
+            type="button"
+            severity="secondary"
+            @click="deleteAccountDialogVisible = false"
+          >
+            {{ t("cancel") }}
+          </Button>
+          <Button type="button" severity="danger" @click="handleDeleteAccount">
+            {{ t("delete-account-cta") }}
+          </Button>
+        </div>
+      </div>
+    </Dialog>
   </section>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, nextTick } from "vue";
 import { useAuth } from "~/composables/useAuth";
 import FormInput from "~/components/FormInput.vue";
 import Button from "primevue/button";
 import { useFormValidation } from "~/composables/useFormValidation";
 import { useToast } from "primevue/usetoast";
 import { useRuntimeConfig } from "nuxt/app";
+import autoAnimate from "@formkit/auto-animate";
+import Dialog from "primevue/dialog";
 
 defineI18nRoute({
   paths: {
@@ -216,6 +328,11 @@ const isEditingPhone = ref(false);
 const isLoading = ref(false);
 const toast = useToast();
 const config = useRuntimeConfig();
+const showAllOrders = ref(false);
+const addressContainer = ref(null);
+const phoneContainer = ref(null);
+const ordersContainer = ref(null);
+const deleteAccountDialogVisible = ref(false);
 
 const addressForm = ref({
   county: "",
@@ -276,15 +393,63 @@ const validationRules = {
 const { formErrors, errorMessages, validateField, validateForm } =
   useFormValidation(validationRules);
 
-onMounted(() => {
+const mockOrders = [
+  {
+    id: "#ORD-600-121",
+    status: "Delivered",
+    date: "3 January, 2025",
+    items: 1,
+    total: 89.0,
+    currency: "$",
+  },
+  {
+    id: "#ORD-600-122",
+    status: "Processing",
+    date: "5 January, 2025",
+    items: 2,
+    total: 145.5,
+    currency: "$",
+  },
+  {
+    id: "#ORD-600-123",
+    status: "Cancelled",
+    date: "7 January, 2025",
+    items: 3,
+    total: 210.75,
+    currency: "$",
+  },
+  {
+    id: "#ORD-600-124",
+    status: "Delivered",
+    date: "10 January, 2025",
+    items: 1,
+    total: 65.99,
+    currency: "$",
+  },
+];
+
+const displayedOrders = computed(() => {
+  return showAllOrders.value ? mockOrders : mockOrders.slice(0, 2);
+});
+
+onMounted(async () => {
   if (checkAuth()) {
     loadUser();
+  }
+
+  if (addressContainer.value) {
+    autoAnimate(addressContainer.value);
+  }
+  if (phoneContainer.value) {
+    autoAnimate(phoneContainer.value);
+  }
+  if (ordersContainer.value) {
+    autoAnimate(ordersContainer.value);
   }
 });
 
 const toggleAddressEdit = async () => {
   try {
-    // Check address modification status
     const response = await fetch(
       `${config.public.apiBase}/users/profile/address-status`,
       {
@@ -345,7 +510,6 @@ const saveAddress = async () => {
     return;
   }
 
-  // Check if any changes were made
   const hasChanges =
     addressForm.value.county !== user.value.county ||
     addressForm.value.city !== user.value.city ||
@@ -363,7 +527,6 @@ const saveAddress = async () => {
     return;
   }
 
-  // Additional validation to ensure no empty fields
   if (
     !addressForm.value.county ||
     !addressForm.value.city ||
@@ -512,6 +675,45 @@ const savePhone = async () => {
 const handleLogout = () => {
   logout();
 };
+
+const showDeleteAccountDialog = () => {
+  deleteAccountDialogVisible.value = true;
+};
+
+const handleDeleteAccount = async () => {
+  try {
+    const response = await fetch(`${config.public.apiBase}/users/profile`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || t("error-deleting-account"));
+    }
+
+    deleteAccountDialogVisible.value = false;
+    toast.add({
+      severity: "success",
+      summary: t("success-title"),
+      detail: t("account-deleted-successfully"),
+      life: 3000,
+    });
+    handleLogout();
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    toast.add({
+      severity: "error",
+      summary: t("error-title"),
+      detail: error.message || t("error-deleting-account"),
+      life: 3000,
+    });
+  }
+};
 </script>
 
 <i18n lang="json">
@@ -553,7 +755,19 @@ const handleLogout = () => {
     "phone-must-be-10-digits": "Phone number must be exactly 10 digits",
     "phone-required": "Phone number is required",
     "phone-updated": "Phone number updated successfully",
-    "error-saving-phone": "An error occurred while saving your phone number"
+    "error-saving-phone": "An error occurred while saving your phone number",
+    "orders-histroy": "Orders History",
+    "items": "items",
+    "show-more": "Show More Orders",
+    "show-less": "Show Less Orders",
+    "account-settings": "Account Settings",
+    "logout-cta": "Logout",
+    "logout-message": "Do you want to logout?",
+    "delete-account-cta": "Delete Account",
+    "delete-account-message": "Once you delete your account, there is no going back. Please be certain.",
+    "delete-account-confirmation": "Are you sure you want to delete your account?",
+    "error-deleting-account": "An error occurred while deleting your account",
+    "account-deleted-successfully": "Your account has been deleted successfully"
   },
   "ro": {
     "title": "Profilul meu",
@@ -592,7 +806,19 @@ const handleLogout = () => {
     "phone-must-be-10-digits": "Numărul de telefon trebuie să aibă exact 10 cifre",
     "phone-required": "Numărul de telefon este obligatoriu",
     "phone-updated": "Numărul de telefon a fost actualizat cu succes",
-    "error-saving-phone": "A apărut o eroare la salvarea numărului de telefon"
+    "error-saving-phone": "A apărut o eroare la salvarea numărului de telefon",
+    "orders-histroy": "Istoricul comenzilor",
+    "items": "produse",
+    "show-more": "Afișează mai multe comenzi",
+    "show-less": "Afișează mai puține comenzi",
+    "account-settings": "Setările contului",
+    "logout-cta": "Ieșire",
+    "logout-message": "Vrei să ieși din cont?",
+    "delete-account-cta": "Ștergere cont",
+    "delete-account-message": "Odată șters contul, nu mai poți reveni. Te rugăm să fii sigur.",
+    "delete-account-confirmation": "Esti sigur ca vrei sa ștergi contul?",
+    "error-deleting-account": "A apărut o eroare la ștergerea contului",
+    "account-deleted-successfully": "Contul a fost șters cu succes"
   }
 }
 </i18n>

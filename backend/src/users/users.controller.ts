@@ -6,6 +6,7 @@ import {
   UseGuards,
   Request,
   NotFoundException,
+  Delete,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -77,5 +78,11 @@ export class UsersController {
   @Put('profile/phone')
   async updatePhone(@Request() req, @Body() updateData: { phone: string }) {
     return this.usersService.updatePhone(req.user.id, updateData.phone);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('profile')
+  async deleteAccount(@Request() req) {
+    return this.usersService.deleteAccount(req.user.id);
   }
 }

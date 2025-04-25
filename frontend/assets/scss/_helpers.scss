@@ -21,6 +21,15 @@
     &alto {
       background-color: $alto;
     }
+    &palm-leaf {
+      background-color: $palm-leaf;
+    }
+    &aero-blue {
+      background-color: $aero-blue;
+    }
+    &castleton-green {
+      background-color: $castleton-green;
+    }
   }
 
   &font-weight {
@@ -45,7 +54,7 @@
       border-color: $color-primary !important;
     }
     &-secondary {
-      border-color: $color-secondary !important;
+      border-color: $color-secondary;
     }
     &-dusty-gray {
       border-color: $dusty-gray !important;
@@ -78,6 +87,12 @@
     }
     &-dusty-gray {
       color: $dusty-gray;
+    }
+    &-castleton-green {
+      color: $castleton-green;
+    }
+    &-aero-blue {
+      color: $aero-blue;
     }
   }
   &border-radius {

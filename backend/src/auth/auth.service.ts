@@ -167,6 +167,10 @@ export class AuthService {
         password: hashedPassword,
         is_email_verified: true,
       });
+    } else {
+      user = await this.usersService.update(user.id, {
+        picture: req.user.picture,
+      });
     }
 
     return this.login(user);

@@ -213,4 +213,26 @@ export class UsersService {
       recentModifications,
     };
   }
+
+  async deleteAccount(
+    id: number,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    try {
+      await this.usersRepository.remove(user);
+      return {
+        success: true,
+        message: 'Account deleted successfully',
+      };
+    } catch (error) {
+      throw new BadRequestException({
+        success: false,
+        message: 'Failed to delete account',
+      });
+    }
+  }
 }
