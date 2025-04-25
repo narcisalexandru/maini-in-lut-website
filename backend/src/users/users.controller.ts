@@ -72,4 +72,10 @@ export class UsersController {
   async getAddressModificationStatus(@Request() req) {
     return this.usersService.getAddressModificationStatus(req.user.id);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('profile/phone')
+  async updatePhone(@Request() req, @Body() updateData: { phone: string }) {
+    return this.usersService.updatePhone(req.user.id, updateData.phone);
+  }
 }

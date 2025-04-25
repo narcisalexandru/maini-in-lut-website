@@ -145,6 +145,38 @@ export class UsersService {
     return { success: true };
   }
 
+  async updatePhone(
+    id: number,
+    phone: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    // Check if phone number is already in use by another user
+    if (phone) {
+      const existingUser = await this.findOneByPhone(phone);
+      if (existingUser && existingUser.id !== id) {
+        throw new BadRequestException({
+          success: false,
+          message: 'Phone number is already in use by another user',
+        });
+      }
+    }
+
+    // Validate phone number format
+    if (phone && !/^[0-9]{10}$/.test(phone)) {
+      throw new BadRequestException({
+        success: false,
+        message: 'Phone number must be exactly 10 digits',
+      });
+    }
+
+    await this.usersRepository.update(id, { phone });
+    return { success: true };
+  }
+
   async getAddressModificationStatus(id: number): Promise<{
     inCooldown: boolean;
     cooldownRemaining?: number;

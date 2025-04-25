@@ -45,8 +45,16 @@
                   {{ t("address") }}
                 </div>
                 <i
+                  v-if="
+                    user.county && user.city && user.street && user.postal_code
+                  "
                   @click="toggleAddressEdit"
                   class="ph ph-note-pencil h-color-lunar-green cursor-pointer hover:text-gray-700 ml-1 items-center"
+                />
+                <i
+                  v-else
+                  @click="toggleAddressEdit"
+                  class="ph ph-plus h-color-lunar-green cursor-pointer hover:text-gray-700 ml-1 items-center"
                 />
               </div>
               <div v-if="!isEditingAddress" class="h-font-size-16">
@@ -128,11 +136,50 @@
               </div>
             </div>
             <div class="mt-4">
-              <div class="h-color-lunar-green">
-                {{ t("phone") }}
+              <div class="flex items-center">
+                <div class="h-color-lunar-green">
+                  {{ t("phone") }}
+                </div>
+                <i
+                  v-if="!user.phone"
+                  @click="togglePhoneEdit"
+                  class="ph ph-plus h-color-lunar-green cursor-pointer hover:text-gray-700 ml-1 items-center"
+                />
               </div>
-              <div class="h-font-size-16">
+              <div v-if="!isEditingPhone" class="h-font-size-16">
                 {{ user.phone || `${t("no-phone")}` }}
+              </div>
+              <div v-else class="space-y-4 mt-2">
+                <FormInput
+                  id="phone"
+                  name="phone"
+                  :label="t('phone')"
+                  type="text"
+                  v-model="phoneForm.phone"
+                  :error="formErrors.phone"
+                  :error-message="errorMessages.phone"
+                  autocomplete="tel"
+                  @blur="() => validateField('phone', phoneForm.phone)"
+                />
+
+                <div class="flex justify-end space-x-4 mt-4">
+                  <Button
+                    type="button"
+                    class="maini-ui-button__secondary"
+                    severity="danger"
+                    @click="cancelPhoneEdit"
+                  >
+                    {{ t("cancel") }}
+                  </Button>
+                  <Button
+                    type="button"
+                    class="maini-ui-button__primary"
+                    @click="savePhone"
+                    :disabled="isLoading"
+                  >
+                    {{ isLoading ? t("saving") : t("save") }}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -146,6 +193,7 @@
 import { ref, onMounted } from "vue";
 import { useAuth } from "~/composables/useAuth";
 import FormInput from "~/components/FormInput.vue";
+import Button from "primevue/button";
 import { useFormValidation } from "~/composables/useFormValidation";
 import { useToast } from "primevue/usetoast";
 import { useRuntimeConfig } from "nuxt/app";
@@ -164,6 +212,7 @@ const { t } = useI18n({
 const { user, isAuthenticated, checkAuth, loadUser, logout, updateProfile } =
   useAuth();
 const isEditingAddress = ref(false);
+const isEditingPhone = ref(false);
 const isLoading = ref(false);
 const toast = useToast();
 const config = useRuntimeConfig();
@@ -173,6 +222,10 @@ const addressForm = ref({
   city: "",
   street: "",
   postal_code: "",
+});
+
+const phoneForm = ref({
+  phone: "",
 });
 
 const validationRules = {
@@ -210,6 +263,12 @@ const validationRules = {
     {
       required: true,
       message: t("postal-code-required"),
+    },
+  ],
+  phone: [
+    {
+      pattern: /^[0-9]{10}$/,
+      message: t("phone-must-be-10-digits"),
     },
   ],
 };
@@ -367,6 +426,89 @@ const saveAddress = async () => {
   }
 };
 
+const togglePhoneEdit = () => {
+  isEditingPhone.value = true;
+  phoneForm.value = {
+    phone: user.value.phone || "",
+  };
+};
+
+const cancelPhoneEdit = () => {
+  isEditingPhone.value = false;
+  phoneForm.value = {
+    phone: "",
+  };
+};
+
+const savePhone = async () => {
+  if (!phoneForm.value.phone || !phoneForm.value.phone.match(/^[0-9]{10}$/)) {
+    formErrors.phone = true;
+    errorMessages.phone = t("phone-must-be-10-digits");
+    return;
+  }
+
+  const hasChanges = phoneForm.value.phone !== user.value.phone;
+
+  if (!hasChanges) {
+    isEditingPhone.value = false;
+    toast.add({
+      severity: "info",
+      summary: t("no-changes-title"),
+      detail: t("no-changes-made"),
+      life: 3000,
+    });
+    return;
+  }
+
+  isLoading.value = true;
+  try {
+    const response = await fetch(
+      `${config.public.apiBase}/users/profile/phone`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ phone: phoneForm.value.phone }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to update phone number");
+    }
+
+    isEditingPhone.value = false;
+    try {
+      await loadUser();
+      toast.add({
+        severity: "success",
+        summary: t("success-title"),
+        detail: t("phone-updated"),
+        life: 3000,
+      });
+    } catch (error) {
+      console.error("Error reloading user data:", error);
+      toast.add({
+        severity: "error",
+        summary: t("error-title"),
+        detail: t("error-loading-user-data"),
+        life: 3000,
+      });
+    }
+  } catch (error) {
+    console.error("Error saving phone number:", error);
+    toast.add({
+      severity: "error",
+      summary: t("error-title"),
+      detail: error.message || t("error-saving-phone"),
+      life: 3000,
+    });
+  } finally {
+    isLoading.value = false;
+  }
+};
+
 const handleLogout = () => {
   logout();
 };
@@ -407,7 +549,11 @@ const handleLogout = () => {
     "error-saving-address": "An error occurred while saving your address",
     "error-checking-status": "Error checking address modification status",
     "address-updated": "Address updated successfully",
-    "error-loading-user-data": "An error occurred while reloading user data"
+    "error-loading-user-data": "An error occurred while reloading user data",
+    "phone-must-be-10-digits": "Phone number must be exactly 10 digits",
+    "phone-required": "Phone number is required",
+    "phone-updated": "Phone number updated successfully",
+    "error-saving-phone": "An error occurred while saving your phone number"
   },
   "ro": {
     "title": "Profilul meu",
@@ -442,7 +588,11 @@ const handleLogout = () => {
     "error-saving-address": "A apărut o eroare la salvarea adresei",
     "error-checking-status": "Eroare la verificarea stării modificării adresei",
     "address-updated": "Adresa a fost actualizată cu succes",
-    "error-loading-user-data": "A apărut o eroare la reîncărcarea datelor utilizatorului"
+    "error-loading-user-data": "A apărut o eroare la reîncărcarea datelor utilizatorului",
+    "phone-must-be-10-digits": "Numărul de telefon trebuie să aibă exact 10 cifre",
+    "phone-required": "Numărul de telefon este obligatoriu",
+    "phone-updated": "Numărul de telefon a fost actualizat cu succes",
+    "error-saving-phone": "A apărut o eroare la salvarea numărului de telefon"
   }
 }
 </i18n>
