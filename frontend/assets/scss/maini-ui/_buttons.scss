@@ -14,7 +14,7 @@
     border-color: $color-primary;
 
     &:enabled:hover {
-      background-color: darken($color-primary, 10%);
+      background-color: color.scale($color-primary, $lightness: -10%);
       border-color: $color-primary;
       transition: all 0.3s ease;
     }

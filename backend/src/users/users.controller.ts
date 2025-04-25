@@ -13,7 +13,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 class UpdateProfileDto {
   first_name?: string;
   last_name?: string;
-  address?: string;
+  county?: string;
+  city?: string;
+  street?: string;
+  postal_code?: string;
+  phone?: string;
+  picture?: string;
 }
 
 @Controller('users')
@@ -45,5 +50,26 @@ export class UsersController {
     const user = await this.usersService.update(req.user.id, updateProfileDto);
     const { password, ...result } = user;
     return result;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('profile/address')
+  async updateAddress(
+    @Request() req,
+    @Body()
+    updateData: {
+      county?: string;
+      city?: string;
+      street?: string;
+      postal_code?: string;
+    },
+  ) {
+    return this.usersService.updateAddress(req.user.id, updateData);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile/address-status')
+  async getAddressModificationStatus(@Request() req) {
+    return this.usersService.getAddressModificationStatus(req.user.id);
   }
 }

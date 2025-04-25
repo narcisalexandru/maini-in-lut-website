@@ -1,7 +1,7 @@
 <template>
   <section class="maini-ui__section">
     <div class="maini-ui__container">
-      <h1 class="maini-ui__heading">{{ t("one-more") }}...</h1>
+      <h1 class="maini-ui__heading text-center">{{ t("one-more") }}...</h1>
       <div class="maini-ui__small-container">
         <div class="h-color-lunar-green h-font-size-24 text-center">
           {{ t("sub-heading") }}

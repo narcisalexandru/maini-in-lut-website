@@ -18,7 +18,6 @@ onMounted(async () => {
       throw new Error("Token-ul lipsește");
     }
 
-    // Apelul către API pentru verificarea tokenului
     const response = await fetch(
       `${config.public.apiBase}/auth/verify-email?token=${token}`
     );
@@ -28,7 +27,6 @@ onMounted(async () => {
     }
 
     isVerified.value = true;
-    // Redirecționare după 3 secunde
     setTimeout(() => {
       router.push("/");
     }, 3000);

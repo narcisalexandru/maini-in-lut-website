@@ -172,10 +172,28 @@ export const useAuth = () => {
     return false;
   };
 
-  const loadUser = () => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      user.value = JSON.parse(storedUser);
+  const loadUser = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        return;
+      }
+
+      const response = await fetch("http://localhost:4000/users/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load user data");
+      }
+
+      const userData = await response.json();
+      user.value = userData;
+      localStorage.setItem("user", JSON.stringify(userData));
+    } catch (error) {
+      console.error("Error loading user data:", error);
     }
   };
 
@@ -184,6 +202,45 @@ export const useAuth = () => {
     localStorage.removeItem("user");
     const loginPath = locale.value === "en" ? "/en/login" : "/login";
     router.push(loginPath);
+  };
+
+  const updateProfile = async (updateData: Partial<User>) => {
+    try {
+      isLoading.value = true;
+      error.value = null;
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch("http://localhost:4000/users/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Profile update failed");
+      }
+
+      // Update local user data with the new values
+      const updatedUser = { ...user.value, ...data };
+      user.value = updatedUser;
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      return { success: true, data: updatedUser };
+    } catch (err) {
+      const error = handleAuthError(err);
+      return { success: false, error };
+    } finally {
+      isLoading.value = false;
+    }
   };
 
   return {
@@ -197,5 +254,6 @@ export const useAuth = () => {
     googleAuth,
     isLoading,
     error,
+    updateProfile,
   };
 };

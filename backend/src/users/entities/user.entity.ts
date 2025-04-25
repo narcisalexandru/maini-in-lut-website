@@ -50,6 +50,12 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   email_verification_token_expires: Date | null;
 
+  @Column({ type: 'jsonb', nullable: true })
+  address_modification_history: { timestamp: string }[];
+
+  @Column({ type: 'timestamp', nullable: true })
+  address_modification_cooldown: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
