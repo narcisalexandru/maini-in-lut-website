@@ -7,25 +7,26 @@
           <div class="mb-6 bg-white rounded-lg p-4 shadow-sm">
             <div class="font-semibold mb-2">Categories</div>
             <ul class="flex flex-col space-y-2">
-              <li>
+              <li class="flex items-center">
                 <Checkbox
-                  v-model="selectedCategories"
-                  :value="'All'"
-                  @change="toggleCategory"
+                  :modelValue="selectedCategories.includes('All')"
+                  @update:modelValue="toggleAll"
+                  :binary="true"
                   :inputId="'all-products'"
-                  :disabled="
-                    selectedCategories.length === 1 &&
-                    selectedCategories.includes('All')
-                  "
                 />
                 <label for="all-products" class="ml-2">All Products</label>
               </li>
-              <li v-for="cat in categories" :key="cat">
+
+              <li
+                v-for="cat in categories"
+                :key="'cat-' + cat"
+                class="flex items-center"
+              >
                 <Checkbox
-                  v-model="selectedCategories"
-                  :value="cat"
-                  @change="toggleCategory"
                   :inputId="'cat-' + cat"
+                  :binary="true"
+                  :modelValue="selectedCategories.includes(cat)"
+                  @update:modelValue="(checked) => toggleCategory(cat, checked)"
                 />
                 <label :for="'cat-' + cat" class="ml-2">{{ cat }}</label>
               </li>
@@ -78,6 +79,7 @@ import { ref, computed, onMounted, watch, nextTick } from "vue";
 import Dropdown from "primevue/dropdown";
 import Slider from "primevue/slider";
 import Checkbox from "primevue/checkbox";
+import Select from "primevue/select";
 
 const products = ref([]);
 const categories = ref([]);
@@ -157,43 +159,56 @@ const filteredProducts = computed(() => {
   return filtered;
 });
 
-function toggleCategory(event) {
-  const selectedValue = event.value;
-
-  // Dacă userul încearcă să deselecteze "All" când e singura opțiune, nu facem nimic
-  if (
-    selectedValue === "All" &&
-    selectedCategories.value.length === 1 &&
-    selectedCategories.value[0] === "All"
-  ) {
-    return;
-  }
-
-  if (selectedValue === "All") {
-    // Selectăm doar "All"
+function toggleAll(checked) {
+  if (checked) {
     selectedCategories.value = ["All"];
   } else {
-    // Eliminăm "All" dacă e în listă
+    selectedCategories.value = [];
+  }
+}
+
+function toggleCategory(cat, checked) {
+  // Remove "All" if it's present
+  if (selectedCategories.value.includes("All")) {
     selectedCategories.value = selectedCategories.value.filter(
-      (cat) => cat !== "All"
+      (c) => c !== "All"
     );
+  }
 
-    // Toggle pentru categoria selectată
-    if (selectedCategories.value.includes(selectedValue)) {
-      selectedCategories.value = selectedCategories.value.filter(
-        (cat) => cat !== selectedValue
-      );
-    } else {
-      selectedCategories.value.push(selectedValue);
-    }
+  // Add or remove the category based on checked state
+  if (checked) {
+    selectedCategories.value.push(cat);
+  } else {
+    selectedCategories.value = selectedCategories.value.filter(
+      (c) => c !== cat
+    );
+  }
 
-    // Dacă nu a mai rămas nicio categorie, revenim la "All"
-    if (selectedCategories.value.length === 0) {
-      selectedCategories.value = ["All"];
-    }
+  // If no categories are selected, select "All"
+  if (selectedCategories.value.length === 0) {
+    selectedCategories.value = ["All"];
   }
 }
 </script>
+
+<style scoped>
+/* Asigură că bifa din checkbox este vizibilă */
+:deep(.p-checkbox-box.p-highlight) {
+  background-color: var(--primary-color, #6366f1);
+  border-color: var(--primary-color, #6366f1);
+}
+
+:deep(.p-checkbox-box) {
+  border: 2px solid #ced4da;
+  width: 20px;
+  height: 20px;
+}
+
+:deep(.p-checkbox-icon) {
+  color: white;
+  font-weight: bold;
+}
+</style>
 
 <i18n lang="json">
 {
