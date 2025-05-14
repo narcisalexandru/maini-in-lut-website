@@ -1,56 +1,11 @@
 <template>
   <div class="flex maini-ui__section mx-auto px-4 py-8">
-    <div class="maini-ui__container flex-row flex">
-      <div class="flex flex-col w-1/5 flex-shrink-0 mr-8 p-4">
-        <h2 class="text-2xl font-bold mb-6">{{ t("produse") }}</h2>
-        <aside class="flex flex-col">
-          <div class="mb-6 bg-white rounded-lg p-4 shadow-sm">
-            <div class="font-semibold mb-2">Categories</div>
-            <ul class="flex flex-col space-y-2">
-              <li class="flex items-center">
-                <Checkbox
-                  :binary="true"
-                  :inputId="'all-products'"
-                  :modelValue="selectAll"
-                  @update:modelValue="handleAllChange"
-                />
-                <label for="all-products" class="ml-2">All Products</label>
-              </li>
-
-              <li
-                v-for="cat in categories"
-                :key="'cat-' + cat"
-                class="flex items-center"
-              >
-                <Checkbox
-                  :inputId="'cat-' + cat"
-                  :binary="true"
-                  :modelValue="selectedCategories.includes(cat)"
-                  @update:modelValue="(checked) => toggleCategory(cat, checked)"
-                />
-                <label :for="'cat-' + cat" class="ml-2">{{ cat }}</label>
-              </li>
-            </ul>
-          </div>
-          <div class="mb-6 bg-white rounded-lg p-4 shadow-sm">
-            <div class="font-semibold mb-2">Price Range</div>
-            <Slider
-              v-model="priceRange"
-              :min="minPrice"
-              :max="maxPrice"
-              :step="1"
-              range
-              class="mb-2"
-            />
-            <div class="flex justify-between text-sm">
-              <span>${{ priceRange[0] }}</span>
-              <span>${{ priceRange[1] }}</span>
-            </div>
-          </div>
-        </aside>
-      </div>
-      <div class="flex flex-col w-full">
-        <div class="flex justify-end items-center mb-4">
+    <div class="maini-ui__container">
+      <div class="flex flex-row items-center justify-between mb-4">
+        <h2 class="flex text-2xl justify-start font-bold">
+          {{ t("produse") }}
+        </h2>
+        <div class="flex items-center">
           <label class="mr-2 font-medium">Ordonează:</label>
           <Select
             v-model="sortBy"
@@ -60,14 +15,67 @@
             class="w-48"
           />
         </div>
-        <div
-          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
-        >
-          <ProductCard
-            v-for="product in filteredProducts"
-            :key="product.id"
-            :product="product"
-          />
+      </div>
+      <div class="flex flex-row">
+        <div class="flex flex-col w-1/5 flex-shrink-0 mr-8">
+          <aside class="flex flex-col">
+            <div class="mb-4 bg-white rounded-lg p-4 shadow-sm">
+              <div class="font-semibold mb-2">Categories</div>
+              <ul class="flex flex-col space-y-2">
+                <li class="flex items-center">
+                  <Checkbox
+                    :binary="true"
+                    :inputId="'all-products'"
+                    :modelValue="selectAll"
+                    @update:modelValue="handleAllChange"
+                  />
+                  <label for="all-products" class="ml-2">All Products</label>
+                </li>
+
+                <li
+                  v-for="cat in categories"
+                  :key="'cat-' + cat"
+                  class="flex items-center"
+                >
+                  <Checkbox
+                    :inputId="'cat-' + cat"
+                    :binary="true"
+                    :modelValue="selectedCategories.includes(cat)"
+                    @update:modelValue="
+                      (checked) => toggleCategory(cat, checked)
+                    "
+                  />
+                  <label :for="'cat-' + cat" class="ml-2">{{ cat }}</label>
+                </li>
+              </ul>
+            </div>
+            <div class="mb-6 bg-white rounded-lg p-4 shadow-sm">
+              <div class="font-semibold mb-2">Price Range</div>
+              <Slider
+                v-model="priceRange"
+                :min="minPrice"
+                :max="maxPrice"
+                :step="1"
+                range
+                class="mb-2"
+              />
+              <div class="flex justify-between text-sm">
+                <span>${{ priceRange[0] }}</span>
+                <span>${{ priceRange[1] }}</span>
+              </div>
+            </div>
+          </aside>
+        </div>
+        <div class="flex flex-col w-full">
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+          >
+            <ProductCard
+              v-for="product in filteredProducts"
+              :key="product.id"
+              :product="product"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -76,7 +84,6 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from "vue";
-import Dropdown from "primevue/dropdown";
 import Slider from "primevue/slider";
 import Checkbox from "primevue/checkbox";
 import Select from "primevue/select";
