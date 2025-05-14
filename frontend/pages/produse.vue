@@ -9,10 +9,10 @@
             <ul class="flex flex-col space-y-2">
               <li class="flex items-center">
                 <Checkbox
-                  :modelValue="selectedCategories.includes('All')"
-                  @update:modelValue="toggleAll"
                   :binary="true"
                   :inputId="'all-products'"
+                  :modelValue="selectAll"
+                  @update:modelValue="handleAllChange"
                 />
                 <label for="all-products" class="ml-2">All Products</label>
               </li>
@@ -75,7 +75,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import Dropdown from "primevue/dropdown";
 import Slider from "primevue/slider";
 import Checkbox from "primevue/checkbox";
@@ -88,6 +88,8 @@ const sortBy = ref("popularity");
 const priceRange = ref([0, 1000]);
 const minPrice = ref(0);
 const maxPrice = ref(1000);
+
+const selectAll = computed(() => selectedCategories.value.includes("All"));
 
 const sortOptions = [
   { label: "Cele mai populare", value: "popularity" },
@@ -159,23 +161,36 @@ const filteredProducts = computed(() => {
   return filtered;
 });
 
-function toggleAll(checked) {
+function handleAllChange(checked) {
+  console.log("All checkbox changed to:", checked);
   if (checked) {
     selectedCategories.value = ["All"];
   } else {
-    selectedCategories.value = [];
+    if (categories.value.includes("Cani")) {
+      selectedCategories.value = ["Cani"];
+    } else {
+      selectedCategories.value =
+        categories.value.length > 0 ? [categories.value[0]] : [];
+    }
+
+    nextTick(() => {
+      console.log(
+        "Selected categories after unchecking All:",
+        selectedCategories.value
+      );
+    });
   }
 }
 
 function toggleCategory(cat, checked) {
-  // Remove "All" if it's present
+  console.log("Category toggled:", cat, checked);
+
   if (selectedCategories.value.includes("All")) {
     selectedCategories.value = selectedCategories.value.filter(
       (c) => c !== "All"
     );
   }
 
-  // Add or remove the category based on checked state
   if (checked) {
     selectedCategories.value.push(cat);
   } else {
@@ -184,31 +199,11 @@ function toggleCategory(cat, checked) {
     );
   }
 
-  // If no categories are selected, select "All"
   if (selectedCategories.value.length === 0) {
     selectedCategories.value = ["All"];
   }
 }
 </script>
-
-<style scoped>
-/* Asigură că bifa din checkbox este vizibilă */
-:deep(.p-checkbox-box.p-highlight) {
-  background-color: var(--primary-color, #6366f1);
-  border-color: var(--primary-color, #6366f1);
-}
-
-:deep(.p-checkbox-box) {
-  border: 2px solid #ced4da;
-  width: 20px;
-  height: 20px;
-}
-
-:deep(.p-checkbox-icon) {
-  color: white;
-  font-weight: bold;
-}
-</style>
 
 <i18n lang="json">
 {
