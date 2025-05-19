@@ -11,6 +11,7 @@
           <div class="flex md:hidden">
             <button
               class="maini-ui-button flex justify-between w-full h-bg-white border-1 h-border-color-geyser h-color-pickled-bluewood"
+              @click="showCategoryModal = true"
             >
               Filtrează <i class="ph ph-caret-down h-font-size-16"></i>
             </button>
@@ -89,7 +90,12 @@
       </div>
     </div>
   </div>
-  <ModalCategorySelect />
+  <ModalCategorySelect
+    v-model:showModal="showCategoryModal"
+    :categories="categories"
+    :selectedCategories="selectedCategories"
+    @update:selectedCategories="selectedCategories = $event"
+  />
 </template>
 
 <script setup>
@@ -105,6 +111,7 @@ const sortBy = ref("popularity");
 const priceRange = ref([0, 1000]);
 const minPrice = ref(0);
 const maxPrice = ref(1000);
+const showCategoryModal = ref(false);
 
 const selectAll = computed(() => selectedCategories.value.includes("All"));
 
