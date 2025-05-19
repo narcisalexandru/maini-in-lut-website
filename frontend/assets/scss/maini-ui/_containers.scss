@@ -34,4 +34,10 @@
     padding-left: rem(15px);
     padding-right: rem(15px);
   }
+  &__container-products {
+    max-width: rem(1200px);
+    margin: 0 auto;
+    padding-left: rem(5px);
+    padding-right: rem(5px);
+  }
 }

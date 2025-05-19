@@ -1,3 +1,5 @@
+// prettier-ignore
+const defaultTheme = require("tailwindcss/defaultTheme");
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -8,8 +10,6 @@ export default {
     "./app.vue",
   ],
   darkMode: false,
-  theme: {
-    extend: {},
-  },
+  theme: {},
   plugins: [],
 };

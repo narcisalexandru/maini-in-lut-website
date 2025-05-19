@@ -59,6 +59,9 @@
     &-dusty-gray {
       border-color: $dusty-gray !important;
     }
+    &-geyser {
+      border-color: $geyser !important;
+    }
   }
   &color {
     &-white {
@@ -93,6 +96,12 @@
     }
     &-aero-blue {
       color: $aero-blue;
+    }
+    &-geyser {
+      color: $geyser;
+    }
+    &-pickled-bluewood {
+      color: $pickled-bluewood;
     }
   }
   &border-radius {

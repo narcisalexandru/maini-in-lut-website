@@ -1,23 +1,34 @@
 <template>
-  <div class="flex maini-ui__section mx-auto px-4 py-8">
-    <div class="maini-ui__container">
-      <div class="flex flex-row items-center justify-between mb-4">
+  <div class="maini-ui__section md:px-4">
+    <div class="maini-ui__container-products">
+      <div
+        class="flex flex-col mb-4 lg:flex-row lg:items-center lg:justify-between lg:mb-4"
+      >
         <h2 class="flex text-2xl justify-start font-bold">
           {{ t("produse") }}
         </h2>
-        <div class="flex items-center">
-          <label class="mr-2 font-medium">Ordonează:</label>
-          <Select
-            v-model="sortBy"
-            :options="sortOptions"
-            optionLabel="label"
-            optionValue="value"
-            class="w-48"
-          />
+        <div class="grid grid-cols-2 md:flex md:justify-end gap-2">
+          <div class="flex md:hidden">
+            <button
+              class="maini-ui-button flex justify-between w-full h-bg-white border-1 h-border-color-geyser h-color-pickled-bluewood"
+            >
+              Filtrează <i class="ph ph-caret-down h-font-size-16"></i>
+            </button>
+          </div>
+          <div class="flex">
+            <Select
+              v-model="sortBy"
+              :options="sortOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Ordonează"
+              class="text-xs w-full items-center"
+            />
+          </div>
         </div>
       </div>
       <div class="flex flex-row">
-        <div class="flex flex-col w-1/5 flex-shrink-0 mr-8">
+        <div class="hidden md:flex flex-col w-1/5 flex-shrink-0 mr-8">
           <aside class="flex flex-col">
             <div class="mb-4 bg-white rounded-lg p-4 shadow-sm">
               <div class="font-semibold mb-2">Categories</div>
@@ -67,9 +78,7 @@
           </aside>
         </div>
         <div class="flex flex-col w-full">
-          <div
-            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
-          >
+          <div class="grid grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-6">
             <ProductCard
               v-for="product in filteredProducts"
               :key="product.id"
@@ -80,6 +89,7 @@
       </div>
     </div>
   </div>
+  <ModalCategorySelect />
 </template>
 
 <script setup>
@@ -104,7 +114,6 @@ const sortOptions = [
   { label: "Pret crescator", value: "price-asc" },
   { label: "Pret descrescator", value: "price-desc" },
   { label: "Discount", value: "discount" },
-  { label: "Nr. review-uri", value: "reviews" },
 ];
 
 const { t } = useI18n({
@@ -161,9 +170,6 @@ const filteredProducts = computed(() => {
     case "discount":
       filtered = [...filtered].sort((a, b) => b.discount - a.discount);
       break;
-    case "reviews":
-      filtered = [...filtered].sort((a, b) => b.reviewsCount - a.reviewsCount);
-      break;
   }
   return filtered;
 });
@@ -211,6 +217,12 @@ function toggleCategory(cat, checked) {
   }
 }
 </script>
+
+<style scoped>
+.maini-ui-button {
+  font-size: 12px;
+}
+</style>
 
 <i18n lang="json">
 {
