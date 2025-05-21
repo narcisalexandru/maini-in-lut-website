@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative"
+    class="bg-white flex flex-col flex-1 shrink rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative"
   >
     <div class="relative h-48">
       <img
@@ -27,22 +27,36 @@
         Popular
       </span>
     </div>
-    <div class="p-4">
-      <h3 class="text-lg font-semibold text-gray-800 mb-2">
+    <div class="flex flex-1 flex-col shrink p-2">
+      <h3 class="flex flex-1 text-sm font-semibold text-gray-800 mb-2">
         {{ product.title }}
       </h3>
       <div class="flex items-center space-x-2 mb-1">
         <span
           v-if="product.discount > 0"
-          class="text-gray-400 line-through text-sm"
+          class="text-gray-400 line-through text-xs"
           >{{ product.priceBeforeDiscount }} RON</span
         >
-        <span class="text-xl font-bold text-primary-600"
+        <span class="flex text-sm font-bold text-primary-600"
           >{{ product.price }} RON</span
         >
       </div>
-      <div class="text-xs text-gray-500">
-        {{ product.reviewsCount }} review-uri
+      <div class="flex w-full items-center justify-center">
+        <Button
+          class="maini-ui-button__heart transition-all duration-300 w-1/4 sm:w-1/5 md:w-1/6 h-bg-transparent border-none group"
+        >
+          <i
+            class="ph ph-heart transition-all duration-300 group-hover:hidden h-color-primary"
+          ></i>
+          <i
+            class="ph ph-fill transition-all duration-300 ph-heart hidden group-hover:block h-color-primary"
+          ></i>
+        </Button>
+        <Button
+          class="maini-ui-button__buy w-full flex justify-center items-center h-bg-primary h-color-white border-none"
+        >
+          Adaugă în coș
+        </Button>
       </div>
     </div>
   </div>

@@ -95,6 +95,7 @@
     :categories="categories"
     :selectedCategories="selectedCategories"
     @update:selectedCategories="selectedCategories = $event"
+    :numberofProducts="filteredProducts.length"
   />
 </template>
 

@@ -1,7 +1,7 @@
 @use "sass:color";
 
-$color-primary: #8a9772;
-$color-secondary: #fff9f5;
+$battleship-gray: #8a9772;
+$soapstone: #fff9f5;
 $palm-leaf: #144111;
 $alto: #e8e8e8;
 $lunar-green: #414241;
@@ -12,6 +12,10 @@ $aero-blue: #d1fae5;
 $castleton-green: #065f46;
 $geyser: #cbd5e1;
 $pickled-bluewood: #334155;
+
+$color-primary: $battleship-gray;
+$color-secondary: $soapstone;
+
 $base-font-size-px: 16px;
 
 $breakpoints: (

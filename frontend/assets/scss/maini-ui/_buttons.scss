@@ -57,26 +57,44 @@
         0 1px 3px 1px rgba(60, 64, 67, 0.15);
     }
   }
-  //   &__link-primary {
-  //     font-size: rem(16px);
-  //     color: $haiti;
-  //     font-weight: 500;
-  //     transition: all 0.3s ease;
-  //     cursor: pointer;
-  //     &:hover {
-  //       text-decoration: underline !important;
-  //       transition: all 0.3s ease;
-  //     }
-  //   }
-  //   &__link-primary-white {
-  //     font-size: rem(16px);
-  //     color: $white;
-  //     font-weight: 500;
-  //     transition: all 0.3s ease;
-  //     cursor: pointer;
-  //     &:hover {
-  //       text-decoration: underline !important;
-  //       transition: all 0.3s ease;
-  //     }
-  //   }
+
+  &__buy {
+    border: 0px;
+
+    font-size: 14px;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+
+    &:enabled:hover {
+      background-color: color.scale($color-primary, $lightness: -10%);
+      border: 0px;
+      transition: all 0.3s ease;
+    }
+    &:enabled:active {
+      background-color: $lunar-green;
+      transition: all 0.3s ease;
+    }
+  }
+  &__heart {
+    padding: 6px;
+    font-size: 20px;
+    border: 0px;
+
+    &:enabled:hover {
+      background-color: transparent;
+      border: 0px;
+      transition: all 0.3s ease;
+    }
+    &:enabled:active {
+      background-color: transparent;
+      border: 0px;
+      transition: all 0.3s ease;
+    }
+
+    @media (min-width: 768px) {
+      font-size: 22px;
+    }
+  }
 }

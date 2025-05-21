@@ -4,7 +4,6 @@
     position="bottom"
     @update:visible="(val) => emit('update:showModal', val)"
     modal
-    draggable="false"
     class="w-full !m-0 !rounded-none"
   >
     <template #header>
@@ -40,6 +39,14 @@
         </ul>
       </div>
     </div>
+    <div class="flex justify-center">
+      <button
+        class="maini-ui-button w-full bg-white border-1 h-border-color-geyser"
+        @click="emit('update:showModal', false)"
+      >
+        Vezi produse ({{ numberofProducts }})
+      </button>
+    </div>
   </Dialog>
 </template>
 
@@ -59,6 +66,10 @@ const props = defineProps({
   },
   selectedCategories: {
     type: Array,
+    required: true,
+  },
+  numberofProducts: {
+    type: Number,
     required: true,
   },
 });

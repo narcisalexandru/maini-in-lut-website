@@ -1,0 +1,23 @@
+@use "../../_variables" as vars;
+
+.p-checkbox {
+  .p-checkbox-box {
+    border: 1px solid vars.$color-primary !important;
+    background: transparent;
+
+    &:hover {
+      border-color: vars.$color-primary !important;
+    }
+  }
+
+  .p-checkbox-icon {
+    color: white;
+  }
+
+  &.p-checkbox-checked {
+    .p-checkbox-box {
+      background: vars.$color-primary !important;
+      border-color: vars.$color-primary !important;
+    }
+  }
+}
