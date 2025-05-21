@@ -1,0 +1,27 @@
+@use "../../_variables" as vars;
+@use "sass:color";
+
+.p-select {
+  border: 1px solid vars.$color-primary !important;
+}
+
+.p-select-option-selected,
+.p-select-option-selected.p-focus {
+  background: rgba(vars.$color-primary, 1) !important;
+  color: #fff !important;
+
+  &:hover {
+    background: rgba(
+      color.scale(vars.$color-primary, $lightness: -15%),
+      0.8
+    ) !important;
+    color: #fff !important;
+  }
+}
+
+.p-select-option {
+  &:hover {
+    background: rgba(vars.$color-primary, 0.8) !important;
+    color: #fff !important;
+  }
+}

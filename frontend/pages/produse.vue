@@ -247,12 +247,6 @@ const handlePriceRangeChange = (newValue) => {
 };
 </script>
 
-<style scoped>
-.maini-ui-button {
-  font-size: 12px;
-}
-</style>
-
 <i18n lang="json">
 {
   "en": {
