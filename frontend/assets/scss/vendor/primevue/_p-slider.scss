@@ -11,9 +11,16 @@
     box-shadow: 0 0 0 2px rgba(vars.$color-primary, 0.15);
 
     &:hover,
+    &:active,
     &:focus {
       border-color: vars.$color-primary !important;
-      box-shadow: 0 0 0 4px rgba(vars.$color-primary, 0.2);
+      box-shadow: none !important;
+      outline: none !important;
+    }
+
+    &:focus {
+      outline: none !important;
+      box-shadow: none !important;
     }
   }
 }
