@@ -70,6 +70,11 @@
                 :step="1"
                 range
                 class="mb-2"
+                :pt="{
+                  range: { class: 'bg-primary' },
+                  handle: { class: 'border-primary' },
+                }"
+                @update:modelValue="handlePriceRangeChange"
               />
               <div class="flex justify-between text-sm">
                 <span>${{ priceRange[0] }}</span>
@@ -100,7 +105,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from "vue";
+import { ref, computed, onMounted, nextTick, watch } from "vue";
 import Slider from "primevue/slider";
 import Checkbox from "primevue/checkbox";
 import Select from "primevue/select";
@@ -224,6 +229,22 @@ function toggleCategory(cat, checked) {
     selectedCategories.value = ["All"];
   }
 }
+
+const handlePriceRangeChange = (newValue) => {
+  const [min, max] = newValue;
+
+  if (min > max) {
+    priceRange.value = [max, max];
+    return;
+  }
+
+  if (max < min) {
+    priceRange.value = [min, min];
+    return;
+  }
+
+  priceRange.value = [min, max];
+};
 </script>
 
 <style scoped>
