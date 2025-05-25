@@ -2,6 +2,8 @@ import Aura from "@primeuix/themes/aura";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
+  ssr: true,
+
   imports: {
     autoImport: true,
   },
