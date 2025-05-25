@@ -77,24 +77,4 @@
       transition: all 0.3s ease;
     }
   }
-  &__heart {
-    padding: 6px;
-    font-size: 20px;
-    border: 0px;
-
-    &:enabled:hover {
-      background-color: transparent;
-      border: 0px;
-      transition: all 0.3s ease;
-    }
-    &:enabled:active {
-      background-color: transparent;
-      border: 0px;
-      transition: all 0.3s ease;
-    }
-
-    @media (min-width: 768px) {
-      font-size: 22px;
-    }
-  }
 }
