@@ -1,8 +1,3 @@
----
-description: 
-globs: 
-alwaysApply: true
----
 # AI Context for Cursor
 
 ## 🏗️ Tech Stack
