@@ -1,5 +1,5 @@
-@use "../_functions" as *;
-@use "../_variables" as *;
+@use "../_functions.scss" as *;
+@use "../_variables.scss" as *;
 
 .maini-ui__heading {
   font-size: rem(32px);

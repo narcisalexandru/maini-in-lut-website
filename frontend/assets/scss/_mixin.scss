@@ -1,4 +1,4 @@
-@use "variables" as *;
+@use "variables.scss" as *;
 
 @mixin generate-font-size-classes($size) {
   .h-font-size-#{$size} {
