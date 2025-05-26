@@ -62,42 +62,27 @@
   }
 
   &__buy {
-    border: 0px;
+    border: 0px !important;
 
-    font-size: 14px;
-    padding-left: 5px;
-    padding-right: 5px;
-    padding-top: 4px;
-    padding-bottom: 4px;
+    font-size: 14px !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
 
+    background-color: $color-primary !important;
+    color: $white !important;
     &:enabled:hover {
-      background-color: color.scale($color-primary, $lightness: -10%);
-      border: 0px;
-      transition: all 0.3s ease;
+      background-color: color.scale(
+        $color-primary,
+        $lightness: -10%
+      ) !important;
+      border: 0px !important;
+      transition: all 0.3s ease !important;
     }
     &:enabled:active {
-      background-color: $lunar-green;
-      transition: all 0.3s ease;
-    }
-  }
-  &__heart {
-    padding: 6px;
-    font-size: 20px;
-    border: 0px;
-
-    &:enabled:hover {
-      background-color: transparent;
-      border: 0px;
-      transition: all 0.3s ease;
-    }
-    &:enabled:active {
-      background-color: transparent;
-      border: 0px;
-      transition: all 0.3s ease;
-    }
-
-    @media (min-width: 768px) {
-      font-size: 22px;
+      background-color: $lunar-green !important;
+      transition: all 0.3s ease !important;
     }
   }
 }

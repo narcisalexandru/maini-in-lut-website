@@ -77,8 +77,8 @@
                 @update:modelValue="handlePriceRangeChange"
               />
               <div class="flex justify-between text-sm">
-                <span>${{ priceRange[0] }}</span>
-                <span>${{ priceRange[1] }}</span>
+                <span>{{ priceRange[0] }} lei</span>
+                <span>{{ priceRange[1] }} lei</span>
               </div>
             </div>
           </aside>
