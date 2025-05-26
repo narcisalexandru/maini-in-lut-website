@@ -68,11 +68,14 @@ export const useAuth = () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await fetch("http://localhost:4000/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        "https://maini-in-lut-website.onrender.com/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       const data = await response.json();
 
@@ -109,11 +112,14 @@ export const useAuth = () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await fetch("http://localhost:4000/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData),
-      });
+      const response = await fetch(
+        "https://maini-in-lut-website.onrender.com/auth/register",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(userData),
+        }
+      );
 
       const data = await response.json();
 
@@ -153,7 +159,8 @@ export const useAuth = () => {
   };
 
   const googleAuth = () => {
-    window.location.href = "http://localhost:4000/auth/google";
+    window.location.href =
+      "https://maini-in-lut-website.onrender.com/auth/google";
   };
 
   const checkAuth = () => {
@@ -179,11 +186,14 @@ export const useAuth = () => {
         return;
       }
 
-      const response = await fetch("http://localhost:4000/users/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        "https://maini-in-lut-website.onrender.com/users/profile",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to load user data");
@@ -214,14 +224,17 @@ export const useAuth = () => {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch("http://localhost:4000/users/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updateData),
-      });
+      const response = await fetch(
+        "https://maini-in-lut-website.onrender.com/users/profile",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(updateData),
+        }
+      );
 
       const data = await response.json();
 

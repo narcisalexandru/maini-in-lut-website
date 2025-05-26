@@ -142,7 +142,9 @@ defineI18nRoute({
 
 onMounted(async () => {
   try {
-    const response = await fetch("http://localhost:4000/products");
+    const response = await fetch(
+      "https://maini-in-lut-website.onrender.com/products"
+    );
     const data = await response.json();
     products.value = data;
     categories.value = [...new Set(data.map((p) => p.category))];

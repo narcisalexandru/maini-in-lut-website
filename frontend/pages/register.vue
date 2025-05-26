@@ -16,7 +16,7 @@
           :disabled="isLoading"
         >
           <nuxt-img
-            src="images/google-logo.svg"
+            src="/images/google-logo.svg"
             alt="Google"
             class="w-4 h-4 mr-1"
           />

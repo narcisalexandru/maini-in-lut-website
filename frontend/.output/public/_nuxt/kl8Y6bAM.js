@@ -1,1 +1,0 @@
-import{g as o,c as s,a as t,o as a}from"./BG0I7BMR.js";const u={__name:"cos",setup(n){const{t:c}=o({useScope:"local"});return(l,e)=>(a(),s("div",null,e[0]||(e[0]=[t("h1",null,"Cos",-1)])))}};export{u as default};

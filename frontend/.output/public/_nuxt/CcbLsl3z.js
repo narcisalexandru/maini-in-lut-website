@@ -1,1 +1,0 @@
-import{g as o,c as t,a,o as s}from"./BG0I7BMR.js";const u={__name:"favorite",setup(r){const{t:n}=o({useScope:"local"});return(l,e)=>(s(),t("div",null,e[0]||(e[0]=[a("h1",null,"Favorite",-1)])))}};export{u as default};

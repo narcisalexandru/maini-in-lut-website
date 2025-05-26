@@ -25,7 +25,11 @@ export default defineNuxtConfig({
         { name: "description", content: "Maini in Lut" },
       ],
       link: [
-        { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
+        {
+          rel: "icon",
+          type: "image/x-icon",
+          href: "/images/logo.png",
+        },
         {
           rel: "stylesheet",
           type: "text/css",
@@ -78,7 +82,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: import.meta.env.API_BASE_URL || "http://localhost:4000",
+      apiBase:
+        process.env.API_BASE_URL || "https://maini-in-lut-website.onrender.com",
     },
   },
 
