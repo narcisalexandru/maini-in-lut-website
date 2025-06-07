@@ -69,7 +69,7 @@ export const useAuth = () => {
       error.value = null;
 
       const response = await fetch(
-        "https://maini-in-lut-website.onrender.com/auth/login",
+        `${import.meta.env.VITE_BACKEND_URL}/auth/login`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -113,7 +113,7 @@ export const useAuth = () => {
       error.value = null;
 
       const response = await fetch(
-        "https://maini-in-lut-website.onrender.com/auth/register",
+        `${import.meta.env.VITE_BACKEND_URL}/auth/register`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -159,8 +159,7 @@ export const useAuth = () => {
   };
 
   const googleAuth = () => {
-    window.location.href =
-      "https://maini-in-lut-website.onrender.com/auth/google";
+    window.location.href = `${import.meta.env.VITE_BACKEND_URL}/auth/google`;
   };
 
   const checkAuth = () => {
@@ -187,7 +186,7 @@ export const useAuth = () => {
       }
 
       const response = await fetch(
-        "https://maini-in-lut-website.onrender.com/users/profile",
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -225,7 +224,7 @@ export const useAuth = () => {
       }
 
       const response = await fetch(
-        "https://maini-in-lut-website.onrender.com/users/profile",
+        `${import.meta.env.VITE_BACKEND_URL}/users/profile`,
         {
           method: "PUT",
           headers: {
@@ -242,7 +241,6 @@ export const useAuth = () => {
         throw new Error(data.message || "Profile update failed");
       }
 
-      // Update local user data with the new values
       const updatedUser = { ...user.value, ...data };
       user.value = updatedUser;
       localStorage.setItem("user", JSON.stringify(updatedUser));

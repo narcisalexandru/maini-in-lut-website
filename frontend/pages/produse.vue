@@ -143,7 +143,7 @@ defineI18nRoute({
 onMounted(async () => {
   try {
     const response = await fetch(
-      "https://maini-in-lut-website.onrender.com/products"
+      `${import.meta.env.VITE_BACKEND_URL}/products`
     );
     const data = await response.json();
     products.value = data;
