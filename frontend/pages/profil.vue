@@ -3,9 +3,9 @@
     <div class="maini-ui__container">
       <h1 class="maini-ui__heading text-left">{{ t("title") }}</h1>
       <div class="h-font-size-16 text-left mb-8">{{ t("sub-title") }}</div>
-      <div class="maini-ui__container h-bg-white p-8 rounded-xl shadow-md">
-        <div class="flex flex-row">
-          <div class="flex w-1/5 justify-center">
+      <div class="h-bg-white p-4 md:p-8 rounded-xl shadow-md">
+        <div class="flex flex-col md:flex-row">
+          <div class="flex w-full justify-start md:w-1/6 md:justify-start">
             <nuxt-img
               :src="user.picture"
               :alt="user.name"
@@ -13,8 +13,8 @@
             />
           </div>
           <div class="flex flex-col w-full">
-            <div class="flex flex-row gap-96 w-full">
-              <div class="flex flex-col">
+            <div class="flex flex-col md:flex-row md:gap-96 w-full">
+              <div class="flex flex-col mt-4 md:mt-0">
                 <div class="h-font-size-16 h-color-lunar-green">
                   {{ t("first-name") }}
                 </div>
@@ -22,7 +22,7 @@
                   {{ user.first_name }}
                 </div>
               </div>
-              <div class="flex flex-col">
+              <div class="flex flex-col mt-4 md:mt-0">
                 <div class="h-font-size-16 h-color-lunar-green">
                   {{ t("last-name") }}
                 </div>
@@ -190,7 +190,7 @@
           </div>
         </div>
       </div>
-      <div class="h-bg-white p-8 rounded-xl shadow-md mt-8">
+      <div class="h-bg-white p-4 md:p-8 rounded-xl shadow-md mt-8">
         <h2
           class="h-font-size-18 text-left h-color-palm-leaf h-font-weight-700 mb-4"
         >
@@ -236,13 +236,13 @@
           </Button>
         </div>
       </div>
-      <div class="h-bg-white p-8 rounded-xl shadow-md mt-8">
-        <h2
+      <div class="h-bg-white p-4 md:p-8 rounded-xl shadow-md mt-8">
+        <div
           class="h-font-size-18 text-left h-color-palm-leaf h-font-weight-700 mb-4"
         >
           {{ t("account-settings") }}
-        </h2>
-        <div class="flex flex-col gap-4">
+        </div>
+        <div class="flex items-center md:items-start flex-col gap-4">
           <div class="flex flex-col gap-2">
             <div class="h-color-lunar-green">{{ t("logout-message") }}</div>
             <Button

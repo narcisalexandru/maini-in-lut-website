@@ -1,0 +1,5 @@
+@use "../../_variables.scss" as vars;
+
+.p-toast {
+  max-width: calc(100vw - 40px);
+}

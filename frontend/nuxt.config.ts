@@ -83,7 +83,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase:
-        process.env.API_BASE_URL || "https://maini-in-lut-website.onrender.com",
+        process.env.API_BASE_URL || `${import.meta.env.VITE_BACKEND_URL}`,
     },
   },
 
