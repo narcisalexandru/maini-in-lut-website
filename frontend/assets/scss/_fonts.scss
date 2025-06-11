@@ -8,7 +8,7 @@ $ultrathin: 100;
 
 @include webfont(
   "Noto_Serif",
-  "noto_serif_variable",
+  "/fonts/NotoSerif/noto_serif_variable.woff2",
   $regular,
   normal,
   "U+0000-007F"
@@ -16,7 +16,7 @@ $ultrathin: 100;
 
 @include webfont(
   "Noto_Serif",
-  "noto_serif_variable",
+  "/fonts/NotoSerif/noto_serif_variable.woff2",
   $bold,
   normal,
   "U+0000-007F"

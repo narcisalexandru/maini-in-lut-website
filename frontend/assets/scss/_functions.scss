@@ -17,8 +17,7 @@ $base-font-size-px: 16px;
     font-display: swap;
     font-style: $style;
     font-weight: $weight;
-    src: url(../../fonts/NotoSerif/#{$file}.woff2) format("woff2"),
-      url(../../fonts/NotoSerif/#{$file}.woff) format("woff");
+    src: url(#{$file}) format("woff2"), url(#{$file}) format("woff");
     unicode-range: $range;
   }
 }
