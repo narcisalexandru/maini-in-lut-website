@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   ssr: true,
 
   nitro: {
-    preset: "node",
+    preset: "netlify",
   },
 
   imports: {
@@ -91,5 +91,5 @@ export default defineNuxtConfig({
     },
   },
 
-  compatibilityDate: "2025-04-02",
+  // compatibilityDate: "2025-04-02",
 });
