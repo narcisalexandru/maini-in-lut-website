@@ -5,10 +5,7 @@ export default defineNuxtConfig({
   ssr: true,
 
   nitro: {
-    prerender: {
-      crawlLinks: true,
-      failOnError: false,
-    },
+    preset: "netlify",
   },
 
   imports: {
