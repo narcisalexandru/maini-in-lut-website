@@ -242,7 +242,7 @@
         >
           {{ t("account-settings") }}
         </div>
-        <div class="flex items-center md:items-start flex-col gap-4">
+        <div class="flex items-start flex-col gap-4">
           <div class="flex flex-col gap-2">
             <div class="h-color-lunar-green">{{ t("logout-message") }}</div>
             <Button
