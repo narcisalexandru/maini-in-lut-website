@@ -141,3 +141,5 @@ dist
 .netlify
 
 frontend/.env
+
+*.env
