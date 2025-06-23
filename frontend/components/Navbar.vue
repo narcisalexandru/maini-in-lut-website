@@ -7,8 +7,8 @@
             @click="isOpen = !isOpen"
             class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
           >
-            <i class="ph ph-list text-2xl" v-if="!isOpen"></i>
-            <i class="ph ph-x text-2xl" v-else></i>
+            <i class="ph ph-list text-2xl h-color-secondary" v-if="!isOpen"></i>
+            <i class="ph ph-x text-2xl h-color-secondary" v-else></i>
           </button>
         </div>
 
@@ -62,7 +62,7 @@
           v-for="item in menuItems"
           :key="item.to"
           :to="$localePath(item.to)"
-          class="text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium"
+          class="h-color-secondary hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium"
         >
           {{ item.label }}
         </nuxt-link>
