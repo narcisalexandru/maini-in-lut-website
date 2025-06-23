@@ -143,3 +143,6 @@ dist
 frontend/.env
 
 *.env
+
+frontend/pages/maintenance.vue
+frontend/middleware/maintenance.global.ts
