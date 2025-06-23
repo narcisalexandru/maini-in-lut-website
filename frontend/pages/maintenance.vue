@@ -2,10 +2,8 @@
   <div
     class="relative flex flex-col text-center justify-center items-center min-h-screen bg-gray-100 overflow-hidden"
   >
-    <!-- Artificii -->
     <canvas id="fireworks" class="absolute inset-0 z-0"></canvas>
 
-    <!-- Conținut principal -->
     <div class="z-10 px-4">
       <h1 class="text-3xl md:text-5xl font-bold mb-4 text-gray-800">
         Mulțumim pentru încredere!
@@ -44,7 +42,6 @@
 <script setup>
 definePageMeta({ layout: "empty" });
 
-// Fireworks logic (canvas)
 onMounted(() => {
   const canvas = document.getElementById("fireworks");
   const ctx = canvas.getContext("2d");
@@ -96,10 +93,10 @@ onMounted(() => {
 });
 
 function openWhatsApp() {
-  window.open("https://wa.me/40712345678", "_blank"); // Inlocuieste cu numarul tau real
+  window.open("https://wa.me/40771032007", "_blank");
 }
 function openInstagram() {
-  window.open("https://instagram.com/maini.in.lut", "_blank"); // Inlocuieste cu profilul tau real
+  window.open("https://www.instagram.com/maini.in.lut/", "_blank");
 }
 </script>
 
