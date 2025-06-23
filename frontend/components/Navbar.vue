@@ -1,10 +1,10 @@
 <template>
-  <nav class="h-bg-primary shadow-md px-4 md:px-12">
+  <nav class="h-bg-primary shadow-md px-4 md:px-12 relative">
     <div class="w-full mx-auto">
       <div class="flex justify-between items-center h-16">
         <div class="flex md:hidden">
           <button
-            @click="isOpen = !isOpen"
+            @click.stop="isOpen = !isOpen"
             class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
           >
             <i class="ph ph-list text-2xl h-color-secondary" v-if="!isOpen"></i>
@@ -57,12 +57,17 @@
     </div>
 
     <div class="md:hidden" v-if="isOpen">
-      <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+      <div
+        ref="mobileMenu"
+        @click.stop
+        class="absolute left-0 right-0 top-16 z-50 px-2 pt-2 pb-3 space-y-1 sm:px-3 h-bg-primary shadow-lg"
+      >
         <nuxt-link
           v-for="item in menuItems"
           :key="item.to"
           :to="$localePath(item.to)"
           class="h-color-secondary hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium"
+          @click="isOpen = false"
         >
           {{ item.label }}
         </nuxt-link>
@@ -72,13 +77,32 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 
 const { t } = useI18n({
   useScope: "local",
 });
 
 const isOpen = ref(false);
+const mobileMenu = ref(null);
+
+const handleClickOutside = (event) => {
+  if (
+    isOpen.value &&
+    mobileMenu.value &&
+    !mobileMenu.value.contains(event.target)
+  ) {
+    isOpen.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", handleClickOutside);
+});
 
 const menuItems = [
   {
