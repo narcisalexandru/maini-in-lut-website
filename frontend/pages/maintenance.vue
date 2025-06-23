@@ -96,10 +96,10 @@ onMounted(() => {
 });
 
 function openWhatsApp() {
-  window.open("https://wa.me/40712345678", "_blank"); // Inlocuieste cu numarul tau real
+  window.open("https://wa.me/40771032007", "_blank");
 }
 function openInstagram() {
-  window.open("https://instagram.com/maini.in.lut", "_blank"); // Inlocuieste cu profilul tau real
+  window.open("https://instagram.com/maini.in.lut", "_blank");
 }
 </script>
 
