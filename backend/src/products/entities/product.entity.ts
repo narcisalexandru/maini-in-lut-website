@@ -5,8 +5,8 @@ export class Product {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  title: string;
+  @Column('simple-json')
+  title: { ro: string; en: string };
 
   @Column()
   description: string;

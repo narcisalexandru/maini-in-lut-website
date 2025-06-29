@@ -6,7 +6,10 @@ export class ProductsService {
   private readonly products: Product[] = [
     {
       id: 1,
-      title: 'Cana cu toartă - Căpșuni',
+      title: {
+        ro: 'Cana cu toartă - Căpșuni',
+        en: 'Mug with Handle - Strawberries',
+      },
       description:
         'Cana din lut ars cu motive de căpșuni, perfectă pentru cafea sau ceai',
       price: 45.0,
@@ -21,7 +24,7 @@ export class ProductsService {
     },
     {
       id: 2,
-      title: 'Vază - Flori de Primăvară',
+      title: { ro: 'Vază - Flori de Primăvară', en: 'Vase - Spring Flowers' },
       description:
         'Vază decorativă cu motive florale, ideală pentru buchete de primăvară',
       price: 85.0,
@@ -36,7 +39,10 @@ export class ProductsService {
     },
     {
       id: 3,
-      title: 'Set 3 Căni - Culori Pastel',
+      title: {
+        ro: 'Set 3 Căni - Culori Pastel',
+        en: 'Set of 3 Mugs - Pastel Colors',
+      },
       description:
         'Set de 3 căni din lut cu culori pastel, perfecte pentru familie',
       price: 120.0,
@@ -51,7 +57,10 @@ export class ProductsService {
     },
     {
       id: 4,
-      title: 'Platou - Motive Tradiționale',
+      title: {
+        ro: 'Platou - Motive Tradiționale',
+        en: 'Plate - Traditional Motifs',
+      },
       description: 'Platou decorativ cu motive tradiționale românești',
       price: 65.0,
       image: '/images/products/image-47.png',
@@ -65,7 +74,7 @@ export class ProductsService {
     },
     {
       id: 5,
-      title: 'Cănițe - Set 6 Bucăți',
+      title: { ro: 'Cănițe - Set 6 Bucăți', en: 'Mugs - Set of 6 Pieces' },
       description: 'Set de 6 cănițe pentru espresso, cu design modern',
       price: 150.0,
       image: '/images/products/image-46.png',
@@ -79,7 +88,7 @@ export class ProductsService {
     },
     {
       id: 6,
-      title: 'Vază - Design Modern',
+      title: { ro: 'Vază - Design Modern', en: 'Vase - Modern Design' },
       description:
         'Vază modernă cu design minimalist, perfectă pentru orice decor',
       price: 95.0,
@@ -94,7 +103,7 @@ export class ProductsService {
     },
     {
       id: 7,
-      title: 'Platou - Frunze de Toamnă',
+      title: { ro: 'Platou - Frunze de Toamnă', en: 'Plate - Autumn Leaves' },
       description: 'Platou decorativ cu motive de frunze de toamnă',
       price: 75.0,
       image: '/images/products/image-44.png',
@@ -108,7 +117,10 @@ export class ProductsService {
     },
     {
       id: 8,
-      title: 'Cana cu Toartă - Motive Geometrice',
+      title: {
+        ro: 'Cana cu Toartă - Motive Geometrice',
+        en: 'Mug with Handle - Geometric Motifs',
+      },
       description: 'Cana din lut cu design geometric modern',
       price: 50.0,
       image: '/images/products/image-43.png',
@@ -122,7 +134,10 @@ export class ProductsService {
     },
     {
       id: 9,
-      title: 'Set 4 Farfurii - Design Rustic',
+      title: {
+        ro: 'Set 4 Farfurii - Design Rustic',
+        en: 'Set of 4 Plates - Rustic Design',
+      },
       description: 'Set de 4 farfurii cu design rustic, perfecte pentru masă',
       price: 180.0,
       image: '/images/products/image-42.png',
@@ -136,7 +151,7 @@ export class ProductsService {
     },
     {
       id: 10,
-      title: 'Vază - Motive Marine',
+      title: { ro: 'Vază - Motive Marine', en: 'Vase - Marine Motifs' },
       description:
         'Vază decorativă cu motive marine, ideală pentru decorul de vară',
       price: 110.0,

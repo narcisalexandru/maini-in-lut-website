@@ -5,7 +5,7 @@
         class="flex flex-col mb-4 lg:flex-row lg:items-center lg:justify-between lg:mb-4"
       >
         <h2 class="flex text-2xl justify-start font-bold">
-          {{ t("produse") }}
+          {{ t("products") }}
         </h2>
         <div class="grid grid-cols-2 md:flex md:justify-end gap-2">
           <div class="flex md:hidden">
@@ -13,7 +13,7 @@
               class="maini-ui-button flex justify-between items-center w-full h-bg-transparent border-1 h-border-color-geyser h-color-pickled-bluewood"
               @click="showCategoryModal = true"
             >
-              <div class="text-xs">Filtrează</div>
+              <div class="text-xs">{{ t("filter") }}</div>
             </button>
           </div>
           <div class="flex">
@@ -31,7 +31,7 @@
         <div class="hidden md:flex flex-col w-1/5 flex-shrink-0 mr-8">
           <aside class="flex flex-col">
             <div class="mb-4 bg-white rounded-lg p-4 shadow-sm">
-              <div class="font-semibold mb-2">Categories</div>
+              <div class="font-semibold mb-2">{{ t("categories") }}</div>
               <ul class="flex flex-col space-y-2">
                 <li class="flex items-center">
                   <Checkbox
@@ -40,9 +40,10 @@
                     :modelValue="selectAll"
                     @update:modelValue="handleAllChange"
                   />
-                  <label for="all-products" class="ml-2">All Products</label>
+                  <label for="all-products" class="ml-2">{{
+                    t("allProducts")
+                  }}</label>
                 </li>
-
                 <li
                   v-for="cat in categories"
                   :key="'cat-' + cat"
@@ -56,12 +57,14 @@
                       (checked) => toggleCategory(cat, checked)
                     "
                   />
-                  <label :for="'cat-' + cat" class="ml-2">{{ cat }}</label>
+                  <label :for="'cat-' + cat" class="ml-2">{{
+                    t("category." + cat) || cat
+                  }}</label>
                 </li>
               </ul>
             </div>
             <div class="mb-6 bg-white rounded-lg p-4 shadow-sm">
-              <div class="font-semibold mb-2">Price Range</div>
+              <div class="font-semibold mb-2">{{ t("priceRange") }}</div>
               <Slider
                 v-model="priceRange"
                 :min="minPrice"
@@ -76,8 +79,8 @@
                 @update:modelValue="handlePriceRangeChange"
               />
               <div class="flex justify-between text-sm">
-                <span>{{ priceRange[0] }} lei</span>
-                <span>{{ priceRange[1] }} lei</span>
+                <span>{{ formatPrice(priceRange[0]) }}</span>
+                <span>{{ formatPrice(priceRange[1]) }}</span>
               </div>
             </div>
           </aside>
@@ -104,7 +107,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import Slider from "primevue/slider";
 import Checkbox from "primevue/checkbox";
 import Select from "primevue/select";
@@ -120,17 +123,39 @@ const showCategoryModal = ref(false);
 
 const selectAll = computed(() => selectedCategories.value.includes("All"));
 
-const sortOptions = [
-  { label: "Cele mai populare", value: "popularity" },
-  { label: "Cele mai noi", value: "newest" },
-  { label: "Pret crescator", value: "price-asc" },
-  { label: "Pret descrescator", value: "price-desc" },
-  { label: "Discount", value: "discount" },
-];
-
-const { t } = useI18n({
+const { t, locale } = useI18n({
   useScope: "local",
 });
+
+const EUR_RATE = 5;
+
+const CATEGORY_KEY_MAP = {
+  Căni: "Mugs",
+  Vaze: "Vases",
+  Platouri: "Platters",
+  Farfurii: "Plates",
+  Mugs: "Mugs",
+  Vases: "Vases",
+  Platters: "Platters",
+  Plates: "Plates",
+};
+
+function formatPrice(price) {
+  if (typeof price !== "number" || isNaN(price)) return "";
+  if (locale.value === "en") {
+    return `${(price / EUR_RATE).toFixed(2)} €`;
+  } else {
+    return `${price} lei`;
+  }
+}
+
+const sortOptions = [
+  { label: t("sort_popularity"), value: "popularity" },
+  { label: t("sort_newest"), value: "newest" },
+  { label: t("sort_price_asc"), value: "price-asc" },
+  { label: t("sort_price_desc"), value: "price-desc" },
+  { label: t("sort_discount"), value: "discount" },
+];
 
 defineI18nRoute({
   paths: {
@@ -146,7 +171,9 @@ onMounted(async () => {
     );
     const data = await response.json();
     products.value = data;
-    categories.value = [...new Set(data.map((p) => p.category))];
+    categories.value = [
+      ...new Set(data.map((p) => CATEGORY_KEY_MAP[p.category] || p.category)),
+    ];
     const prices = data.map((p) => p.price);
     minPrice.value = Math.min(...prices);
     maxPrice.value = Math.max(...prices);
@@ -160,7 +187,9 @@ const filteredProducts = computed(() => {
   let filtered = products.value;
   if (!selectedCategories.value.includes("All")) {
     filtered = filtered.filter((p) =>
-      selectedCategories.value.includes(p.category)
+      selectedCategories.value.includes(
+        CATEGORY_KEY_MAP[p.category] || p.category
+      )
     );
   }
   filtered = filtered.filter(
@@ -189,29 +218,19 @@ const filteredProducts = computed(() => {
 });
 
 function handleAllChange(checked) {
-  console.log("All checkbox changed to:", checked);
   if (checked) {
     selectedCategories.value = ["All"];
   } else {
-    if (categories.value.includes("Cani")) {
-      selectedCategories.value = ["Cani"];
+    if (categories.value.includes("Mugs")) {
+      selectedCategories.value = ["Mugs"];
     } else {
       selectedCategories.value =
         categories.value.length > 0 ? [categories.value[0]] : [];
     }
-
-    nextTick(() => {
-      console.log(
-        "Selected categories after unchecking All:",
-        selectedCategories.value
-      );
-    });
   }
 }
 
 function toggleCategory(cat, checked) {
-  console.log("Category toggled:", cat, checked);
-
   if (selectedCategories.value.includes("All")) {
     selectedCategories.value = selectedCategories.value.filter(
       (c) => c !== "All"
@@ -251,10 +270,46 @@ const handlePriceRangeChange = (newValue) => {
 <i18n lang="json">
 {
   "en": {
-    "produse": "Products"
+    "products": "Products",
+    "categories": "Categories",
+    "priceRange": "Price Range",
+    "allProducts": "All Products",
+    "filter": "Filter",
+    "sort": "Sort",
+    "sort_popularity": "Most Popular",
+    "sort_newest": "Newest",
+    "sort_price_asc": "Price Ascending",
+    "sort_price_desc": "Price Descending",
+    "sort_discount": "Discount",
+    "lei": "lei",
+    "eur": "€",
+    "category": {
+      "Mugs": "Mugs",
+      "Vases": "Vases",
+      "Platters": "Platters",
+      "Plates": "Plates"
+    }
   },
   "ro": {
-    "produse": "Produse"
+    "products": "Produse",
+    "categories": "Categorii",
+    "priceRange": "Interval de preț",
+    "allProducts": "Toate produsele",
+    "filter": "Filtrează",
+    "sort": "Sortează",
+    "sort_popularity": "Cele mai populare",
+    "sort_newest": "Cele mai noi",
+    "sort_price_asc": "Preț crescător",
+    "sort_price_desc": "Preț descrescător",
+    "sort_discount": "Discount",
+    "lei": "lei",
+    "eur": "€",
+    "category": {
+      "Mugs": "Căni",
+      "Vases": "Vaze",
+      "Platters": "Platouri",
+      "Plates": "Farfurii"
+    }
   }
 }
 </i18n>

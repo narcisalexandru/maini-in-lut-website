@@ -9,11 +9,11 @@
     class="w-full !m-0 !rounded-none"
   >
     <template #header>
-      <h3 class="text-xl font-semibold">Selectează categorii</h3>
+      <h3 class="text-xl font-semibold">{{ t("select_categories") }}</h3>
     </template>
     <div class="flex flex-col space-y-4">
       <div class="mb-4">
-        <div class="font-semibold mb-2">Categories</div>
+        <div class="font-semibold mb-2">{{ t("categories") }}</div>
         <ul class="flex flex-col space-y-2">
           <li class="flex items-center">
             <Checkbox
@@ -22,9 +22,10 @@
               :modelValue="selectAll"
               @update:modelValue="handleAllChange"
             />
-            <label for="modal-all-products" class="ml-2">All Products</label>
+            <label for="modal-all-products" class="ml-2">{{
+              t("allProducts")
+            }}</label>
           </li>
-
           <li
             v-for="cat in categories"
             :key="'modal-cat-' + cat"
@@ -36,7 +37,9 @@
               :modelValue="selectedCategories.includes(cat)"
               @update:modelValue="(checked) => toggleCategory(cat, checked)"
             />
-            <label :for="'modal-cat-' + cat" class="ml-2">{{ cat }}</label>
+            <label :for="'modal-cat-' + cat" class="ml-2">{{
+              t("category." + cat)
+            }}</label>
           </li>
         </ul>
       </div>
@@ -46,7 +49,7 @@
         class="maini-ui-button w-full bg-white border-1 h-border-color-geyser"
         @click="emit('update:showModal', false)"
       >
-        Vezi produse ({{ numberofProducts }})
+        {{ t("seeProducts") }} ({{ numberofProducts }})
       </button>
     </div>
   </Dialog>
@@ -56,6 +59,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Checkbox from "primevue/checkbox";
+import { useI18n } from "vue-i18n";
 
 const props = defineProps({
   showModal: {
@@ -78,6 +82,8 @@ const props = defineProps({
 
 const emit = defineEmits(["update:showModal", "update:selectedCategories"]);
 
+const { t } = useI18n({ useScope: "local" });
+
 const selectAll = computed(() => props.selectedCategories.includes("All"));
 
 const modalContent = ref(null);
@@ -86,8 +92,8 @@ function handleAllChange(checked) {
   if (checked) {
     emit("update:selectedCategories", ["All"]);
   } else {
-    if (props.categories.includes("Cani")) {
-      emit("update:selectedCategories", ["Cani"]);
+    if (props.categories.includes("Mugs")) {
+      emit("update:selectedCategories", ["Mugs"]);
     } else {
       emit(
         "update:selectedCategories",
@@ -141,3 +147,32 @@ onUnmounted(() => {
   document.removeEventListener("mousedown", handleClickOutside);
 });
 </script>
+
+<i18n lang="json">
+{
+  "en": {
+    "select_categories": "Select categories",
+    "categories": "Categories",
+    "allProducts": "All Products",
+    "seeProducts": "See products",
+    "category": {
+      "Mugs": "Mugs",
+      "Vases": "Vases",
+      "Platters": "Platters",
+      "Plates": "Plates"
+    }
+  },
+  "ro": {
+    "select_categories": "Selectează categorii",
+    "categories": "Categorii",
+    "allProducts": "Toate produsele",
+    "seeProducts": "Vezi produse",
+    "category": {
+      "Mugs": "Căni",
+      "Vases": "Vaze",
+      "Platters": "Platouri",
+      "Plates": "Farfurii"
+    }
+  }
+}
+</i18n>
