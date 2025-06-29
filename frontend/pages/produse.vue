@@ -10,10 +10,10 @@
         <div class="grid grid-cols-2 md:flex md:justify-end gap-2">
           <div class="flex md:hidden">
             <button
-              class="maini-ui-button flex justify-between w-full h-bg-white border-1 h-border-color-geyser h-color-pickled-bluewood"
+              class="maini-ui-button flex justify-between items-center w-full h-bg-transparent border-1 h-border-color-geyser h-color-pickled-bluewood"
               @click="showCategoryModal = true"
             >
-              Filtrează <i class="ph ph-caret-down h-font-size-16"></i>
+              <div class="text-xs">Filtrează</div>
             </button>
           </div>
           <div class="flex">
@@ -22,7 +22,6 @@
               :options="sortOptions"
               optionLabel="label"
               optionValue="value"
-              placeholder="Ordonează"
               class="text-xs w-full items-center"
             />
           </div>

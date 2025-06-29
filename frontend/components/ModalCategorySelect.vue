@@ -1,8 +1,10 @@
 <template>
   <Dialog
     :visible="showModal"
+    ref="modalContent"
     position="bottom"
     @update:visible="(val) => emit('update:showModal', val)"
+    @hide="emit('update:showModal', false)"
     modal
     class="w-full !m-0 !rounded-none"
   >
@@ -51,7 +53,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Checkbox from "primevue/checkbox";
 
@@ -77,6 +79,8 @@ const props = defineProps({
 const emit = defineEmits(["update:showModal", "update:selectedCategories"]);
 
 const selectAll = computed(() => props.selectedCategories.includes("All"));
+
+const modalContent = ref(null);
 
 function handleAllChange(checked) {
   if (checked) {
@@ -112,4 +116,28 @@ function toggleCategory(cat, checked) {
 
   emit("update:selectedCategories", newCategories);
 }
+
+function handleClickOutside(event) {
+  if (props.showModal) {
+    const dialogEl = document.querySelector(".p-dialog");
+    if (dialogEl && !dialogEl.contains(event.target)) {
+      emit("update:showModal", false);
+    }
+  }
+}
+
+watch(
+  () => props.showModal,
+  (val) => {
+    if (val) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }
+);
+
+onUnmounted(() => {
+  document.removeEventListener("mousedown", handleClickOutside);
+});
 </script>

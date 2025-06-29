@@ -2,7 +2,8 @@
 @use "sass:color";
 
 .p-select {
-  border: 1px solid vars.$color-primary !important;
+  border: 1px solid vars.$geyser !important;
+  background: transparent !important;
 }
 
 .p-select-option-selected,
