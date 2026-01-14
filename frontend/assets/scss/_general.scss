@@ -8,12 +8,14 @@ body {
   font-family: $serif-fontface !important;
   font-smooth: antialiased;
   -webkit-font-smoothing: antialiased;
+  color-scheme: light;
 }
 html {
   font-family: $serif-fontface !important;
   font-smooth: antialiased;
   -webkit-font-smoothing: antialiased;
   scroll-behavior: smooth;
+  color-scheme: light;
 }
 
 .img-responsive {

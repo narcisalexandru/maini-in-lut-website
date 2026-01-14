@@ -27,6 +27,7 @@ export default defineNuxtConfig({
         { charset: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
         { name: "description", content: "Maini in Lut" },
+        { name: "color-scheme", content: "light" },
       ],
       link: [
         {
@@ -56,7 +57,7 @@ export default defineNuxtConfig({
         preset: Aura,
         options: {
           prefix: "p",
-          darkModeSelector: "system",
+          darkModeSelector: false,
           cssLayer: false,
         },
       },
