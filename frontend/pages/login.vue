@@ -110,6 +110,7 @@ const { t } = useI18n({
 });
 
 const { login, googleAuth, isLoading, error } = useAuth();
+const { mergeGuestFavorites } = useFavorites();
 
 const formData = ref({
   email: "",
@@ -160,6 +161,7 @@ const handleSubmit = async () => {
     }
 
     showError.value = false;
+    await mergeGuestFavorites();
     router.push("/");
   } catch (error) {
     showError.value = true;

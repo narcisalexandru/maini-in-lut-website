@@ -15,6 +15,11 @@ import { useRoute } from "vue-router";
 import { computed } from "vue";
 
 const route = useRoute();
+const { loadFavorites } = useFavorites();
+
+onMounted(() => {
+  loadFavorites();
+});
 const isAuthRoute = computed(() => {
   return [
     "/login",

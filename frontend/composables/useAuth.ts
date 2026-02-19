@@ -209,6 +209,8 @@ export const useAuth = () => {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    const { loadFavorites } = useFavorites();
+    loadFavorites();
     const loginPath = locale.value === "en" ? "/en/login" : "/login";
     router.push(loginPath);
   };

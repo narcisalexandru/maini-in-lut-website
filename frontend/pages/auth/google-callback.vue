@@ -20,7 +20,7 @@ definePageMeta({
   layout: "empty",
 });
 
-onMounted(() => {
+onMounted(async () => {
   try {
     const tokenParam = route.query.token as string;
     if (!tokenParam) {
@@ -31,6 +31,8 @@ onMounted(() => {
     if (data.access_token) {
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      const { mergeGuestFavorites } = useFavorites();
+      await mergeGuestFavorites();
       router.push("/");
     } else {
       console.error("No access token found in response");

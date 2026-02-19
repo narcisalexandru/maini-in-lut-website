@@ -27,13 +27,20 @@
         Popular
       </span>
       <button
+        type="button"
         class="absolute bottom-2 right-2 h-font-size-20 flex items-center justify-center transition-all duration-300 w-10 h-10 h-bg-white rounded-full group hover:scale-110"
+        :aria-label="isFavorite(product.id) ? 'Elimină din favorite' : 'Adaugă în favorite'"
+        @click.prevent="toggleFavorite(product.id)"
       >
         <i
+          v-show="!isFavorite(product.id)"
           class="ph ph-heart transition-all duration-300 group-hover:hidden h-color-primary"
         ></i>
         <i
-          class="ph ph-fill transition-all duration-300 ph-heart hidden group-hover:block h-color-primary"
+          :class="[
+            'ph ph-heart ph-fill transition-all duration-300 h-color-primary',
+            isFavorite(product.id) ? 'block' : 'hidden group-hover:block'
+          ]"
         ></i>
       </button>
     </div>
@@ -71,6 +78,8 @@ const { product } = defineProps({
     required: true,
   },
 });
+
+const { toggleFavorite, isFavorite } = useFavorites();
 
 const isNew = computed(() => {
   const now = new Date();

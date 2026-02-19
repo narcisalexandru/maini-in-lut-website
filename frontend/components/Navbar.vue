@@ -36,9 +36,25 @@
         <div class="flex items-center space-x-4">
           <nuxt-link
             :to="$localePath('/favorite')"
-            class="h-color-secondary hover:text-gray-900"
+            class="h-color-secondary hover:text-gray-900 relative"
           >
-            <i class="ph ph-heart text-xl"></i>
+            <ClientOnly>
+              <i
+                :class="[
+                  'ph text-xl',
+                  favoritesCount > 0 ? 'ph-heart ph-fill' : 'ph-heart',
+                ]"
+              ></i>
+              <span
+                v-if="favoritesCount > 0"
+                class="absolute -top-1 -right-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold px-1"
+              >
+                {{ favoritesCount > 99 ? "99+" : favoritesCount }}
+              </span>
+              <template #fallback>
+                <i class="ph ph-heart text-xl"></i>
+              </template>
+            </ClientOnly>
           </nuxt-link>
           <nuxt-link
             :to="$localePath('/cos')"
@@ -73,6 +89,12 @@
 
 <script setup>
 import { ref } from "vue";
+
+const { favoritesCount, loadFavorites } = useFavorites();
+
+onMounted(() => {
+  loadFavorites();
+});
 
 const { t } = useI18n({
   useScope: "local",
