@@ -32,7 +32,9 @@ onMounted(async () => {
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
       const { mergeGuestFavorites } = useFavorites();
+      const { mergeGuestCart } = useCart();
       await mergeGuestFavorites();
+      await mergeGuestCart();
       router.push("/");
     } else {
       console.error("No access token found in response");

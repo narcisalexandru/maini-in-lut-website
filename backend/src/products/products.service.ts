@@ -6,10 +6,10 @@ export class ProductsService {
   private readonly products: Product[] = [
     {
       id: 1,
-      title: 'Cana cu toartă - Căpșuni',
+      title: 'Cana gâscă ',
       description:
         'Cana din lut ars cu motive de căpșuni, perfectă pentru cafea sau ceai',
-      price: 45.0,
+      price: 150.0,
       image: '/images/products/cana_gasca_iarna.jpg',
       inStock: true,
       category: 'Căni',
@@ -17,7 +17,7 @@ export class ProductsService {
       popularity: 120,
       discount: 10,
       reviewsCount: 15,
-      priceBeforeDiscount: 50.0,
+      priceBeforeDiscount: 160.0,
     },
     {
       id: 2,

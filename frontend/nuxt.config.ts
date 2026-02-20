@@ -8,6 +8,11 @@ export default defineNuxtConfig({
     preset: "netlify",
   },
 
+  routeRules: {
+    "/cos": { ssr: false },
+    "/en/cart": { ssr: false },
+  },
+
   imports: {
     autoImport: true,
   },

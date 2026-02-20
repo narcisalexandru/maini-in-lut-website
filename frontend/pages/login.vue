@@ -111,6 +111,7 @@ const { t } = useI18n({
 
 const { login, googleAuth, isLoading, error } = useAuth();
 const { mergeGuestFavorites } = useFavorites();
+const { mergeGuestCart } = useCart();
 
 const formData = ref({
   email: "",
@@ -162,6 +163,7 @@ const handleSubmit = async () => {
 
     showError.value = false;
     await mergeGuestFavorites();
+    await mergeGuestCart();
     router.push("/");
   } catch (error) {
     showError.value = true;

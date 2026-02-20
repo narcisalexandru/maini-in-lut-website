@@ -142,6 +142,8 @@ export const useAuth = () => {
       }
 
       setAuthData(data);
+      const { mergeGuestCart } = useCart();
+      await mergeGuestCart();
       router.push(
         locale.value === "en"
           ? "/en/auth/email-verification"
@@ -210,7 +212,9 @@ export const useAuth = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     const { loadFavorites } = useFavorites();
+    const { clearCart } = useCart();
     loadFavorites();
+    clearCart();
     const loginPath = locale.value === "en" ? "/en/login" : "/login";
     router.push(loginPath);
   };

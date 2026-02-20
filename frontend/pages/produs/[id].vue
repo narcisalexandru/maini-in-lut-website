@@ -11,13 +11,18 @@
           </li>
           <li><span class="mx-1">/</span></li>
           <li>
-            <NuxtLink :to="$localePath('/produse')" class="hover:h-color-primary">
+            <NuxtLink
+              :to="$localePath('/produse')"
+              class="hover:h-color-primary"
+            >
               {{ t("breadcrumb.products") }}
             </NuxtLink>
           </li>
           <li><span class="mx-1">/</span></li>
           <li>
-            <span class="h-color-lunar-green font-medium">{{ product?.title }}</span>
+            <span class="h-color-lunar-green font-medium">{{
+              product?.title
+            }}</span>
           </li>
         </ol>
       </nav>
@@ -26,10 +31,15 @@
         <i class="ph ph-spinner text-4xl animate-spin h-color-primary"></i>
       </div>
 
-      <div v-else-if="product" class="flex flex-col lg:flex-row gap-8 lg:gap-12">
+      <div
+        v-else-if="product"
+        class="flex flex-col lg:flex-row gap-8 lg:gap-12"
+      >
         <!-- Left: Product images -->
         <div class="flex-1 lg:max-w-[55%]">
-          <div class="aspect-square bg-white rounded-lg overflow-hidden shadow-sm mb-4">
+          <div
+            class="aspect-square bg-white rounded-lg overflow-hidden shadow-sm mb-4"
+          >
             <img
               :src="selectedImage || product.image"
               :alt="product.title"
@@ -42,22 +52,24 @@
               :key="idx"
               type="button"
               class="w-20 h-20 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0"
-              :class="selectedImage === img ? 'h-border-color-primary ring-2 ring-[#8a9772]/30' : 'border-transparent hover:border-gray-300'"
+              :class="
+                selectedImage === img
+                  ? 'h-border-color-primary ring-2 ring-[#8a9772]/30'
+                  : 'border-transparent hover:border-gray-300'
+              "
               @click="selectedImage = img"
             >
-              <img :src="img" :alt="`${product.title} ${idx + 1}`" class="w-full h-full object-cover" />
+              <img
+                :src="img"
+                :alt="`${product.title} ${idx + 1}`"
+                class="w-full h-full object-cover"
+              />
             </button>
           </div>
         </div>
 
         <!-- Right: Product info -->
         <div class="flex-1 lg:max-w-[45%]">
-          <span
-            v-if="product.popularity > 150"
-            class="inline-block text-xs font-semibold tracking-wider uppercase mb-2 h-color-primary"
-          >
-            {{ t("limitedSeries") }}
-          </span>
           <h1 class="text-2xl md:text-3xl font-bold h-color-lunar-green mb-2">
             {{ product.title }}
           </h1>
@@ -78,28 +90,30 @@
 
           <!-- Quantity & Add to cart -->
           <div class="flex flex-wrap items-center gap-4 mb-6">
-            <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+            <div
+              class="quantity-picker flex items-center border border-gray-300 rounded-lg overflow-hidden"
+            >
               <button
                 type="button"
-                class="w-10 h-10 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                class="w-10 h-10 flex items-center justify-center cursor-pointer transition-colors"
                 :aria-label="t('decreaseQty')"
                 @click="quantity = Math.max(1, quantity - 1)"
               >
-                <i class="ph ph-minus text-sm"></i>
+                <i class="ph ph-minus text-sm h-color-primary"></i>
               </button>
               <input
                 v-model.number="quantity"
                 type="number"
                 min="1"
-                class="w-14 h-10 text-center border-x border-gray-300 focus:outline-none focus:ring-0"
+                class="quantity-input w-10 h-8 text-center h-color-palm-leaf border-none focus:outline-none focus:ring-0 focus:border-none"
               />
               <button
                 type="button"
-                class="w-10 h-10 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                class="w-10 h-10 flex items-center justify-center cursor-pointer transition-colors"
                 :aria-label="t('increaseQty')"
                 @click="quantity = quantity + 1"
               >
-                <i class="ph ph-plus text-sm"></i>
+                <i class="ph ph-plus text-sm h-color-primary"></i>
               </button>
             </div>
             <span
@@ -113,18 +127,24 @@
             </span>
           </div>
 
-          <Button
-            class="maini-ui-button__buy w-full md:w-auto flex justify-center items-center gap-2 px-8 py-3"
+          <button
+            class="maini-ui-button__buy w-1/2 h-10"
             :disabled="!product.inStock"
             @click="addToCart"
           >
-            <i class="ph ph-shopping-bag text-xl"></i>
-            {{ t("addToCart") }}
-          </Button>
+            <span class="flex items-center justify-center flex-row gap-2">
+              <i
+                class="ph ph-shopping-cart flex items-center justify-center text-lg"
+              ></i>
+              <span class="text-sm font-medium">
+                {{ t("addToCart") }}
+              </span>
+            </span>
+          </button>
 
           <!-- Accordion: Detalii, Îngrijire, Livrare -->
-          <div class="mt-8 space-y-2">
-            <Accordion value="0">
+          <div class="product-accordion mt-8 space-y-2">
+            <Accordion v-model:value="accordionOpenPanel">
               <AccordionPanel :value="0">
                 <AccordionHeader>{{ t("productDetails") }}</AccordionHeader>
                 <AccordionContent>
@@ -139,13 +159,17 @@
               <AccordionPanel :value="1">
                 <AccordionHeader>{{ t("care") }}</AccordionHeader>
                 <AccordionContent>
-                  <p class="text-gray-600 text-sm">{{ t("carePlaceholder") }}</p>
+                  <p class="text-gray-600 text-sm">
+                    {{ t("carePlaceholder") }}
+                  </p>
                 </AccordionContent>
               </AccordionPanel>
               <AccordionPanel :value="2">
                 <AccordionHeader>{{ t("delivery") }}</AccordionHeader>
                 <AccordionContent>
-                  <p class="text-gray-600 text-sm">{{ t("deliveryPlaceholder") }}</p>
+                  <p class="text-gray-600 text-sm">
+                    {{ t("deliveryPlaceholder") }}
+                  </p>
                 </AccordionContent>
               </AccordionPanel>
             </Accordion>
@@ -154,8 +178,13 @@
       </div>
 
       <!-- You might also like -->
-      <section v-if="relatedProducts.length > 0" class="mt-16 pt-12 border-t border-gray-200">
-        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+      <section
+        v-if="relatedProducts.length > 0"
+        class="mt-16 pt-12 border-t border-gray-200"
+      >
+        <div
+          class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6"
+        >
           <div>
             <h2 class="text-2xl font-bold h-color-lunar-green mb-1">
               {{ t("youMightLike") }}
@@ -170,11 +199,7 @@
           </NuxtLink>
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          <ProductCard
-            v-for="p in relatedProducts"
-            :key="p.id"
-            :product="p"
-          />
+          <ProductCard v-for="p in relatedProducts" :key="p.id" :product="p" />
         </div>
       </section>
     </div>
@@ -195,11 +220,12 @@ const product = ref(null);
 const loading = ref(true);
 const quantity = ref(1);
 const selectedImage = ref(null);
+const accordionOpenPanel = ref(0);
 
 const CANA_GASCA_IMAGES = [
-  '/images/products/cana_gasca_iarna.jpg',
-  '/images/products/cana_gasca_vara.jpg',
-  '/images/products/cana_gasca_vara_iarna.jpg',
+  "/images/products/cana_gasca_iarna.jpg",
+  "/images/products/cana_gasca_vara.jpg",
+  "/images/products/cana_gasca_vara_iarna.jpg",
 ];
 
 const productImages = computed(() => {
@@ -215,6 +241,8 @@ const { t } = useI18n({
   useScope: "local",
 });
 
+const { addToCart: addToCartStore } = useCart();
+
 defineI18nRoute({
   paths: {
     ro: "/produs/[id]",
@@ -226,7 +254,7 @@ async function fetchProduct() {
   loading.value = true;
   try {
     const res = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/products/${id.value}`
+      `${import.meta.env.VITE_BACKEND_URL}/products/${id.value}`,
     );
     if (!res.ok) {
       product.value = null;
@@ -244,9 +272,7 @@ async function fetchProduct() {
 
 async function fetchRelated() {
   try {
-    const res = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/products`
-    );
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/products`);
     const all = await res.json();
     const others = all.filter((p) => p.id !== product.value?.id);
     relatedProducts.value = others.slice(0, 4);
@@ -256,7 +282,10 @@ async function fetchRelated() {
 }
 
 function addToCart() {
-  // TODO: integrate with cart
+  if (product.value?.id) {
+    addToCartStore(product.value.id, quantity.value);
+    quantity.value = 1;
+  }
 }
 
 watch(id, fetchProduct, { immediate: true });
@@ -264,6 +293,52 @@ watch(product, (p) => {
   if (p) fetchRelated();
 });
 </script>
+
+<style scoped lang="scss">
+@use "~/assets/scss/_variables.scss" as *;
+@use "sass:color";
+
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.quantity-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.quantity-input:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* Accordion: fundal h-bg-secondary, hover mai închis, săgeata h-color-primary */
+$accordion-hover: color.adjust($color-secondary, $lightness: -4%);
+
+.product-accordion :deep(.p-accordion),
+.product-accordion :deep(.p-accordionpanel),
+.product-accordion :deep(.p-accordionheader),
+.product-accordion :deep(.p-accordioncontent),
+.product-accordion :deep(.p-accordioncontent-content) {
+  background-color: $color-secondary !important;
+}
+/* Header deschis (active) – păstrăm secondary, nu alb */
+.product-accordion :deep(.p-accordionpanel-active .p-accordionheader),
+.product-accordion :deep(.p-accordionheader[data-p-active="true"]) {
+  background-color: $color-secondary !important;
+}
+.product-accordion :deep(.p-accordionheader) {
+  background-color: $color-secondary !important;
+  transition: background-color 0.2s;
+  &:hover {
+    background-color: $accordion-hover !important;
+  }
+}
+.product-accordion :deep(.p-accordionheader-toggle-icon) {
+  color: $color-primary !important;
+}
+</style>
 
 <i18n lang="json">
 {

@@ -67,11 +67,14 @@
         >
       </div>
       <div class="flex w-full">
-        <span
+        <button
+          type="button"
           class="maini-ui-button__buy w-full flex justify-center items-center border-none cursor-pointer"
+          aria-label="Adaugă în coș"
+          @click.prevent.stop="addToCart(product.id)"
         >
           Adaugă în coș
-        </span>
+        </button>
       </div>
     </NuxtLink>
   </div>
@@ -88,6 +91,7 @@ const { product } = defineProps({
 });
 
 const { toggleFavorite, isFavorite } = useFavorites();
+const { addToCart } = useCart();
 
 const isNew = computed(() => {
   const now = new Date();

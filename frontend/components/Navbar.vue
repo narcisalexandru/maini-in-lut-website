@@ -58,9 +58,20 @@
           </nuxt-link>
           <nuxt-link
             :to="$localePath('/cos')"
-            class="h-color-secondary hover:text-gray-900"
+            class="h-color-secondary hover:text-gray-900 relative"
           >
-            <i class="ph ph-shopping-cart text-xl"></i>
+            <ClientOnly>
+              <i class="ph ph-shopping-cart text-xl"></i>
+              <span
+                v-if="cartCount > 0"
+                class="absolute -top-1 -right-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold px-1"
+              >
+                {{ cartCount > 99 ? "99+" : cartCount }}
+              </span>
+              <template #fallback>
+                <i class="ph ph-shopping-cart text-xl"></i>
+              </template>
+            </ClientOnly>
           </nuxt-link>
           <nuxt-link
             :to="$localePath('/profil')"
@@ -91,6 +102,7 @@
 import { ref } from "vue";
 
 const { favoritesCount, loadFavorites } = useFavorites();
+const { cartCount } = useCart();
 
 onMounted(() => {
   loadFavorites();
