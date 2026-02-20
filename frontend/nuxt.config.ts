@@ -92,5 +92,18 @@ export default defineNuxtConfig({
     },
   },
 
-  // compatibilityDate: "2025-04-02",
+  hooks: {
+    "pages:extend"(pages) {
+      // Catch-all must be last so /produs/:id matches before 404
+      const idx = pages.findIndex(
+        (p) =>
+          p.path === "/:pathMatch(.*)*" ||
+          (p.file && String(p.file).includes("slug"))
+      );
+      if (idx > -1) {
+        const [catchAll] = pages.splice(idx, 1);
+        pages.push(catchAll);
+      }
+    },
+  },
 });

@@ -10,7 +10,7 @@ export class ProductsService {
       description:
         'Cana din lut ars cu motive de căpșuni, perfectă pentru cafea sau ceai',
       price: 45.0,
-      image: '/images/products/image-41.png',
+      image: '/images/products/cana_gasca_iarna.jpg',
       inStock: true,
       category: 'Căni',
       datePublished: new Date('2024-06-01'),

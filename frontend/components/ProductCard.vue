@@ -2,7 +2,10 @@
   <div
     class="bg-white flex flex-col flex-1 shrink rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative"
   >
-    <div class="relative h-48">
+    <NuxtLink
+      :to="$localePath(`/produs/${product.id}`)"
+      class="block relative h-48"
+    >
       <img
         :src="product.image"
         :alt="product.title"
@@ -29,7 +32,9 @@
       <button
         type="button"
         class="absolute bottom-2 right-2 h-font-size-20 flex items-center justify-center transition-all duration-300 w-10 h-10 h-bg-white rounded-full group hover:scale-110"
-        :aria-label="isFavorite(product.id) ? 'Elimină din favorite' : 'Adaugă în favorite'"
+        :aria-label="
+          isFavorite(product.id) ? 'Elimină din favorite' : 'Adaugă în favorite'
+        "
         @click.prevent="toggleFavorite(product.id)"
       >
         <i
@@ -39,12 +44,15 @@
         <i
           :class="[
             'ph ph-heart ph-fill transition-all duration-300 h-color-primary',
-            isFavorite(product.id) ? 'block' : 'hidden group-hover:block'
+            isFavorite(product.id) ? 'block' : 'hidden group-hover:block',
           ]"
         ></i>
       </button>
-    </div>
-    <div class="flex flex-col h-36 p-2 md:p-3">
+    </NuxtLink>
+    <NuxtLink
+      :to="$localePath(`/produs/${product.id}`)"
+      class="flex flex-col h-36 p-2 md:p-3 flex-1 hover:opacity-90 transition-opacity no-underline text-inherit"
+    >
       <h3 class="flex flex-1 text-sm font-semibold text-gray-800 mb-1">
         {{ product.title }}
       </h3>
@@ -59,13 +67,13 @@
         >
       </div>
       <div class="flex w-full">
-        <Button
-          class="maini-ui-button__buy w-full flex justify-center items-center border-none"
+        <span
+          class="maini-ui-button__buy w-full flex justify-center items-center border-none cursor-pointer"
         >
           Adaugă în coș
-        </Button>
+        </span>
       </div>
-    </div>
+    </NuxtLink>
   </div>
 </template>
 
