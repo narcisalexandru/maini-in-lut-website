@@ -27,7 +27,7 @@ export class CartService {
     productId: number,
     quantity = 1,
   ): Promise<CartItemDto> {
-    const product = this.productsService.findOne(productId);
+    const product = await this.productsService.findOne(productId);
     if (!product) {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
@@ -60,7 +60,7 @@ export class CartService {
       return null;
     }
 
-    const product = this.productsService.findOne(productId);
+    const product = await this.productsService.findOne(productId);
     if (!product) {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
@@ -97,7 +97,7 @@ export class CartService {
     }
 
     for (const { productId, quantity } of items) {
-      const product = this.productsService.findOne(productId);
+      const product = await this.productsService.findOne(productId);
       if (!product) continue;
 
       const existing = await this.cartRepository.findOne({
@@ -117,5 +117,9 @@ export class CartService {
     }
 
     return this.findAll(userId);
+  }
+
+  async clearCart(userId: number): Promise<void> {
+    await this.cartRepository.delete({ userId });
   }
 }

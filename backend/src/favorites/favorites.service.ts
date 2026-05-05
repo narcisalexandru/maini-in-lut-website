@@ -21,7 +21,7 @@ export class FavoritesService {
   }
 
   async add(userId: number, productId: number): Promise<{ productId: number }> {
-    const product = this.productsService.findOne(productId);
+    const product = await this.productsService.findOne(productId);
     if (!product) {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
@@ -52,7 +52,7 @@ export class FavoritesService {
   async addMany(userId: number, productIds: number[]): Promise<number[]> {
     const added: number[] = [];
     for (const productId of productIds) {
-      const product = this.productsService.findOne(productId);
+      const product = await this.productsService.findOne(productId);
       if (!product) continue;
 
       const existing = await this.favoritesRepository.findOne({

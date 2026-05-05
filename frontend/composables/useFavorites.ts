@@ -38,6 +38,13 @@ export const useFavorites = () => {
     return null;
   };
 
+  const useGuestFlow = () => {
+    if (!import.meta.client) {
+      return;
+    }
+    localStorage.removeItem("token");
+  };
+
   const loadGuestFavorites = (): number[] => getGuestFavoritesFromStorage();
 
   const saveGuestFavorites = (ids: number[]) => {
@@ -58,10 +65,13 @@ export const useFavorites = () => {
           favoriteIds.value = Array.isArray(ids) ? ids : [];
           return;
         }
+        if (response.status === 401 || response.status === 403) {
+          useGuestFlow();
+        }
       } catch (e) {
         console.error("Failed to load favorites:", e);
       }
-      favoriteIds.value = [];
+      favoriteIds.value = loadGuestFavorites();
     } else {
       favoriteIds.value = loadGuestFavorites();
     }
@@ -80,16 +90,20 @@ export const useFavorites = () => {
         );
         if (response.ok && !favoriteIds.value.includes(productId)) {
           favoriteIds.value = [...favoriteIds.value, productId];
+          return;
+        }
+        if (response.status === 401 || response.status === 403) {
+          useGuestFlow();
         }
       } catch (e) {
         console.error("Failed to add favorite:", e);
       }
-    } else {
-      if (!favoriteIds.value.includes(productId)) {
-        const next = [...favoriteIds.value, productId];
-        favoriteIds.value = next;
-        saveGuestFavorites(next);
-      }
+    }
+
+    if (!favoriteIds.value.includes(productId)) {
+      const next = [...favoriteIds.value, productId];
+      favoriteIds.value = next;
+      saveGuestFavorites(next);
     }
   };
 
@@ -106,15 +120,19 @@ export const useFavorites = () => {
         );
         if (response.ok) {
           favoriteIds.value = favoriteIds.value.filter((id) => id !== productId);
+          return;
+        }
+        if (response.status === 401 || response.status === 403) {
+          useGuestFlow();
         }
       } catch (e) {
         console.error("Failed to remove favorite:", e);
       }
-    } else {
-      const next = favoriteIds.value.filter((id) => id !== productId);
-      favoriteIds.value = next;
-      saveGuestFavorites(next);
     }
+
+    const next = favoriteIds.value.filter((id) => id !== productId);
+    favoriteIds.value = next;
+    saveGuestFavorites(next);
   };
 
   const toggleFavorite = async (productId: number) => {

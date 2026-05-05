@@ -456,7 +456,7 @@ const toggleAddressEdit = async () => {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -547,7 +547,7 @@ const saveAddress = async () => {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify(addressForm.value),
-      }
+      },
     );
 
     const result = await response.json();
@@ -634,7 +634,7 @@ const savePhone = async () => {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({ phone: phoneForm.value.phone }),
-      }
+      },
     );
 
     if (!response.ok) {

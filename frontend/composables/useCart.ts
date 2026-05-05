@@ -30,6 +30,13 @@ export const useCart = () => {
     return null;
   };
 
+  const useGuestFlow = () => {
+    if (!import.meta.client) {
+      return;
+    }
+    localStorage.removeItem("token");
+  };
+
   const loadGuestCart = (): CartItem[] => getGuestCartFromStorage();
 
   const saveGuestCart = (items: CartItem[]) => {
@@ -50,10 +57,13 @@ export const useCart = () => {
           cartItems.value = Array.isArray(data) ? data : [];
           return;
         }
+        if (response.status === 401 || response.status === 403) {
+          useGuestFlow();
+        }
       } catch (e) {
         console.error("Failed to load cart:", e);
       }
-      cartItems.value = [];
+      cartItems.value = loadGuestCart();
     } else {
       cartItems.value = loadGuestCart();
     }
@@ -74,26 +84,28 @@ export const useCart = () => {
         if (response.ok) {
           const data = await response.json();
           cartItems.value = Array.isArray(data) ? data : cartItems.value;
+          return;
+        }
+        if (response.status === 401 || response.status === 403) {
+          useGuestFlow();
         }
       } catch (e) {
         console.error("Failed to add to cart:", e);
       }
+    }
+
+    const existing = cartItems.value.find((i) => i.productId === productId);
+    let next: CartItem[];
+    if (existing) {
+      next = cartItems.value.map((i) =>
+        i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i
+      );
     } else {
-      const existing = cartItems.value.find((i) => i.productId === productId);
-      let next: CartItem[];
-      if (existing) {
-        next = cartItems.value.map((i) =>
-          i.productId === productId
-            ? { ...i, quantity: i.quantity + quantity }
-            : i
-        );
-      } else {
-        next = [...cartItems.value, { productId, quantity }];
-      }
-      cartItems.value = next;
-      if (import.meta.client) {
-        saveGuestCart(next);
-      }
+      next = [...cartItems.value, { productId, quantity }];
+    }
+    cartItems.value = next;
+    if (import.meta.client) {
+      saveGuestCart(next);
     }
   };
 
@@ -111,16 +123,20 @@ export const useCart = () => {
         if (response.ok) {
           const data = await response.json();
           cartItems.value = Array.isArray(data) ? data : cartItems.value;
+          return;
+        }
+        if (response.status === 401 || response.status === 403) {
+          useGuestFlow();
         }
       } catch (e) {
         console.error("Failed to remove from cart:", e);
       }
-    } else {
-      const next = cartItems.value.filter((i) => i.productId !== productId);
-      cartItems.value = next;
-      if (import.meta.client) {
-        saveGuestCart(next);
-      }
+    }
+
+    const next = cartItems.value.filter((i) => i.productId !== productId);
+    cartItems.value = next;
+    if (import.meta.client) {
+      saveGuestCart(next);
     }
   };
 
@@ -146,18 +162,22 @@ export const useCart = () => {
         if (response.ok) {
           const data = await response.json();
           cartItems.value = Array.isArray(data) ? data : cartItems.value;
+          return;
+        }
+        if (response.status === 401 || response.status === 403) {
+          useGuestFlow();
         }
       } catch (e) {
         console.error("Failed to set cart quantity:", e);
       }
-    } else {
-      const next = cartItems.value.map((i) =>
-        i.productId === productId ? { ...i, quantity } : i
-      );
-      cartItems.value = next;
-      if (import.meta.client) {
-        saveGuestCart(next);
-      }
+    }
+
+    const next = cartItems.value.map((i) =>
+      i.productId === productId ? { ...i, quantity } : i
+    );
+    cartItems.value = next;
+    if (import.meta.client) {
+      saveGuestCart(next);
     }
   };
 
