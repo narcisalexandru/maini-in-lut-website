@@ -10,9 +10,10 @@ import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
-  private readonly RAPID_MODIFICATION_LIMIT = 3;
+  private readonly RAPID_MODIFICATION_LIMIT = 10;
   private readonly COOLDOWN_TIME = 120; // 2 minutes in seconds
   private readonly TIME_WINDOW = 300; // 5 minutes in seconds
+  private readonly SECONDARY_ADDRESSES_LIMIT = 3;
 
   constructor(
     @InjectRepository(User)
@@ -175,6 +176,143 @@ export class UsersService {
 
     await this.usersRepository.update(id, { phone });
     return { success: true };
+  }
+
+  async getCheckoutAddresses(id: number): Promise<{
+    primaryAddress: {
+      county: string;
+      city: string;
+      street: string;
+      postal_code: string;
+    } | null;
+    secondaryAddresses: {
+      label?: string;
+      county: string;
+      city: string;
+      street: string;
+      postal_code: string;
+    }[];
+    phone: string | null;
+  }> {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    const hasPrimary =
+      !!user.county && !!user.city && !!user.street && !!user.postal_code;
+    return {
+      primaryAddress: hasPrimary
+        ? {
+            county: user.county,
+            city: user.city,
+            street: user.street,
+            postal_code: user.postal_code,
+          }
+        : null,
+      secondaryAddresses: Array.isArray(user.secondary_addresses)
+        ? user.secondary_addresses
+        : [],
+      phone: user.phone || null,
+    };
+  }
+
+  async addSecondaryAddress(
+    id: number,
+    address: {
+      label?: string;
+      county: string;
+      city: string;
+      street: string;
+      postal_code: string;
+    },
+  ): Promise<{ success: boolean; secondaryAddresses: User['secondary_addresses'] }> {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    if (!address.county || !address.city || !address.street || !address.postal_code) {
+      throw new BadRequestException('All address fields are required');
+    }
+    const current = Array.isArray(user.secondary_addresses)
+      ? [...user.secondary_addresses]
+      : [];
+    if (current.length >= this.SECONDARY_ADDRESSES_LIMIT) {
+      throw new BadRequestException(
+        `You can save up to ${this.SECONDARY_ADDRESSES_LIMIT} secondary addresses.`,
+      );
+    }
+    current.push({
+      label: address.label?.trim() || 'Acasa',
+      county: address.county.trim(),
+      city: address.city.trim(),
+      street: address.street.trim(),
+      postal_code: address.postal_code.trim(),
+    });
+    await this.usersRepository.update(id, { secondary_addresses: current });
+    return { success: true, secondaryAddresses: current };
+  }
+
+  async updateSecondaryAddress(
+    id: number,
+    index: number,
+    address: {
+      label?: string;
+      county: string;
+      city: string;
+      street: string;
+      postal_code: string;
+    },
+  ): Promise<{ success: boolean; secondaryAddresses: User['secondary_addresses'] }> {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    const current = Array.isArray(user.secondary_addresses)
+      ? [...user.secondary_addresses]
+      : [];
+    if (index < 0 || index >= current.length) {
+      throw new BadRequestException('Secondary address index is invalid');
+    }
+    if (!address.county || !address.city || !address.street || !address.postal_code) {
+      throw new BadRequestException('All address fields are required');
+    }
+    current[index] = {
+      label: address.label?.trim() || current[index].label || `Adresa ${index + 1}`,
+      county: address.county.trim(),
+      city: address.city.trim(),
+      street: address.street.trim(),
+      postal_code: address.postal_code.trim(),
+    };
+    await this.usersRepository.update(id, { secondary_addresses: current });
+    return { success: true, secondaryAddresses: current };
+  }
+
+  async deleteSecondaryAddress(
+    id: number,
+    index: number,
+  ): Promise<{ success: boolean; secondaryAddresses: User['secondary_addresses'] }> {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    const current = Array.isArray(user.secondary_addresses)
+      ? [...user.secondary_addresses]
+      : [];
+    if (index < 0 || index >= current.length) {
+      throw new BadRequestException('Secondary address index is invalid');
+    }
+
+    const hasPrimaryAddress =
+      !!user.county && !!user.city && !!user.street && !!user.postal_code;
+    if (!hasPrimaryAddress && current.length <= 1) {
+      throw new BadRequestException(
+        'At least one address must remain associated with your account.',
+      );
+    }
+
+    current.splice(index, 1);
+    await this.usersRepository.update(id, { secondary_addresses: current });
+    return { success: true, secondaryAddresses: current };
   }
 
   async getAddressModificationStatus(id: number): Promise<{

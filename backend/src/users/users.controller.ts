@@ -2,11 +2,13 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Body,
   UseGuards,
   Request,
   NotFoundException,
   Delete,
+  Param,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -78,6 +80,62 @@ export class UsersController {
   @Put('profile/phone')
   async updatePhone(@Request() req, @Body() updateData: { phone: string }) {
     return this.usersService.updatePhone(req.user.id, updateData.phone);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile/checkout-addresses')
+  async getCheckoutAddresses(@Request() req) {
+    return this.usersService.getCheckoutAddresses(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('profile/secondary-address')
+  async addSecondaryAddress(
+    @Request() req,
+    @Body()
+    body: {
+      label?: string;
+      county: string;
+      city: string;
+      street: string;
+      postal_code: string;
+    },
+  ) {
+    return this.usersService.addSecondaryAddress(req.user.id, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('profile/secondary-address/:index')
+  async updateSecondaryAddress(
+    @Request() req,
+    @Param('index') index: string,
+    @Body()
+    body: {
+      label?: string;
+      county: string;
+      city: string;
+      street: string;
+      postal_code: string;
+    },
+  ) {
+    const parsed = Number(index);
+    if (!Number.isInteger(parsed)) {
+      throw new NotFoundException('Invalid secondary address index');
+    }
+    return this.usersService.updateSecondaryAddress(req.user.id, parsed, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('profile/secondary-address/:index')
+  async deleteSecondaryAddress(
+    @Request() req,
+    @Param('index') index: string,
+  ) {
+    const parsed = Number(index);
+    if (!Number.isInteger(parsed)) {
+      throw new NotFoundException('Invalid secondary address index');
+    }
+    return this.usersService.deleteSecondaryAddress(req.user.id, parsed);
   }
 
   @UseGuards(JwtAuthGuard)

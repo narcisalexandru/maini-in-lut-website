@@ -1,5 +1,6 @@
 #env
 backend/.env
+backend/certs/
 frontend/.env
 
 # Logs

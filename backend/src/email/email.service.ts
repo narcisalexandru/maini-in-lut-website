@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { renderFile } from 'ejs';
 import * as path from 'path';
+import Mail from 'nodemailer/lib/mailer';
 
 @Injectable()
 export class EmailService {
@@ -52,6 +53,23 @@ export class EmailService {
       to: email,
       subject: 'Verify your email address',
       html,
+    });
+  }
+
+  async sendOrderNotificationEmail(
+    to: string,
+    subject: string,
+    html: string,
+    attachments?: Mail.Attachment[],
+  ): Promise<void> {
+    await this.transporter.sendMail({
+      from: `"${this.configService.get(
+        'SMTP_FROM_NAME',
+      )}" <${this.configService.get('SMTP_FROM_EMAIL')}>`,
+      to,
+      subject,
+      html,
+      attachments,
     });
   }
 }

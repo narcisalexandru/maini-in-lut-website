@@ -35,6 +35,15 @@ export class User {
   @Column({ type: 'text', nullable: true })
   phone: string;
 
+  @Column({ type: 'jsonb', nullable: true })
+  secondary_addresses: {
+    label?: string;
+    county: string;
+    city: string;
+    street: string;
+    postal_code: string;
+  }[];
+
   @Column({ nullable: true })
   picture?: string;
 
