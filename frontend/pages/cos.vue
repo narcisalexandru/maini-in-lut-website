@@ -274,8 +274,16 @@
                   </label>
                 </div>
                 <label class="flex items-start gap-2 pt-2 text-sm text-gray-700">
-                  <input v-model="termsAccepted" type="checkbox" class="mt-1" @blur="termsTouched = true" />
-                  <span>{{ t('guestTermsLabel') }} *</span>
+                  <input v-model="termsAccepted" type="checkbox" class="mt-1 shrink-0" @blur="termsTouched = true" />
+                  <span>
+                    {{ t('guestTermsPrefix') }}
+                    <NuxtLink
+                      :to="localePath({ name: 'terms-and-conditions', query: { step: '3' } })"
+                      class="underline h-color-palm-leaf hover:h-color-primary"
+                      @click.stop
+                    >{{ t('guestTermsLink') }}</NuxtLink>.
+                    *
+                  </span>
                 </label>
                 <p v-if="showTermsError" class="text-xs text-red-600">{{ t('guestTermsRequired') }}</p>
               </section>
@@ -371,6 +379,7 @@ const { t } = useI18n({ useScope: 'local' });
 const { cartItems, setQuantity, removeFromCart, clearCart } = useCart();
 const localePath = useLocalePath();
 const router = useRouter();
+const route = useRoute();
 const allProducts = ref([]);
 const promoCode = ref('');
 const checkoutLoading = ref(false);
@@ -1031,6 +1040,9 @@ onMounted(async () => {
       console.error('Failed to load checkout addresses:', error);
     }
   }
+  if (route.query.step === '3' && cartProducts.value.length > 0) {
+    currentStep.value = canAccessStep3.value ? 3 : 2;
+  }
 });
 </script>
 
@@ -1124,7 +1136,8 @@ onMounted(async () => {
     "guestCityExample": "ex. Bucharest",
     "guestPostalCodeExample": "123456",
     "guestMissingFields": "Please complete all required details for guest checkout.",
-    "guestTermsLabel": "I agree with the Terms and Conditions.",
+    "guestTermsPrefix": "I agree with the",
+    "guestTermsLink": "Terms and Conditions",
     "guestTermsRequired": "You must accept the Terms and Conditions to continue.",
     "guestValidationRequired": "This field is required.",
     "guestValidationInvalidEmail": "Please enter a valid email address.",
@@ -1222,7 +1235,8 @@ onMounted(async () => {
     "guestCityExample": "ex. Bucuresti",
     "guestPostalCodeExample": "123456",
     "guestMissingFields": "Completeaza toate datele necesare pentru comanda fara cont.",
-    "guestTermsLabel": "Sunt de acord cu Termenii si Conditiile.",
+    "guestTermsPrefix": "Sunt de acord cu",
+    "guestTermsLink": "Termenii si Conditiile",
     "guestTermsRequired": "Trebuie sa accepti Termenii si Conditiile pentru a continua.",
     "guestValidationRequired": "Acest camp este obligatoriu.",
     "guestValidationInvalidEmail": "Introdu o adresa de email valida.",
