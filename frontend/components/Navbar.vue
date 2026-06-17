@@ -1,5 +1,5 @@
 <template>
-  <nav class="h-bg-primary shadow-md px-4 md:px-12">
+  <nav class="site-navbar h-bg-primary shadow-md px-4 md:px-12 select-none">
     <div class="w-full mx-auto">
       <div class="flex justify-between items-center h-16">
         <div class="flex md:hidden">
@@ -18,6 +18,7 @@
               src="/images/logo.png"
               alt="logo"
               class="img-responsive w-28"
+              draggable="false"
             />
           </NuxtLink>
         </div>
@@ -137,6 +138,17 @@ const menuItems = [
   },
 ];
 </script>
+
+<style scoped>
+.site-navbar,
+.site-navbar a,
+.site-navbar button,
+.site-navbar img {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+</style>
 
 <i18n lang="json">
 {
