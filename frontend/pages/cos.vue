@@ -2,7 +2,10 @@
   <div class="maini-ui__section md:px-4">
     <ClientOnly>
       <div class="maini-ui__container-products">
-        <div class="mb-8 flex items-center justify-center gap-3">
+        <div
+          v-if="cartProducts.length > 0"
+          class="mb-8 flex items-center justify-center gap-3"
+        >
           <template v-for="step in steps" :key="step.id">
             <button
               type="button"
@@ -18,21 +21,45 @@
           </template>
         </div>
 
-        <div class="flex flex-col lg:flex-row gap-8 lg:gap-12">
+        <div v-if="cartProducts.length === 0" class="py-8">
+          <div class="text-center mb-10">
+            <i class="ph ph-shopping-cart text-6xl mb-4 opacity-50 h-color-lunar-green"></i>
+            <h1 class="text-2xl md:text-3xl font-bold h-color-lunar-green mb-2">{{ t('empty') }}</h1>
+            <p class="text-gray-600">{{ t('emptySubtitle') }}</p>
+            <NuxtLink :to="$localePath('/produse')" class="inline-flex items-center justify-center gap-2 mt-6 px-6 py-3 rounded-lg text-base font-semibold border border-[#6f825d] text-[#6f825d] hover:bg-[#f4f7f2] transition-colors">
+              <i class="ph ph-arrow-left"></i>
+              {{ t('continueShopping') }}
+            </NuxtLink>
+          </div>
+
+          <section v-if="recommendedProducts.length > 0">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+              <div>
+                <h2 class="text-2xl font-bold h-color-lunar-green mb-1">{{ t('recommendedTitle') }}</h2>
+                <p class="text-gray-600 text-sm">{{ t('recommendedSubtitle') }}</p>
+              </div>
+              <NuxtLink
+                :to="$localePath('/produse')"
+                class="text-sm font-semibold uppercase h-color-primary hover:underline"
+              >
+                {{ t('viewAllCollection') }}
+              </NuxtLink>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+              <ProductCard
+                v-for="product in recommendedProducts"
+                :key="product.id"
+                :product="product"
+              />
+            </div>
+          </section>
+        </div>
+
+        <div v-else class="flex flex-col lg:flex-row gap-8 lg:gap-12">
           <div class="flex-1">
             <h1 class="text-2xl md:text-3xl font-bold h-color-lunar-green mb-6">{{ t(stepTitle) }}</h1>
 
-            <div v-if="cartProducts.length === 0" class="py-12 text-center">
-              <i class="ph ph-shopping-cart text-6xl mb-4 opacity-50 h-color-lunar-green"></i>
-              <p class="text-lg h-color-lunar-green">{{ t('empty') }}</p>
-              <NuxtLink :to="$localePath('/produse')" class="inline-flex items-center justify-center gap-2 mt-4 px-6 py-3 rounded-lg text-base font-semibold border border-[#6f825d] text-[#6f825d] hover:bg-[#f4f7f2] transition-colors">
-                <i class="ph ph-arrow-left"></i>
-                {{ t('continueShopping') }}
-              </NuxtLink>
-            </div>
-
-            <template v-else>
-              <section v-if="currentStep === 1" class="space-y-4">
+            <section v-if="currentStep === 1" class="space-y-4">
                 <article v-for="item in cartProducts" :key="item.product.id" class="flex flex-col sm:flex-row gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
                   <NuxtLink :to="$localePath(`/produs/${item.product.id}`)" class="w-full sm:w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                     <img :src="item.product.image" :alt="item.product.title" class="w-full h-full object-cover" />
@@ -287,10 +314,9 @@
                 </label>
                 <p v-if="showTermsError" class="text-xs text-red-600">{{ t('guestTermsRequired') }}</p>
               </section>
-            </template>
           </div>
 
-          <aside v-if="cartProducts.length > 0" class="lg:w-92 flex-shrink-0 min-w-0">
+          <aside class="lg:w-92 flex-shrink-0 min-w-0">
             <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 sticky top-4">
               <h2 class="text-3xl font-semibold h-color-lunar-green mb-4">{{ t('summaryTitle') }}</h2>
               <div class="space-y-3 mb-4 border-b border-gray-100 pb-4">
@@ -454,6 +480,10 @@ const cartProducts = computed(() => {
     const product = products.find((p) => p.id === item.productId);
     return product ? { product, quantity: item.quantity } : null;
   }).filter(Boolean);
+});
+const recommendedProducts = computed(() => {
+  const cartIds = new Set(cartItems.value.map((item) => item.productId));
+  return allProducts.value.filter((product) => !cartIds.has(product.id)).slice(0, 4);
 });
 const subtotal = computed(() => cartProducts.value.reduce((sum, { product, quantity }) => sum + Number(product.price) * quantity, 0));
 const deliveryFee = computed(() => 15);
@@ -1044,6 +1074,12 @@ onMounted(async () => {
     currentStep.value = canAccessStep3.value ? 3 : 2;
   }
 });
+
+watch(cartProducts, (items) => {
+  if (!items.length) {
+    currentStep.value = 1;
+  }
+});
 </script>
 
 <style scoped>
@@ -1064,6 +1100,10 @@ onMounted(async () => {
     "deliveryTitle": "Delivery Information",
     "paymentTitle": "Checkout",
     "empty": "Your cart is empty.",
+    "emptySubtitle": "Discover handcrafted pieces you might love.",
+    "recommendedTitle": "You might also like",
+    "recommendedSubtitle": "Other pieces crafted with the same passion.",
+    "viewAllCollection": "View full collection",
     "continueShopping": "Continue shopping",
     "summaryTitle": "Order Summary",
     "subtotal": "Subtotal",
@@ -1163,6 +1203,10 @@ onMounted(async () => {
     "deliveryTitle": "Informatii de livrare",
     "paymentTitle": "Finalizare comanda",
     "empty": "Cosul tau este gol.",
+    "emptySubtitle": "Descopera piese lucrate manual care ti-ar putea placea.",
+    "recommendedTitle": "S-ar putea sa-ti placa",
+    "recommendedSubtitle": "Alte piese lucrate cu aceeasi pasiune.",
+    "viewAllCollection": "Vezi toata colectia",
     "continueShopping": "Continua cumparaturile",
     "summaryTitle": "Sumar comanda",
     "subtotal": "Subtotal",
