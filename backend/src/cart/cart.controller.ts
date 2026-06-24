@@ -26,10 +26,10 @@ export class CartController {
   @Post('merge')
   async mergeCart(
     @Request() req,
-    @Body() body: { items?: CartItemDto[] },
+    @Body() body: { items?: CartItemDto[]; guestId?: string },
   ) {
     const items = body?.items ?? [];
-    return this.cartService.merge(req.user.id, items);
+    return this.cartService.merge(req.user.id, items, body?.guestId);
   }
 
   @Post('items')

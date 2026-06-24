@@ -2,14 +2,28 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from './dto/create-user.dto';
-import { User } from './entities/user.entity';
+import { User, UserWithoutPassword } from './entities/user.entity';
+import { stripPassword } from '../common/utils/user-response.util';
+import { UserRole } from '../common/enums/user-role.enum';
+import { Artist } from '../artists/entities/artist.entity';
+import { EmailService } from '../email/email.service';
+import { normalizeRomanianPhone } from '../common/utils/phone.util';
+
+export interface DeleteAccountResult {
+  success: boolean;
+  message: string;
+  requiresAdminApproval?: boolean;
+}
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
   private readonly RAPID_MODIFICATION_LIMIT = 10;
   private readonly COOLDOWN_TIME = 120; // 2 minutes in seconds
   private readonly TIME_WINDOW = 300; // 5 minutes in seconds
@@ -18,6 +32,10 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Artist)
+    private artistsRepository: Repository<Artist>,
+    private emailService: EmailService,
+    private configService: ConfigService,
   ) {}
 
   create(createUserDto: CreateUserDto): Promise<User> {
@@ -48,8 +66,21 @@ export class UsersService {
     return this.usersRepository.find();
   }
 
+  async findAllSanitized(): Promise<UserWithoutPassword[]> {
+    const users = await this.findAll();
+    return users.map(stripPassword);
+  }
+
   findOne(id: number): Promise<User | null> {
     return this.usersRepository.findOneBy({ id });
+  }
+
+  async findSuperAdminEmails(): Promise<string[]> {
+    const admins = await this.usersRepository.find({
+      where: { role: UserRole.SUPER_ADMIN },
+      select: ['email'],
+    });
+    return admins.map((admin) => admin.email).filter(Boolean);
   }
 
   findOneByEmail(email: string): Promise<User | null> {
@@ -69,7 +100,9 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-    await this.usersRepository.update(id, updateData);
+
+    const { role: _role, ...safeUpdateData } = updateData;
+    await this.usersRepository.update(id, safeUpdateData);
     return this.findOne(id) as Promise<User>;
   }
 
@@ -155,30 +188,27 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    // Check if phone number is already in use by another user
-    if (phone) {
-      const existingUser = await this.findOneByPhone(phone);
-      if (existingUser && existingUser.id !== id) {
-        throw new BadRequestException({
-          success: false,
-          message: 'Phone number is already in use by another user',
-        });
-      }
+    const normalizedPhone = normalizeRomanianPhone(phone);
+    if (!normalizedPhone) {
+      throw new BadRequestException(
+        'Phone number must be exactly 10 digits',
+      );
     }
 
-    // Validate phone number format
-    if (phone && !/^[0-9]{10}$/.test(phone)) {
-      throw new BadRequestException({
-        success: false,
-        message: 'Phone number must be exactly 10 digits',
-      });
+    const existingUser = await this.findOneByPhone(normalizedPhone);
+    if (existingUser && existingUser.id !== id) {
+      throw new BadRequestException(
+        'Phone number is already in use by another user',
+      );
     }
 
-    await this.usersRepository.update(id, { phone });
+    await this.usersRepository.update(id, { phone: normalizedPhone });
     return { success: true };
   }
 
   async getCheckoutAddresses(id: number): Promise<{
+    firstName: string;
+    lastName: string;
     primaryAddress: {
       county: string;
       city: string;
@@ -201,6 +231,8 @@ export class UsersService {
     const hasPrimary =
       !!user.county && !!user.city && !!user.street && !!user.postal_code;
     return {
+      firstName: user.first_name || '',
+      lastName: user.last_name || '',
       primaryAddress: hasPrimary
         ? {
             county: user.county,
@@ -352,12 +384,20 @@ export class UsersService {
     };
   }
 
-  async deleteAccount(
-    id: number,
-  ): Promise<{ success: boolean; message: string }> {
+  async deleteAccount(id: number): Promise<DeleteAccountResult> {
     const user = await this.findOne(id);
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    if (user.role === UserRole.ARTIST) {
+      await this.requestArtistAccountDeletion(user);
+      return {
+        success: true,
+        requiresAdminApproval: true,
+        message:
+          'O sa revenim cu un apel catre dumneavoastra in cel mai scurt timp, pentru a confirma ca dumneavoastra doriti sa faceti aceasta actiune. Multumim de intelegere !',
+      };
     }
 
     try {
@@ -370,6 +410,67 @@ export class UsersService {
       throw new BadRequestException({
         success: false,
         message: 'Failed to delete account',
+      });
+    }
+  }
+
+  private async requestArtistAccountDeletion(user: User): Promise<void> {
+    const artist = await this.artistsRepository.findOne({
+      where: { userId: user.id },
+    });
+
+    const recipients = await this.findSuperAdminEmails();
+    if (!recipients.length) {
+      this.logger.warn(
+        'No super-admin emails found for artist account deletion request',
+      );
+      throw new BadRequestException({
+        success: false,
+        message:
+          'Cererea de ștergere nu a putut fi trimisă. Contactați suportul platformei.',
+      });
+    }
+
+    const frontendBase =
+      this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+    const applicantName =
+      `${artist?.artistFirstName || user.first_name} ${artist?.artistLastName || user.last_name}`.trim();
+    const requestedAt = new Date().toLocaleString('ro-RO', {
+      dateStyle: 'long',
+      timeStyle: 'short',
+    });
+    const payload = {
+      applicantName,
+      requestedAt,
+      userFirstName: user.first_name,
+      userLastName: user.last_name,
+      userEmail: user.email,
+      userPhone: user.phone ?? null,
+      displayName: artist?.displayName ?? null,
+      artistFirstName: artist?.artistFirstName ?? null,
+      artistLastName: artist?.artistLastName ?? null,
+      companyCui: artist?.companyCui ?? null,
+      companyLegalName: artist?.companyLegalName ?? null,
+      contactEmail: artist?.contactEmail ?? user.email,
+      contactPhone: artist?.contactPhone ?? user.phone ?? null,
+      adminUrl: artist ? `${frontendBase}/admin/artisti/${artist.id}` : null,
+    };
+
+    try {
+      await Promise.all(
+        recipients.map((email) =>
+          this.emailService.sendArtistAccountDeletionRequest(email, payload),
+        ),
+      );
+    } catch (error) {
+      this.logger.error(
+        'Failed to send artist account deletion request email',
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new BadRequestException({
+        success: false,
+        message:
+          'Cererea de ștergere nu a putut fi trimisă. Încercați din nou mai târziu.',
       });
     }
   }

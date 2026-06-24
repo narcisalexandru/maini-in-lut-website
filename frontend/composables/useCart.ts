@@ -1,6 +1,14 @@
+import { clampTotalCartQuantity } from "~/utils/product-stock";
+import {
+  buildGuestCartHeaders,
+  getGuestCartId,
+  getOrCreateGuestCartId,
+} from "~/utils/guest-cart-id";
+
 export type CartItem = { productId: number; quantity: number };
 
 const GUEST_CART_KEY = "guest_cart";
+const RESERVATION_TTL_MS = 10 * 60 * 1000;
 
 function getGuestCartFromStorage(): CartItem[] {
   if (import.meta.client) {
@@ -19,6 +27,10 @@ function getGuestCartFromStorage(): CartItem[] {
 
 export const useCart = () => {
   const cartItems = useState<CartItem[]>("cart", () => []);
+  const reservationExpiresAt = useState<string | null>(
+    "cart-reservation-expires-at",
+    () => null,
+  );
 
   const apiBase = () =>
     import.meta.env.VITE_BACKEND_URL || useRuntimeConfig().public?.apiBase || "";
@@ -45,6 +57,41 @@ export const useCart = () => {
     }
   };
 
+  const syncGuestReservations = async (
+    items: CartItem[],
+  ): Promise<CartItem[]> => {
+    if (!import.meta.client) {
+      return items;
+    }
+
+    const guestId = getOrCreateGuestCartId();
+    try {
+      const response = await fetch(`${apiBase()}/cart/guest/reservations`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guestId, items }),
+      });
+      if (!response.ok) {
+        return items;
+      }
+      const data = await response.json();
+      const synced = Array.isArray(data.items) ? data.items : items;
+      cartItems.value = synced;
+      saveGuestCart(synced);
+      reservationExpiresAt.value =
+        typeof data.expiresAt === "string" ? data.expiresAt : null;
+      return synced;
+    } catch (error) {
+      console.error("Failed to sync guest stock reservations:", error);
+      return items;
+    }
+  };
+
+  const releaseGuestReservations = async () => {
+    await syncGuestReservations([]);
+    reservationExpiresAt.value = null;
+  };
+
   const loadCart = async () => {
     const token = getToken();
     if (token) {
@@ -55,6 +102,7 @@ export const useCart = () => {
         if (response.ok) {
           const data = await response.json();
           cartItems.value = Array.isArray(data) ? data : [];
+          reservationExpiresAt.value = null;
           return;
         }
         if (response.status === 401 || response.status === 403) {
@@ -63,13 +111,25 @@ export const useCart = () => {
       } catch (e) {
         console.error("Failed to load cart:", e);
       }
-      cartItems.value = loadGuestCart();
+      const guestItems = loadGuestCart();
+      cartItems.value = guestItems;
+      if (guestItems.length > 0) {
+        await syncGuestReservations(guestItems);
+      }
     } else {
-      cartItems.value = loadGuestCart();
+      const guestItems = loadGuestCart();
+      cartItems.value = guestItems;
+      if (guestItems.length > 0) {
+        await syncGuestReservations(guestItems);
+      }
     }
   };
 
-  const addToCart = async (productId: number, quantity = 1) => {
+  const addToCart = async (
+    productId: number,
+    quantity = 1,
+    maxTotalQuantity?: number,
+  ) => {
     const token = getToken();
     if (token) {
       try {
@@ -84,6 +144,9 @@ export const useCart = () => {
         if (response.ok) {
           const data = await response.json();
           cartItems.value = Array.isArray(data) ? data : cartItems.value;
+          reservationExpiresAt.value = new Date(
+            Date.now() + RESERVATION_TTL_MS,
+          ).toISOString();
           return;
         }
         if (response.status === 401 || response.status === 403) {
@@ -95,18 +158,29 @@ export const useCart = () => {
     }
 
     const existing = cartItems.value.find((i) => i.productId === productId);
+    const desiredTotal = (existing?.quantity ?? 0) + quantity;
+    const cappedTotal =
+      maxTotalQuantity !== undefined
+        ? clampTotalCartQuantity(desiredTotal, maxTotalQuantity)
+        : desiredTotal;
+
+    if (cappedTotal <= 0) {
+      return;
+    }
+
     let next: CartItem[];
     if (existing) {
+      if (cappedTotal === existing.quantity) {
+        return;
+      }
       next = cartItems.value.map((i) =>
-        i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i
+        i.productId === productId ? { ...i, quantity: cappedTotal } : i,
       );
     } else {
-      next = [...cartItems.value, { productId, quantity }];
+      next = [...cartItems.value, { productId, quantity: cappedTotal }];
     }
-    cartItems.value = next;
-    if (import.meta.client) {
-      saveGuestCart(next);
-    }
+
+    await syncGuestReservations(next);
   };
 
   const removeFromCart = async (productId: number) => {
@@ -118,7 +192,7 @@ export const useCart = () => {
           {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
         if (response.ok) {
           const data = await response.json();
@@ -134,14 +208,20 @@ export const useCart = () => {
     }
 
     const next = cartItems.value.filter((i) => i.productId !== productId);
-    cartItems.value = next;
-    if (import.meta.client) {
-      saveGuestCart(next);
-    }
+    await syncGuestReservations(next);
   };
 
-  const setQuantity = async (productId: number, quantity: number) => {
-    if (quantity <= 0) {
+  const setQuantity = async (
+    productId: number,
+    quantity: number,
+    maxQuantity?: number,
+  ) => {
+    let nextQuantity = quantity;
+    if (maxQuantity !== undefined) {
+      nextQuantity = clampTotalCartQuantity(quantity, maxQuantity);
+    }
+
+    if (nextQuantity <= 0) {
       await removeFromCart(productId);
       return;
     }
@@ -156,12 +236,15 @@ export const useCart = () => {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ quantity }),
-          }
+            body: JSON.stringify({ quantity: nextQuantity }),
+          },
         );
         if (response.ok) {
           const data = await response.json();
           cartItems.value = Array.isArray(data) ? data : cartItems.value;
+          reservationExpiresAt.value = new Date(
+            Date.now() + RESERVATION_TTL_MS,
+          ).toISOString();
           return;
         }
         if (response.status === 401 || response.status === 403) {
@@ -173,16 +256,13 @@ export const useCart = () => {
     }
 
     const next = cartItems.value.map((i) =>
-      i.productId === productId ? { ...i, quantity } : i
+      i.productId === productId ? { ...i, quantity: nextQuantity } : i,
     );
-    cartItems.value = next;
-    if (import.meta.client) {
-      saveGuestCart(next);
-    }
+    await syncGuestReservations(next);
   };
 
   const cartCount = computed(() =>
-    cartItems.value.reduce((sum, i) => sum + i.quantity, 0)
+    cartItems.value.reduce((sum, i) => sum + i.quantity, 0),
   );
 
   const getQuantity = (productId: number) =>
@@ -193,6 +273,7 @@ export const useCart = () => {
     if (!token) return;
 
     const guestItems = loadGuestCart();
+    const guestId = getGuestCartId();
     if (guestItems.length === 0) {
       await loadCart();
       return;
@@ -205,7 +286,7 @@ export const useCart = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ items: guestItems }),
+        body: JSON.stringify({ items: guestItems, guestId }),
       });
       if (response.ok) {
         if (import.meta.client) {
@@ -218,16 +299,31 @@ export const useCart = () => {
     }
   };
 
-  const clearCart = () => {
+  const clearCart = async () => {
     cartItems.value = [];
     if (import.meta.client) {
       localStorage.removeItem(GUEST_CART_KEY);
     }
+    reservationExpiresAt.value = null;
+    if (!getToken()) {
+      await releaseGuestReservations();
+    }
+  };
+
+  const refreshGuestReservations = async () => {
+    if (getToken()) {
+      return;
+    }
+    if (cartItems.value.length === 0) {
+      return;
+    }
+    await syncGuestReservations(cartItems.value);
   };
 
   return {
     cartItems,
     cartCount,
+    reservationExpiresAt,
     loadCart,
     addToCart,
     removeFromCart,
@@ -237,5 +333,8 @@ export const useCart = () => {
     saveGuestCart,
     mergeGuestCart,
     clearCart,
+    refreshGuestReservations,
+    getGuestCartId: getOrCreateGuestCartId,
+    buildGuestCartHeaders,
   };
 };

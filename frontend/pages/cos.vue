@@ -71,11 +71,11 @@
                     <p class="text-sm text-gray-500 mt-0.5 line-clamp-2">{{ item.product.description }}</p>
                     <div class="mt-3 flex items-center gap-3">
                       <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden">
-                        <button type="button" class="w-8 h-8 flex items-center justify-center" :aria-label="t('decreaseQty')" @click="setQuantity(item.product.id, Math.max(1, item.quantity - 1))">
+                        <button type="button" class="w-8 h-8 flex items-center justify-center" :aria-label="t('decreaseQty')" @click="changeCartQuantity(item.product, item.quantity - 1)">
                           <i class="ph ph-minus text-xs"></i>
                         </button>
-                        <input :value="item.quantity" type="number" min="1" class="quantity-input w-10 h-8 text-center border-none" @input="onQuantityInput(item.product.id, $event)" />
-                        <button type="button" class="w-8 h-8 flex items-center justify-center" :aria-label="t('increaseQty')" @click="setQuantity(item.product.id, item.quantity + 1)">
+                        <input :value="item.quantity" type="number" min="1" :max="getMaxCartQuantity(item.product)" class="quantity-input w-10 h-8 text-center border-none" @input="onQuantityInput(item.product, $event)" />
+                        <button type="button" class="w-8 h-8 flex items-center justify-center" :disabled="item.quantity >= getMaxCartQuantity(item.product)" :class="{ 'opacity-40 cursor-not-allowed': item.quantity >= getMaxCartQuantity(item.product) }" :aria-label="t('increaseQty')" @click="changeCartQuantity(item.product, item.quantity + 1)">
                           <i class="ph ph-plus text-xs"></i>
                         </button>
                       </div>
@@ -90,6 +90,55 @@
 
               <section v-else-if="currentStep === 2" class="space-y-4">
                 <template v-if="isLoggedIn">
+                  <div class="rounded-xl border border-gray-200 p-4 md:p-5 space-y-4">
+                    <div>
+                      <h3 class="text-base font-semibold h-color-lunar-green">{{ t('contactDetailsTitle') }}</h3>
+                      <p class="text-xs text-gray-600 mt-1">{{ t('contactDetailsHint') }}</p>
+                      <p class="text-xs text-amber-700 mt-1 font-medium">{{ t('requiredFieldsNote') }}</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestFirstName') }} <span class="text-red-600">*</span></label>
+                        <input
+                          v-model="contactForm.firstName"
+                          type="text"
+                          :placeholder="t('guestFirstNameExample')"
+                          autocomplete="given-name"
+                          class="w-full rounded-lg border px-3 py-2"
+                          :class="loggedContactInputClass('firstName')"
+                          @blur="touchLoggedContactField('firstName')"
+                        />
+                        <p v-if="showLoggedContactError('firstName')" class="text-xs text-red-600 mt-1">{{ loggedContactFieldError('firstName') }}</p>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestLastName') }} <span class="text-red-600">*</span></label>
+                        <input
+                          v-model="contactForm.lastName"
+                          type="text"
+                          :placeholder="t('guestLastNameExample')"
+                          autocomplete="family-name"
+                          class="w-full rounded-lg border px-3 py-2"
+                          :class="loggedContactInputClass('lastName')"
+                          @blur="touchLoggedContactField('lastName')"
+                        />
+                        <p v-if="showLoggedContactError('lastName')" class="text-xs text-red-600 mt-1">{{ loggedContactFieldError('lastName') }}</p>
+                      </div>
+                      <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestPhone') }} <span class="text-red-600">*</span></label>
+                        <input
+                          v-model="contactForm.phone"
+                          type="tel"
+                          :placeholder="t('guestPhoneExample')"
+                          autocomplete="tel"
+                          class="w-full rounded-lg border px-3 py-2"
+                          :class="loggedContactInputClass('phone')"
+                          @blur="touchLoggedContactField('phone')"
+                        />
+                        <p v-if="showLoggedContactError('phone')" class="text-xs text-red-600 mt-1">{{ loggedContactFieldError('phone') }}</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="rounded-xl border border-gray-200 p-4 md:p-5 space-y-4">
                     <div class="flex items-center justify-between">
                       <h3 class="text-base font-semibold h-color-lunar-green">{{ t('chooseDeliveryAddress') }}</h3>
@@ -172,18 +221,35 @@
                     </button>
                   </div>
 
-                  <div v-if="loggedAddressMode === 'newSecondary'" class="rounded-xl border border-gray-200 p-4 md:p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input
-                      v-model="newSecondaryForm.label"
-                      type="text"
-                      :placeholder="t('secondaryLabel')"
-                      class="w-full rounded-lg border px-3 py-2 md:col-span-2"
-                      @input="markAddressDirty"
-                    />
-                    <input v-model="newSecondaryForm.street" type="text" :placeholder="t('guestStreetExample')" class="w-full rounded-lg border px-3 py-2" @input="markAddressDirty" />
-                    <input v-model="newSecondaryForm.city" type="text" :placeholder="t('guestCityExample')" class="w-full rounded-lg border px-3 py-2" @input="markAddressDirty" />
-                    <input v-model="newSecondaryForm.county" type="text" :placeholder="t('guestCountyExample')" class="w-full rounded-lg border px-3 py-2" @input="markAddressDirty" />
-                    <input v-model="newSecondaryForm.postalCode" type="text" :placeholder="t('guestPostalCodeExample')" class="w-full rounded-lg border px-3 py-2" @input="markAddressDirty" />
+                  <div v-if="loggedAddressMode === 'newSecondary'" class="rounded-xl border border-gray-200 p-4 md:p-5 space-y-4">
+                    <p class="text-xs text-amber-700 font-medium">{{ t('requiredFieldsNote') }}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('secondaryLabel') }}</label>
+                      <input
+                        v-model="newSecondaryForm.label"
+                        type="text"
+                        :placeholder="t('secondaryLabel')"
+                        class="w-full rounded-lg border px-3 py-2"
+                        @input="markAddressDirty"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestStreet') }} <span class="text-red-600">*</span></label>
+                      <input v-model="newSecondaryForm.street" type="text" :placeholder="t('guestStreetExample')" class="w-full rounded-lg border px-3 py-2" @input="markAddressDirty" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestCity') }} <span class="text-red-600">*</span></label>
+                      <input v-model="newSecondaryForm.city" type="text" :placeholder="t('guestCityExample')" class="w-full rounded-lg border px-3 py-2" @input="markAddressDirty" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestCounty') }} <span class="text-red-600">*</span></label>
+                      <input v-model="newSecondaryForm.county" type="text" :placeholder="t('guestCountyExample')" class="w-full rounded-lg border px-3 py-2" @input="markAddressDirty" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestPostalCode') }} <span class="text-red-600">*</span></label>
+                      <input v-model="newSecondaryForm.postalCode" type="text" :placeholder="t('guestPostalCodeExample')" class="w-full rounded-lg border px-3 py-2" @input="markAddressDirty" />
+                    </div>
                     <label class="text-sm md:col-span-2 flex items-center gap-2" :class="!canSaveAsSecondaryAddress ? 'opacity-60' : ''">
                       <input v-model="saveAsSecondary" type="checkbox" :disabled="!canSaveAsSecondaryAddress" @change="markAddressDirty" />
                       <span>{{ t('saveAsSecondary') }}</span>
@@ -205,6 +271,7 @@
                       </button>
                       <span v-if="addressSaved" class="text-xs text-green-700">{{ t('addressSavedMsg') }}</span>
                     </div>
+                    </div>
                   </div>
 
                   <div v-if="loggedAddressMode === 'gift'" class="rounded-xl border border-gray-200 p-4 md:p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -219,7 +286,14 @@
 
                   <div class="rounded-xl border border-gray-200 p-4 md:p-5">
                     <h3 class="text-base font-semibold h-color-lunar-green mb-2">{{ t('billingDataTitle') }}</h3>
-                    <div class="space-y-3">
+                    <label class="flex items-start gap-3 mb-3 cursor-pointer">
+                      <input v-model="useDifferentBilling" type="checkbox" class="mt-1 shrink-0" />
+                      <span class="text-sm text-gray-700">{{ t('useDifferentBilling') }}</span>
+                    </label>
+                    <p v-if="!useDifferentBilling" class="text-sm text-gray-600 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2">
+                      {{ t('billingSameAsDelivery') }}
+                    </p>
+                    <div v-else class="space-y-3">
                       <div class="inline-flex rounded-lg border border-gray-300 p-1">
                         <button
                           type="button"
@@ -253,14 +327,38 @@
                       </div>
 
                       <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <input v-model="billingForm.firstName" type="text" :placeholder="t('guestFirstName')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-                        <input v-model="billingForm.lastName" type="text" :placeholder="t('guestLastName')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-                        <input v-model="billingForm.email" type="email" :placeholder="t('guestEmail')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-                        <input v-model="billingForm.phone" type="text" :placeholder="t('guestPhone')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-                        <input v-model="billingForm.street" type="text" :placeholder="t('guestStreet')" class="w-full rounded-lg border border-gray-300 px-3 py-2 md:col-span-2" />
-                        <input v-model="billingForm.city" type="text" :placeholder="t('guestCity')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-                        <input v-model="billingForm.county" type="text" :placeholder="t('guestCounty')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-                        <input v-model="billingForm.postalCode" type="text" :placeholder="t('guestPostalCode')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestFirstName') }} <span class="text-red-600">*</span></label>
+                          <input v-model="billingForm.firstName" type="text" :placeholder="t('guestFirstName')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestLastName') }} <span class="text-red-600">*</span></label>
+                          <input v-model="billingForm.lastName" type="text" :placeholder="t('guestLastName')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestEmail') }} <span class="text-red-600">*</span></label>
+                          <input v-model="billingForm.email" type="email" :placeholder="t('guestEmail')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestPhone') }} <span class="text-red-600">*</span></label>
+                          <input v-model="billingForm.phone" type="text" :placeholder="t('guestPhone')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        </div>
+                        <div class="md:col-span-2">
+                          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestStreet') }} <span class="text-red-600">*</span></label>
+                          <input v-model="billingForm.street" type="text" :placeholder="t('guestStreet')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestCity') }} <span class="text-red-600">*</span></label>
+                          <input v-model="billingForm.city" type="text" :placeholder="t('guestCity')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestCounty') }} <span class="text-red-600">*</span></label>
+                          <input v-model="billingForm.county" type="text" :placeholder="t('guestCounty')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        </div>
+                        <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestPostalCode') }} <span class="text-red-600">*</span></label>
+                          <input v-model="billingForm.postalCode" type="text" :placeholder="t('guestPostalCode')" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -400,9 +498,15 @@
 </template>
 
 <script setup>
+import { normalizeRomanianPhone } from '~/utils/phone';
+import { extractApiErrorMessage, formatPhoneApiError } from '~/utils/api-error';
+import { syncStoredUserProfile } from '~/utils/sync-user-profile';
+import { getOrCreateGuestCartId, buildGuestCartHeaders } from '~/utils/guest-cart-id';
+import { getProductStockQuantity } from '~/utils/product-stock';
 defineI18nRoute({ paths: { ro: '/cos', en: '/cart' } });
 const { t } = useI18n({ useScope: 'local' });
-const { cartItems, setQuantity, removeFromCart, clearCart } = useCart();
+const { cartItems, setQuantity, removeFromCart, clearCart, refreshGuestReservations } = useCart();
+const { getBaseUrl } = useApi();
 const localePath = useLocalePath();
 const router = useRouter();
 const route = useRoute();
@@ -421,12 +525,13 @@ const secondaryAddresses = ref([]);
 const selectedSecondaryIndex = ref(-1);
 const primaryAddress = ref(null);
 const customerFullName = ref('');
-const customerPhone = ref('');
+const savedProfilePhone = ref('');
 const saveAsSecondary = ref(true);
 const addressSaving = ref(false);
 const addressSaved = ref(false);
 const isGiftDelivery = ref(false);
 const billingType = ref('individual');
+const useDifferentBilling = ref(false);
 const billingLookupLoading = ref(false);
 const billingLookupError = ref('');
 const editAddressTarget = ref({ type: '', index: -1 });
@@ -461,6 +566,9 @@ const billingForm = ref({
   street: '',
   postalCode: '',
 });
+const contactForm = ref({ firstName: '', lastName: '', phone: '' });
+const loggedContactTouched = ref({ firstName: false, lastName: false, phone: false });
+const loggedSubmitAttempted = ref(false);
 const steps = [{ id: 1, label: 'steps.cart' }, { id: 2, label: 'steps.delivery' }, { id: 3, label: 'steps.payment' }];
 const deliveryFields = [
   { name: 'firstName', label: 'guestFirstName', placeholder: 'guestFirstNameExample', autocomplete: 'given-name' },
@@ -491,14 +599,34 @@ const cashOperationalFee = computed(() => (payOnline.value ? 0 : 5));
 const total = computed(() => subtotal.value + deliveryFee.value + cashOperationalFee.value);
 const checkoutButtonLabel = computed(() => (payOnline.value ? t('checkout') : t('checkoutCash')));
 const stepTitle = computed(() => (currentStep.value === 1 ? 'title' : currentStep.value === 2 ? 'deliveryTitle' : 'paymentTitle'));
+function getMaxCartQuantity(product) {
+  return getProductStockQuantity(product);
+}
+function changeCartQuantity(product, newQty) {
+  const max = getMaxCartQuantity(product);
+  setQuantity(product.id, newQty, max);
+}
+function clampCartQuantitiesToStock() {
+  for (const item of cartItems.value) {
+    const product = allProducts.value.find((p) => p.id === item.productId);
+    if (!product) continue;
+    const max = getMaxCartQuantity(product);
+    if (item.quantity > max) {
+      setQuantity(product.id, max, max);
+    }
+  }
+}
 function itemLineTotal({ product, quantity }) { return (Number(product.price) * quantity).toFixed(0); }
-function onQuantityInput(productId, e) { const qty = parseInt(e?.target?.value, 10); setQuantity(productId, Number.isFinite(qty) && qty >= 1 ? qty : 1); }
+function onQuantityInput(product, e) {
+  const qty = parseInt(e?.target?.value, 10);
+  changeCartQuantity(product, Number.isFinite(qty) && qty >= 1 ? qty : 1);
+}
 function touchGuestField(field) { if (guestTouched.value[field] !== undefined) guestTouched.value[field] = true; }
 function validateGuestField(field, value) {
   const trimmed = String(value || '').trim();
   if (!trimmed) return 'required';
   if (field === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed) ? '' : 'invalidEmail';
-  if (field === 'phone') return /^(\+4)?0[0-9]{9}$/.test(trimmed) ? '' : 'invalidPhone';
+  if (field === 'phone') return normalizeRomanianPhone(trimmed) ? '' : 'invalidPhone';
   if (field === 'postalCode') return /^[0-9]{6}$/.test(trimmed) ? '' : 'invalidPostalCode';
   if (field === 'firstName' || field === 'lastName') return /^[a-zA-Z\s-]{2,}$/.test(trimmed) ? '' : 'invalidName';
   if (field === 'county' || field === 'city') return /^[a-zA-Z\s.-]{2,}$/.test(trimmed) ? '' : 'invalidLocation';
@@ -513,14 +641,62 @@ function guestFieldError(field) {
 }
 function showGuestFieldError(field) { return (guestTouched.value[field] || guestSubmitAttempted.value) && !!guestFieldError(field); }
 function guestInputClass(field) { return showGuestFieldError(field) ? 'border-red-500 focus:border-red-500' : 'border-gray-300'; }
+function touchLoggedContactField(field) { if (loggedContactTouched.value[field] !== undefined) loggedContactTouched.value[field] = true; }
+function loggedContactFieldError(field) {
+  const code = validateGuestField(field, contactForm.value[field]);
+  if (!code) return '';
+  const keyMap = { required: 'guestValidationRequired', invalidEmail: 'guestValidationInvalidEmail', invalidPhone: 'guestValidationInvalidPhone', invalidPostalCode: 'guestValidationInvalidPostalCode', invalidName: 'guestValidationInvalidName', invalidLocation: 'guestValidationInvalidLocation', invalidStreet: 'guestValidationInvalidStreet' };
+  return t(keyMap[code]);
+}
+function showLoggedContactError(field) {
+  const code = validateGuestField(field, contactForm.value[field]);
+  if (!code) return false;
+  return loggedContactTouched.value[field] || loggedSubmitAttempted.value;
+}
+function loggedContactInputClass(field) {
+  return showLoggedContactError(field) ? 'border-red-500 focus:border-red-500' : 'border-gray-300';
+}
+function isLoggedContactValid() {
+  return ['firstName', 'lastName', 'phone'].every((field) => !validateGuestField(field, contactForm.value[field]));
+}
+const loggedContactValid = computed(() => isLoggedContactValid());
 const hasGuestFormErrors = computed(() => Object.keys(guestForm.value).some((field) => !!validateGuestField(field, guestForm.value[field])));
 const showTermsError = computed(() => (termsTouched.value || guestSubmitAttempted.value) && !termsAccepted.value);
 const canPlaceOrder = computed(() => (isLoggedIn.value ? termsAccepted.value : termsAccepted.value && !hasGuestFormErrors.value));
-const billingDetailsPayload = computed(() => ({
-  type: billingType.value,
-  ...billingForm.value,
-}));
+function buildBillingFromDelivery() {
+  const addr = selectedDeliveryAddress.value;
+  const billingSource =
+    isLoggedIn.value && isGiftDelivery.value
+      ? getPrimaryAddressForBilling()
+      : addr;
+  return {
+    type: 'individual',
+    firstName: contactForm.value.firstName,
+    lastName: contactForm.value.lastName,
+    email: billingForm.value.email,
+    phone: normalizeRomanianPhone(contactForm.value.phone) || contactForm.value.phone,
+    street: billingSource?.street || '',
+    city: billingSource?.city || '',
+    county: billingSource?.county || '',
+    postalCode: billingSource?.postalCode || '',
+    companyName: '',
+    cui: '',
+    tradeRegister: '',
+  };
+}
+const billingDetailsPayload = computed(() => {
+  if (isLoggedIn.value && !useDifferentBilling.value) {
+    return buildBillingFromDelivery();
+  }
+  return {
+    type: billingType.value,
+    ...billingForm.value,
+    phone: normalizeRomanianPhone(billingForm.value.phone) || billingForm.value.phone,
+  };
+});
 const selectedDeliveryAddress = computed(() => {
+  const recipientName = `${contactForm.value.firstName} ${contactForm.value.lastName}`.trim();
+  const recipientPhone = normalizeRomanianPhone(contactForm.value.phone);
   if (!isLoggedIn.value) return null;
   if (loggedAddressMode.value === 'primary') {
     return primaryAddress.value
@@ -529,6 +705,8 @@ const selectedDeliveryAddress = computed(() => {
           city: primaryAddress.value.city,
           street: primaryAddress.value.street,
           postalCode: primaryAddress.value.postal_code,
+          recipientName,
+          recipientPhone,
         }
       : null;
   }
@@ -541,6 +719,8 @@ const selectedDeliveryAddress = computed(() => {
           city: addr.city,
           street: addr.street,
           postalCode: addr.postal_code,
+          recipientName,
+          recipientPhone,
         }
       : null;
   }
@@ -555,6 +735,8 @@ const selectedDeliveryAddress = computed(() => {
           city: newSecondaryForm.value.city,
           street: newSecondaryForm.value.street,
           postalCode: newSecondaryForm.value.postalCode,
+          recipientName,
+          recipientPhone,
         }
       : null;
   }
@@ -587,7 +769,7 @@ const primaryAddressPreview = computed(() => {
 });
 const savedAddressCards = computed(() => {
   const cards = [];
-  const titleBase = `${customerFullName.value || t('guestFirstName')} ${customerPhone.value ? `- ${customerPhone.value}` : ''}`.trim();
+  const titleBase = `${customerFullName.value || t('guestFirstName')} ${contactForm.value.phone ? `- ${contactForm.value.phone}` : ''}`.trim();
   if (primaryAddress.value) {
     cards.push({
       key: 'primary',
@@ -650,17 +832,21 @@ function openNewSecondaryAddress() {
 function toggleGiftDelivery() {
   isGiftDelivery.value = !isGiftDelivery.value;
 }
-function getPrimaryAddressForBilling() {
-  if (!primaryAddress.value) return null;
-  return {
-    street: primaryAddress.value.street || '',
-    city: primaryAddress.value.city || '',
-    county: primaryAddress.value.county || '',
-    postalCode: primaryAddress.value.postal_code || '',
-  };
+function formatApiError(err) {
+  return formatPhoneApiError(err, t) || extractApiErrorMessage(err);
 }
-function syncBillingAddressWithDelivery() {
-  if (billingType.value !== 'individual') return;
+function syncBillingFormFromContact() {
+  const synced = buildBillingFromDelivery();
+  billingForm.value.firstName = synced.firstName;
+  billingForm.value.lastName = synced.lastName;
+  billingForm.value.phone = synced.phone;
+  billingForm.value.street = synced.street;
+  billingForm.value.city = synced.city;
+  billingForm.value.county = synced.county;
+  billingForm.value.postalCode = synced.postalCode;
+}
+function syncBillingAddressOnly() {
+  if (!useDifferentBilling.value) return;
   const billingSource =
     isLoggedIn.value && isGiftDelivery.value
       ? getPrimaryAddressForBilling()
@@ -675,13 +861,27 @@ function syncBillingAddressWithDelivery() {
   billingForm.value.postalCode =
     billingSource.postalCode || billingForm.value.postalCode;
 }
+function getPrimaryAddressForBilling() {
+  if (!primaryAddress.value) return null;
+  return {
+    street: primaryAddress.value.street || '',
+    city: primaryAddress.value.city || '',
+    county: primaryAddress.value.county || '',
+    postalCode: primaryAddress.value.postal_code || '',
+  };
+}
+function syncBillingAddressWithDelivery() {
+  if (!useDifferentBilling.value) return;
+  if (billingType.value !== 'individual') return;
+  syncBillingAddressOnly();
+}
 async function lookupCompanyByCui() {
   const cleaned = String(billingForm.value.cui || '').replace(/\D/g, '');
   if (!cleaned) {
     billingLookupError.value = t('billingCuiRequired');
     return;
   }
-  const base = import.meta.env.VITE_BACKEND_URL || '';
+  const base = getBaseUrl();
   billingLookupLoading.value = true;
   billingLookupError.value = '';
   try {
@@ -732,12 +932,110 @@ function editSavedAddress(addr) {
     };
   }
 }
+function updateLocalUser(partial) {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return;
+    const stored = JSON.parse(raw);
+    const updated = { ...stored, ...partial };
+    localStorage.setItem('user', JSON.stringify(updated));
+  } catch (error) {
+    console.error('Failed to update local user:', error);
+  }
+}
+async function syncProfileFromCheckout() {
+  const token = localStorage.getItem('token');
+  const base = getBaseUrl();
+  const normalizedPhone = normalizeRomanianPhone(contactForm.value.phone);
+  if (contactForm.value.phone?.trim() && !normalizedPhone) {
+    checkoutError.value = t('phoneInvalidFormat');
+    return false;
+  }
+  try {
+    const profilePayload = {};
+    if (contactForm.value.firstName?.trim()) {
+      profilePayload.first_name = contactForm.value.firstName.trim();
+    }
+    if (contactForm.value.lastName?.trim()) {
+      profilePayload.last_name = contactForm.value.lastName.trim();
+    }
+    if (Object.keys(profilePayload).length > 0) {
+      const res = await fetch(`${base}/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(profilePayload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        checkoutError.value = formatApiError(err) || t('profileSyncFailed');
+        return false;
+      }
+      updateLocalUser(profilePayload);
+    }
+    if (normalizedPhone && normalizedPhone !== savedProfilePhone.value) {
+      const res = await fetch(`${base}/users/profile/phone`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone: normalizedPhone }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        checkoutError.value = formatApiError(err) || t('profileSyncFailed');
+        return false;
+      }
+      savedProfilePhone.value = normalizedPhone;
+      contactForm.value.phone = normalizedPhone;
+      updateLocalUser({ phone: normalizedPhone });
+    }
+    const addr = selectedDeliveryAddress.value;
+    if (addr && !primaryAddress.value) {
+      const primaryPayload = {
+        county: addr.county,
+        city: addr.city,
+        street: addr.street,
+        postal_code: addr.postalCode,
+      };
+      const res = await fetch(`${base}/users/profile/address`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(primaryPayload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        checkoutError.value = formatApiError(err) || t('profileSyncFailed');
+        return false;
+      }
+      primaryAddress.value = primaryPayload;
+      updateLocalUser(primaryPayload);
+    }
+    if (!useDifferentBilling.value) {
+      billingForm.value.firstName = contactForm.value.firstName;
+      billingForm.value.lastName = contactForm.value.lastName;
+      billingForm.value.phone = normalizedPhone || contactForm.value.phone;
+    }
+    customerFullName.value = `${contactForm.value.firstName} ${contactForm.value.lastName}`.trim();
+    return true;
+  } catch (error) {
+    console.error('Failed to sync profile from checkout:', error);
+    checkoutError.value = t('profileSyncFailed');
+    return false;
+  }
+}
 function markAddressDirty() {
   addressSaved.value = false;
 }
 async function saveAddressFromForm() {
   const token = localStorage.getItem('token');
-  const base = import.meta.env.VITE_BACKEND_URL || '';
+  const base = getBaseUrl();
   addressSaving.value = true;
   checkoutError.value = '';
   try {
@@ -750,7 +1048,7 @@ async function saveAddressFromForm() {
       street: newSecondaryForm.value.street,
       postal_code: newSecondaryForm.value.postalCode,
     };
-    if (editAddressTarget.value.type === 'primary') {
+    if (editAddressTarget.value.type === 'primary' || !primaryAddress.value) {
       const primaryPayload = {
         county: newSecondaryForm.value.county,
         city: newSecondaryForm.value.city,
@@ -863,7 +1161,7 @@ async function deleteSavedAddress() {
   const addr = pendingDeleteAddress.value;
   if (typeof addr?.idx !== 'number') return;
   const token = localStorage.getItem('token');
-  const base = import.meta.env.VITE_BACKEND_URL || '';
+  const base = getBaseUrl();
   checkoutError.value = '';
   try {
     const res = await fetch(`${base}/users/profile/secondary-address/${addr.idx}`, {
@@ -914,8 +1212,32 @@ watch(isGiftDelivery, (checked) => {
   }
 });
 watch(
+  contactForm,
+  (contact) => {
+    customerFullName.value = `${contact.firstName} ${contact.lastName}`.trim();
+    if (!useDifferentBilling.value) {
+      syncBillingFormFromContact();
+    }
+  },
+  { deep: true },
+);
+watch(useDifferentBilling, (enabled) => {
+  if (!enabled) {
+    billingType.value = 'individual';
+    syncBillingFormFromContact();
+    return;
+  }
+  if (billingType.value === 'individual') {
+    syncBillingAddressOnly();
+  }
+});
+watch(
   selectedDeliveryAddress,
   () => {
+    if (!useDifferentBilling.value) {
+      syncBillingFormFromContact();
+      return;
+    }
     syncBillingAddressWithDelivery();
   },
   { immediate: true },
@@ -938,15 +1260,17 @@ const loggedAddressValid = computed(() =>
   isLoggedIn.value ? !!selectedDeliveryAddress.value : true,
 );
 const canAccessStep3 = computed(() =>
-  isLoggedIn.value ? loggedAddressValid.value : !hasGuestFormErrors.value,
+  isLoggedIn.value ? loggedAddressValid.value && loggedContactValid.value : !hasGuestFormErrors.value,
 );
 function isStepLocked(step) { return step === 3 && !canAccessStep3.value; }
 function navigateToStep(step) {
   if (step === currentStep.value) return;
   if (step === 3 && !canAccessStep3.value) {
     guestSubmitAttempted.value = true;
+    loggedSubmitAttempted.value = true;
     Object.keys(guestTouched.value).forEach((field) => { guestTouched.value[field] = true; });
-    checkoutError.value = t('guestMissingFields');
+    Object.keys(loggedContactTouched.value).forEach((field) => { loggedContactTouched.value[field] = true; });
+    checkoutError.value = isLoggedIn.value ? t('loggedMissingContactOrAddress') : t('guestMissingFields');
     currentStep.value = 2;
     return;
   }
@@ -960,15 +1284,26 @@ async function goToPaymentStep() {
     guestSubmitAttempted.value = true;
     Object.keys(guestTouched.value).forEach((field) => { guestTouched.value[field] = true; });
     if (hasGuestFormErrors.value) { checkoutError.value = t('guestMissingFields'); return; }
-  } else if (!loggedAddressValid.value) {
-    checkoutError.value = t('selectValidAddress');
-    return;
-  } else if (loggedAddressMode.value === 'newSecondary') {
-    const saved = await saveAddressFromForm();
-    if (!saved) {
-      checkoutError.value = t('addressSaveFailed');
+  } else {
+    loggedSubmitAttempted.value = true;
+    Object.keys(loggedContactTouched.value).forEach((field) => { loggedContactTouched.value[field] = true; });
+    if (!loggedContactValid.value) {
+      checkoutError.value = t('loggedMissingContact');
       return;
     }
+    if (!loggedAddressValid.value) {
+      checkoutError.value = t('selectValidAddress');
+      return;
+    }
+    if (loggedAddressMode.value === 'newSecondary') {
+      const saved = await saveAddressFromForm();
+      if (!saved) {
+        checkoutError.value = checkoutError.value || t('addressSaveFailed');
+        return;
+      }
+    }
+    const synced = await syncProfileFromCheckout();
+    if (!synced) return;
   }
   currentStep.value = 3;
 }
@@ -978,8 +1313,22 @@ async function goToCheckout() {
   guestSubmitAttempted.value = true;
   termsTouched.value = true;
   if (!canPlaceOrder.value) { checkoutError.value = !termsAccepted.value ? t('guestTermsRequired') : t('guestMissingFields'); return; }
+  if (token) {
+    loggedSubmitAttempted.value = true;
+    Object.keys(loggedContactTouched.value).forEach((field) => { loggedContactTouched.value[field] = true; });
+    if (!loggedContactValid.value || !loggedAddressValid.value) {
+      checkoutError.value = t('loggedMissingContactOrAddress');
+      currentStep.value = 2;
+      return;
+    }
+    const synced = await syncProfileFromCheckout();
+    if (!synced) {
+      currentStep.value = 2;
+      return;
+    }
+  }
   checkoutLoading.value = true;
-  const base = import.meta.env.VITE_BACKEND_URL || '';
+  const base = getBaseUrl();
   const successPath = localePath('/plata/succes');
   const cancelPath = localePath('/plata/anulata');
   try {
@@ -990,6 +1339,7 @@ async function goToCheckout() {
         ? { deliveryAddress: selectedDeliveryAddress.value, billingDetails: billingDetailsPayload.value }
         : {
             items: cartItems.value,
+            guestCartId: getOrCreateGuestCartId(),
             guest: guestForm.value,
             billingDetails: billingDetailsPayload.value,
           }
@@ -999,20 +1349,20 @@ async function goToCheckout() {
             successUrl: successPath,
             cancelUrl: cancelPath,
             items: cartItems.value,
+            guestCartId: getOrCreateGuestCartId(),
             guest: guestForm.value,
             billingDetails: billingDetailsPayload.value,
           };
     const res = await fetch(`${base}/checkout/${endpoint}`, { method: 'POST', headers: token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const serverMessage = data.message || t('checkoutError');
-      if (typeof serverMessage === 'string' && (serverMessage.toLowerCase().includes('adresa') || serverMessage.toLowerCase().includes('address'))) { await router.push(`${localePath('/profil')}?completeContact=1`); return; }
-      checkoutError.value = serverMessage;
+      checkoutError.value = data.message || t('checkoutError');
       return;
     }
     if (data.url) { window.location.href = data.url; return; }
     if (data.success) {
-      clearCart();
+      await clearCart();
+      await syncStoredUserProfile();
       await router.push(successPath);
       return;
     }
@@ -1032,7 +1382,10 @@ onMounted(async () => {
       if (raw) {
         const user = JSON.parse(raw);
         customerFullName.value = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-        customerPhone.value = user.phone || '';
+        savedProfilePhone.value = user.phone || '';
+        contactForm.value.firstName = user.first_name || '';
+        contactForm.value.lastName = user.last_name || '';
+        contactForm.value.phone = user.phone || '';
         billingForm.value.firstName = user.first_name || '';
         billingForm.value.lastName = user.last_name || '';
         billingForm.value.email = user.email || '';
@@ -1042,8 +1395,16 @@ onMounted(async () => {
       console.error('Failed to parse local user:', error);
     }
   }
-  const base = import.meta.env.VITE_BACKEND_URL || '';
-  try { const res = await fetch(`${base}/products`); if (res.ok) allProducts.value = await res.json(); } catch (error) { console.error('Failed to fetch products for cart:', error); }
+  const base = getBaseUrl();
+    const productHeaders = {
+      ...buildGuestCartHeaders(),
+      ...(localStorage.getItem('token')
+        ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        : {}),
+    };
+  try { const res = await fetch(`${base}/products`, { headers: productHeaders }); if (res.ok) allProducts.value = await res.json(); } catch (error) { console.error('Failed to fetch products for cart:', error); }
+  await refreshGuestReservations();
+  clampCartQuantitiesToStock();
   if (isLoggedIn.value) {
     const token = localStorage.getItem('token');
     try {
@@ -1056,7 +1417,10 @@ onMounted(async () => {
         secondaryAddresses.value = Array.isArray(data.secondaryAddresses)
           ? data.secondaryAddresses
           : [];
-        customerPhone.value = data.phone || customerPhone.value;
+        savedProfilePhone.value = data.phone || savedProfilePhone.value;
+        contactForm.value.firstName = data.firstName || contactForm.value.firstName;
+        contactForm.value.lastName = data.lastName || contactForm.value.lastName;
+        contactForm.value.phone = data.phone || contactForm.value.phone;
         billingForm.value.phone = data.phone || billingForm.value.phone;
         if (data.primaryAddress) {
           billingForm.value.street = data.primaryAddress.street || billingForm.value.street;
@@ -1064,6 +1428,13 @@ onMounted(async () => {
           billingForm.value.county = data.primaryAddress.county || billingForm.value.county;
           billingForm.value.postalCode =
             data.primaryAddress.postal_code || billingForm.value.postalCode;
+        }
+        if (!data.primaryAddress && secondaryAddresses.value.length > 0) {
+          loggedAddressMode.value = 'secondary';
+          selectedSecondaryIndex.value = 0;
+        } else if (!data.primaryAddress && secondaryAddresses.value.length === 0) {
+          loggedAddressMode.value = 'newSecondary';
+          newSecondaryForm.value.label = t('defaultSecondaryLabel');
         }
       }
     } catch (error) {
@@ -1195,7 +1566,17 @@ watch(cartProducts, (items) => {
     "securePayment": "Secure payment. Return options within 14 days.",
     "decreaseQty": "Decrease quantity",
     "increaseQty": "Increase quantity",
-    "remove": "Remove"
+    "remove": "Remove",
+    "contactDetailsTitle": "Contact details",
+    "contactDetailsHint": "Pre-filled from your account. Required to place an order.",
+    "requiredFieldsNote": "Fields marked with * are required.",
+    "loggedMissingContact": "Please complete your name and phone number to continue.",
+    "loggedMissingContactOrAddress": "Please complete your contact details and delivery address to continue.",
+    "profileSyncFailed": "Could not save your details to profile. Please try again.",
+    "phoneInvalidFormat": "Phone number must be exactly 10 digits (ex: 07XXXXXXXX).",
+    "phoneAlreadyInUse": "This phone number is already used by another account.",
+    "useDifferentBilling": "Use different billing details than delivery",
+    "billingSameAsDelivery": "Billing details will match your contact and delivery information."
   },
   "ro": {
     "steps": { "cart": "Cos", "delivery": "Livrare", "payment": "Plata" },
@@ -1298,7 +1679,17 @@ watch(cartProducts, (items) => {
     "securePayment": "Plata securizata. Optiuni de retur in 14 zile.",
     "decreaseQty": "Scade cantitatea",
     "increaseQty": "Creste cantitatea",
-    "remove": "Elimina"
+    "remove": "Elimina",
+    "contactDetailsTitle": "Date de contact",
+    "contactDetailsHint": "Preluate din contul tau. Sunt necesare pentru a plasa comanda.",
+    "requiredFieldsNote": "Campurile marcate cu * sunt obligatorii.",
+    "loggedMissingContact": "Completeaza numele si numarul de telefon pentru a continua.",
+    "loggedMissingContactOrAddress": "Completeaza datele de contact si adresa de livrare pentru a continua.",
+    "profileSyncFailed": "Nu am putut salva datele in profil. Incearca din nou.",
+    "phoneInvalidFormat": "Numarul de telefon trebuie sa aiba exact 10 cifre (ex: 07XXXXXXXX).",
+    "phoneAlreadyInUse": "Acest numar de telefon este deja folosit de alt cont.",
+    "useDifferentBilling": "Doresc alte date de facturare decat cele de livrare",
+    "billingSameAsDelivery": "Datele de facturare vor fi aceleasi cu datele de contact si livrare."
   }
 }
 </i18n>

@@ -12,60 +12,52 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-
-class UpdateProfileDto {
-  first_name?: string;
-  last_name?: string;
-  county?: string;
-  city?: string;
-  street?: string;
-  postal_code?: string;
-  phone?: string;
-  picture?: string;
-}
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../common/enums/user-role.enum';
+import { AuthenticatedRequest } from '../common/types/authenticated-request.interface';
+import { stripPassword } from '../common/utils/user-response.util';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateAddressDto } from './dto/update-address.dto';
+import { UpdatePhoneDto } from './dto/update-phone.dto';
+import { SecondaryAddressDto } from './dto/secondary-address.dto';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
   @Get()
   findAll() {
-    return { message: 'Lista utilizatorilor' };
+    return this.usersService.findAllSanitized();
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  async getProfile(@Request() req) {
+  async getProfile(@Request() req: AuthenticatedRequest) {
     const user = await this.usersService.findOne(req.user.id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    const { password, ...result } = user;
-    return result;
+    return stripPassword(user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Put('profile')
   async updateProfile(
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
     @Body() updateProfileDto: UpdateProfileDto,
   ) {
     const user = await this.usersService.update(req.user.id, updateProfileDto);
-    const { password, ...result } = user;
-    return result;
+    return stripPassword(user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Put('profile/address')
   async updateAddress(
     @Request() req,
-    @Body()
-    updateData: {
-      county?: string;
-      city?: string;
-      street?: string;
-      postal_code?: string;
-    },
+    @Body() updateData: UpdateAddressDto,
   ) {
     return this.usersService.updateAddress(req.user.id, updateData);
   }
@@ -78,7 +70,7 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Put('profile/phone')
-  async updatePhone(@Request() req, @Body() updateData: { phone: string }) {
+  async updatePhone(@Request() req, @Body() updateData: UpdatePhoneDto) {
     return this.usersService.updatePhone(req.user.id, updateData.phone);
   }
 
@@ -92,14 +84,7 @@ export class UsersController {
   @Post('profile/secondary-address')
   async addSecondaryAddress(
     @Request() req,
-    @Body()
-    body: {
-      label?: string;
-      county: string;
-      city: string;
-      street: string;
-      postal_code: string;
-    },
+    @Body() body: SecondaryAddressDto,
   ) {
     return this.usersService.addSecondaryAddress(req.user.id, body);
   }
@@ -109,14 +94,7 @@ export class UsersController {
   async updateSecondaryAddress(
     @Request() req,
     @Param('index') index: string,
-    @Body()
-    body: {
-      label?: string;
-      county: string;
-      city: string;
-      street: string;
-      postal_code: string;
-    },
+    @Body() body: SecondaryAddressDto,
   ) {
     const parsed = Number(index);
     if (!Number.isInteger(parsed)) {

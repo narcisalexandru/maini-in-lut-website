@@ -9,6 +9,12 @@ import { ProductsModule } from './products/products.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { CartModule } from './cart/cart.module';
 import { CheckoutModule } from './checkout/checkout.module';
+import { ArtistsModule } from './artists/artists.module';
+import { OrdersModule } from './orders/orders.module';
+import { DatabaseModule } from './database/database.module';
+import { AuditLogModule } from './audit-log/audit-log.module';
+import { UploadsModule } from './uploads/uploads.module';
+import { StockReservationsModule } from './stock-reservations/stock-reservations.module';
 
 @Module({
   imports: [
@@ -33,6 +39,12 @@ import { CheckoutModule } from './checkout/checkout.module';
     FavoritesModule,
     CartModule,
     CheckoutModule,
+    DatabaseModule,
+    ArtistsModule,
+    OrdersModule,
+    AuditLogModule,
+    UploadsModule,
+    StockReservationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

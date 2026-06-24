@@ -11,6 +11,16 @@ export default defineNuxtConfig({
   routeRules: {
     "/cos": { ssr: false },
     "/en/cart": { ssr: false },
+    "/auth/**": { ssr: false },
+    "/en/auth/**": { ssr: false },
+    "/vinde-cu-noi": { ssr: false },
+    "/en/sell-with-us": { ssr: false },
+    "/login": { ssr: false },
+    "/en/login": { ssr: false },
+    "/admin/**": { ssr: false },
+    "/en/admin/**": { ssr: false },
+    "/profil/comenzi/**": { ssr: false },
+    "/en/profile/orders/**": { ssr: false },
   },
 
   imports: {
@@ -74,6 +84,26 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()],
     optimizeDeps: {
       exclude: ["primevue/menubar"],
+      include: [
+        "primevue/accordion",
+        "primevue/accordionpanel",
+        "primevue/accordionheader",
+        "primevue/accordioncontent",
+        "primevue/button",
+        "primevue/checkbox",
+        "primevue/column",
+        "primevue/datatable",
+        "primevue/dialog",
+        "primevue/inputtext",
+        "primevue/select",
+        "primevue/slider",
+        "primevue/tabpanel",
+        "primevue/tabview",
+        "primevue/tag",
+        "primevue/textarea",
+        "primevue/toast",
+        "primevue/usetoast",
+      ],
     },
   },
   i18n: {
@@ -93,7 +123,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase:
-        process.env.API_BASE_URL || `${import.meta.env.VITE_BACKEND_URL}`,
+        process.env.API_BASE_URL ||
+        process.env.VITE_BACKEND_URL ||
+        "http://localhost:4000",
     },
   },
 

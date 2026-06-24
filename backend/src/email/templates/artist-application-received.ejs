@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cerere trimisă</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #ece4d4;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 24px;
+        margin-top: 20px;
+      }
+      h1 {
+        color: #546a50;
+        margin-top: 0;
+      }
+      .label {
+        font-weight: bold;
+        color: #546a50;
+        margin-top: 16px;
+      }
+      .value {
+        margin: 4px 0 0;
+        white-space: pre-wrap;
+      }
+      .footer {
+        margin-top: 24px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Cererea ta a fost trimisă</h1>
+      <p>
+        Bună <%= firstName %>, îți mulțumim! Am primit cererea ta de înscriere ca
+        artist pe Maini in Lut. Echipa noastră o va verifica în curând.
+      </p>
+
+      <p class="label">Artist</p>
+      <p class="value"><%= artistFirstName %> <%= artistLastName %></p>
+
+      <p class="label">CUI firmă</p>
+      <p class="value"><%= companyCui %></p>
+
+      <p class="label">Denumire legală firmă</p>
+      <p class="value"><%= companyLegalName %></p>
+
+      <p class="label">Nume pe site</p>
+      <p class="value"><%= displayName %></p>
+
+      <p class="label">Email contact</p>
+      <p class="value"><%= contactEmail %></p>
+
+      <% if (contactPhone) { %>
+      <p class="label">Telefon contact</p>
+      <p class="value"><%= contactPhone %></p>
+      <% } %>
+
+      <% if (portfolioUrl) { %>
+      <p class="label">Portofoliu</p>
+      <p class="value"><a href="<%= portfolioUrl %>"><%= portfolioUrl %></a></p>
+      <% } %>
+
+      <div class="footer">
+        <p>Te vom anunța prin email când cererea este aprobată sau respinsă.</p>
+      </div>
+    </div>
+  </body>
+</html>

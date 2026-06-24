@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserCartItem } from './entities/user-cart-item.entity';
 import { ProductsService } from '../products/products.service';
+import { StockReservationsService } from '../stock-reservations/stock-reservations.service';
 
 export type CartItemDto = { productId: number; quantity: number };
 
@@ -12,6 +17,7 @@ export class CartService {
     @InjectRepository(UserCartItem)
     private cartRepository: Repository<UserCartItem>,
     private productsService: ProductsService,
+    private stockReservationsService: StockReservationsService,
   ) {}
 
   async findAll(userId: number): Promise<CartItemDto[]> {
@@ -32,22 +38,22 @@ export class CartService {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
-    const existing = await this.cartRepository.findOne({
-      where: { userId, productId },
-    });
-    if (existing) {
-      existing.quantity += quantity;
-      await this.cartRepository.save(existing);
-      return { productId, quantity: existing.quantity };
-    }
+    const items = await this.findAll(userId);
+    const existing = items.find((item) => item.productId === productId);
+    const nextItems = existing
+      ? items.map((item) =>
+          item.productId === productId
+            ? { ...item, quantity: item.quantity + quantity }
+            : item,
+        )
+      : [...items, { productId, quantity }];
 
-    const item = this.cartRepository.create({
-      userId,
-      productId,
-      quantity,
-    });
-    await this.cartRepository.save(item);
-    return { productId, quantity: item.quantity };
+    const synced = await this.syncUserCart(userId, nextItems);
+    const saved = synced.find((item) => item.productId === productId);
+    if (!saved) {
+      throw new BadRequestException('Produsul nu mai este disponibil in stoc.');
+    }
+    return saved;
   }
 
   async setQuantity(
@@ -65,61 +71,105 @@ export class CartService {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
-    const existing = await this.cartRepository.findOne({
-      where: { userId, productId },
-    });
-    if (!existing) {
-      const item = this.cartRepository.create({
-        userId,
-        productId,
-        quantity,
-      });
-      await this.cartRepository.save(item);
-      return { productId, quantity };
-    }
+    const items = await this.findAll(userId);
+    const hasItem = items.some((item) => item.productId === productId);
+    const nextItems = hasItem
+      ? items.map((item) =>
+          item.productId === productId ? { ...item, quantity } : item,
+        )
+      : [...items, { productId, quantity }];
 
-    existing.quantity = quantity;
-    await this.cartRepository.save(existing);
-    return { productId, quantity: existing.quantity };
+    const synced = await this.syncUserCart(userId, nextItems);
+    return synced.find((item) => item.productId === productId) ?? null;
   }
 
   async remove(userId: number, productId: number): Promise<{ success: boolean }> {
-    const result = await this.cartRepository.delete({
-      userId,
-      productId,
-    });
-    return { success: (result.affected ?? 0) > 0 };
+    const items = await this.findAll(userId);
+    const nextItems = items.filter((item) => item.productId !== productId);
+    await this.syncUserCart(userId, nextItems);
+    return { success: true };
   }
 
-  async merge(userId: number, items: CartItemDto[]): Promise<CartItemDto[]> {
+  async merge(
+    userId: number,
+    items: CartItemDto[],
+    guestId?: string,
+  ): Promise<CartItemDto[]> {
     if (!Array.isArray(items) || items.length === 0) {
       return this.findAll(userId);
     }
 
+    const current = await this.findAll(userId);
+    const merged = new Map<number, number>();
+    for (const item of current) {
+      merged.set(item.productId, item.quantity);
+    }
     for (const { productId, quantity } of items) {
-      const product = await this.productsService.findOne(productId);
-      if (!product) continue;
-
-      const existing = await this.cartRepository.findOne({
-        where: { userId, productId },
-      });
-      if (existing) {
-        existing.quantity += quantity;
-        await this.cartRepository.save(existing);
-      } else {
-        const item = this.cartRepository.create({
-          userId,
-          productId,
-          quantity,
-        });
-        await this.cartRepository.save(item);
+      if (!Number.isInteger(productId) || quantity < 1) {
+        continue;
       }
+      merged.set(productId, (merged.get(productId) ?? 0) + quantity);
     }
 
-    return this.findAll(userId);
+    const nextItems = [...merged.entries()].map(([productId, quantity]) => ({
+      productId,
+      quantity,
+    }));
+    const synced = await this.syncUserCart(userId, nextItems);
+
+    if (guestId?.trim()) {
+      await this.stockReservationsService.releaseHolder({
+        type: 'guest',
+        guestId: guestId.trim(),
+      });
+    }
+
+    return synced;
   }
 
   async clearCart(userId: number): Promise<void> {
     await this.cartRepository.delete({ userId });
+    await this.stockReservationsService.releaseHolder({
+      type: 'user',
+      userId,
+    });
+  }
+
+  private async syncUserCart(
+    userId: number,
+    items: CartItemDto[],
+  ): Promise<CartItemDto[]> {
+    const { items: synced } = await this.stockReservationsService.syncForHolder(
+      { type: 'user', userId },
+      items,
+    );
+    await this.reconcileCart(userId, synced);
+    return synced;
+  }
+
+  private async reconcileCart(
+    userId: number,
+    items: CartItemDto[],
+  ): Promise<void> {
+    const current = await this.cartRepository.find({ where: { userId } });
+    const targetMap = new Map(items.map((item) => [item.productId, item.quantity]));
+
+    for (const row of current) {
+      const targetQuantity = targetMap.get(row.productId);
+      if (targetQuantity === undefined) {
+        await this.cartRepository.delete({ userId, productId: row.productId });
+        continue;
+      }
+      if (row.quantity !== targetQuantity) {
+        row.quantity = targetQuantity;
+        await this.cartRepository.save(row);
+      }
+      targetMap.delete(row.productId);
+    }
+
+    for (const [productId, quantity] of targetMap) {
+      const item = this.cartRepository.create({ userId, productId, quantity });
+      await this.cartRepository.save(item);
+    }
   }
 }

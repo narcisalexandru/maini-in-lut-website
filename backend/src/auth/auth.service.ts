@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { User, UserWithoutPassword } from '../users/entities/user.entity';
+import { toUserResponse } from '../common/utils/user-response.util';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { EmailService } from '../email/email.service';
@@ -43,18 +44,7 @@ export class AuthService {
     const payload = { email: user.email, sub: user.id };
     return {
       access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        phone: user.phone,
-        county: user.county,
-        city: user.city,
-        street: user.street,
-        postal_code: user.postal_code,
-        picture: user.picture,
-      },
+      user: toUserResponse(user),
     };
   }
 
@@ -110,15 +100,12 @@ export class AuthService {
         verificationLink,
       );
 
+      const loginResult = await this.login(user);
+
       return {
+        ...loginResult,
         message:
           'Registration successful. Please check your email to verify your account.',
-        user: {
-          id: user.id,
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-        },
       };
     } catch (error) {
       this.logger.error('Registration failed', error);

@@ -8,6 +8,19 @@ import { CartService } from '../cart/cart.service';
 import { ProductsService } from '../products/products.service';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
+import { OrdersService } from '../orders/orders.service';
+import { OrderBillingDetails } from '../orders/entities/order.entity';
+import { OrderPaymentStatus } from '../common/enums/order-status.enum';
+import { ArtistsService } from '../artists/artists.service';
+import { StockReservationsService } from '../stock-reservations/stock-reservations.service';
+import { CartHolder } from '../stock-reservations/types/cart-holder.type';
+
+type OrderContact = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+};
 
 const DELIVERY_FEE_RON = 15;
 const CASH_OPERATIONAL_FEE_RON = 5;
@@ -33,6 +46,8 @@ export type BillingDetailsDto = {
 
 type OrderItemSnapshot = {
   productId: number;
+  artistId: number;
+  artistDisplayName: string;
   title: string;
   quantity: number;
   unitPriceRon: number;
@@ -62,6 +77,9 @@ export class CheckoutService {
     private productsService: ProductsService,
     private usersService: UsersService,
     private emailService: EmailService,
+    private ordersService: OrdersService,
+    private artistsService: ArtistsService,
+    private stockReservationsService: StockReservationsService,
   ) {}
 
   private readonly REQUIRED_GUEST_FIELDS = [
@@ -74,6 +92,75 @@ export class CheckoutService {
     'street',
     'postalCode',
   ] as const;
+
+  private hasCompleteAddress(fields: {
+    county?: string | null;
+    city?: string | null;
+    street?: string | null;
+    postalCode?: string | null;
+    postal_code?: string | null;
+  }): boolean {
+    const postal = fields.postalCode || fields.postal_code;
+    return !!(fields.county && fields.city && fields.street && postal);
+  }
+
+  private resolveCheckoutPhone(
+    user: { phone?: string | null },
+    deliveryAddress?: { recipientPhone?: string },
+    billingDetails?: BillingDetailsDto,
+  ): string {
+    return (
+      user.phone?.trim() ||
+      deliveryAddress?.recipientPhone?.trim() ||
+      billingDetails?.phone?.trim() ||
+      ''
+    );
+  }
+
+  private resolveCheckoutDeliveryAddress(
+    user: {
+      county?: string | null;
+      city?: string | null;
+      street?: string | null;
+      postal_code?: string | null;
+      first_name: string;
+      last_name: string;
+      phone?: string | null;
+    },
+    phone: string,
+    deliveryAddress?: {
+      county: string;
+      city: string;
+      street: string;
+      postalCode: string;
+      recipientName?: string;
+      recipientPhone?: string;
+    },
+  ) {
+    if (deliveryAddress && this.hasCompleteAddress(deliveryAddress)) {
+      return {
+        county: deliveryAddress.county,
+        city: deliveryAddress.city,
+        street: deliveryAddress.street,
+        postalCode: deliveryAddress.postalCode,
+        recipientPhone: deliveryAddress.recipientPhone || phone,
+        recipientName:
+          deliveryAddress.recipientName ||
+          `${user.first_name} ${user.last_name}`.trim(),
+      };
+    }
+    if (this.hasCompleteAddress(user)) {
+      return {
+        county: user.county as string,
+        city: user.city as string,
+        street: user.street as string,
+        postalCode: user.postal_code as string,
+        recipientPhone: phone,
+        recipientName: `${user.first_name} ${user.last_name}`.trim(),
+      };
+    }
+    return null;
+  }
 
   private getNetopiaApiKey(): string {
     return (
@@ -402,6 +489,85 @@ export class CheckoutService {
     };
   }
 
+  private isGiftOrder(
+    orderPlacer: OrderContact,
+    recipientName?: string,
+  ): boolean {
+    const normalizedRecipient = (recipientName || '').trim();
+    if (!normalizedRecipient) {
+      return false;
+    }
+    const placerName =
+      `${orderPlacer.firstName} ${orderPlacer.lastName}`.trim().toLowerCase();
+    return placerName !== normalizedRecipient.toLowerCase();
+  }
+
+  private placerToMetadata(
+    orderPlacer: OrderContact,
+    isGift: boolean,
+  ): Record<string, string> {
+    if (!isGift) {
+      return { isGift: '0' };
+    }
+    return {
+      isGift: '1',
+      orderPlacerFirstName: orderPlacer.firstName,
+      orderPlacerLastName: orderPlacer.lastName,
+      orderPlacerEmail: orderPlacer.email,
+      orderPlacerPhone: orderPlacer.phone,
+    };
+  }
+
+  private orderPlacerFromMetadata(
+    metadata?: Record<string, string> | null,
+  ): OrderContact | undefined {
+    if (metadata?.isGift !== '1') {
+      return undefined;
+    }
+    return {
+      firstName: metadata.orderPlacerFirstName || '',
+      lastName: metadata.orderPlacerLastName || '',
+      email: metadata.orderPlacerEmail || '',
+      phone: metadata.orderPlacerPhone || '',
+    };
+  }
+
+  private formatOrderPlacerHtml(orderPlacer?: OrderContact): string {
+    if (!orderPlacer) {
+      return '';
+    }
+    return `
+      <h3>Comandat de (cont)</h3>
+      <p>
+        ${orderPlacer.firstName} ${orderPlacer.lastName}<br/>
+        Email: ${orderPlacer.email || '-'}<br/>
+        Telefon: ${orderPlacer.phone || '-'}
+      </p>
+    `;
+  }
+
+  private formatDeliveryHtml(customer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    county: string;
+    city: string;
+    street: string;
+    postalCode: string;
+  }, isGift: boolean): string {
+    const title = isGift ? 'Date livrare (destinatar cadou)' : 'Date livrare';
+    return `
+      <h3>${title}</h3>
+      <p>
+        ${customer.firstName} ${customer.lastName}<br/>
+        Email: ${customer.email}<br/>
+        Telefon: ${customer.phone}<br/>
+        Adresa: ${customer.street}, ${customer.city}, ${customer.county}, ${customer.postalCode}
+      </p>
+    `;
+  }
+
   private formatBillingHtml(billing?: BillingDetailsDto): string {
     if (!billing?.type) return '';
     if (billing.type === 'company') {
@@ -464,7 +630,7 @@ export class CheckoutService {
     }
     return {
       name: company.denumire || '',
-      cui: company.cui || normalizedCui,
+      cui: String(company.cui || normalizedCui),
       tradeRegister: company.nrRegCom || '',
       address: company.adresa || '',
     };
@@ -490,9 +656,21 @@ export class CheckoutService {
       throw new BadRequestException('User not found');
     }
 
-    if (!user.county || !user.city || !user.street || !user.postal_code) {
+    const phone = this.resolveCheckoutPhone(user, deliveryAddress, billingDetails);
+    if (!phone) {
       throw new BadRequestException(
-        'Completeaza adresa in cont inainte de finalizarea comenzii.',
+        'Completeaza numarul de telefon inainte de finalizarea comenzii.',
+      );
+    }
+
+    const effectiveAddress = this.resolveCheckoutDeliveryAddress(
+      user,
+      phone,
+      deliveryAddress,
+    );
+    if (!effectiveAddress) {
+      throw new BadRequestException(
+        'Completeaza adresa de livrare inainte de finalizarea comenzii.',
       );
     }
 
@@ -501,25 +679,52 @@ export class CheckoutService {
       throw new BadRequestException('Cart is empty');
     }
 
-    const items = await this.buildOrderItems(cartItems);
+    const items = await this.buildOrderItems(cartItems, {
+      type: 'user',
+      userId,
+    });
     if (!items.length) {
       throw new BadRequestException('No valid products in cart');
     }
 
-    const effectiveAddress = deliveryAddress || {
-      county: user.county,
-      city: user.city,
-      street: user.street,
-      postalCode: user.postal_code,
-      recipientPhone: user.phone || '',
-      recipientName: `${user.first_name} ${user.last_name}`.trim(),
-    };
-
     const recipientParts = (effectiveAddress.recipientName || '').split(' ');
-    const orderId = `MIL-${Date.now()}`;
+    const subtotal = items.reduce((sum, i) => sum + i.lineTotalRon, 0);
+    const totalRon = Number((subtotal + DELIVERY_FEE_RON).toFixed(2));
+    const orderPlacer: OrderContact = {
+      firstName: user.first_name,
+      lastName: user.last_name,
+      email: user.email,
+      phone,
+    };
+    const isGift = this.isGiftOrder(
+      orderPlacer,
+      effectiveAddress.recipientName,
+    );
+
+    const persistedOrder = await this.ordersService.createCardOrder({
+      userId,
+      customer: {
+        firstName: recipientParts[0] || user.first_name,
+        lastName: recipientParts.slice(1).join(' ') || user.last_name,
+        email: user.email,
+        phone: effectiveAddress.recipientPhone || user.phone || '',
+        county: effectiveAddress.county,
+        city: effectiveAddress.city,
+        street: effectiveAddress.street,
+        postalCode: effectiveAddress.postalCode,
+        recipientName: effectiveAddress.recipientName,
+        recipientPhone: effectiveAddress.recipientPhone,
+      },
+      billingDetails: this.toOrderBillingDetails(billingDetails),
+      items,
+      subtotalRon: subtotal,
+      deliveryFeeRon: DELIVERY_FEE_RON,
+      cashOperationalFeeRon: 0,
+      totalRon,
+    });
 
     return this.createNetopiaPayment({
-      orderId,
+      orderId: persistedOrder.publicOrderNumber,
       items,
       customer: this.toNetopiaContact({
         email: user.email,
@@ -552,6 +757,7 @@ export class CheckoutService {
         deliveryPostalCode: effectiveAddress.postalCode,
         deliveryRecipientName: effectiveAddress.recipientName || '',
         deliveryRecipientPhone: effectiveAddress.recipientPhone || '',
+        ...this.placerToMetadata(orderPlacer, isGift),
         ...this.billingToMetadata(billingDetails),
       },
     });
@@ -572,38 +778,75 @@ export class CheckoutService {
   ): Promise<{ success: true; message: string; orderId: string }> {
     const user = await this.usersService.findOne(userId);
     if (!user) throw new BadRequestException('User not found');
-    if (!user.county || !user.city || !user.street || !user.postal_code) {
+
+    const phone = this.resolveCheckoutPhone(user, deliveryAddress, billingDetails);
+    if (!phone) {
       throw new BadRequestException(
-        'Completeaza adresa in cont inainte de finalizarea comenzii.',
+        'Completeaza numarul de telefon inainte de finalizarea comenzii.',
       );
     }
-    if (!user.phone) {
+
+    const effectiveAddress = this.resolveCheckoutDeliveryAddress(
+      user,
+      phone,
+      deliveryAddress,
+    );
+    if (!effectiveAddress) {
       throw new BadRequestException(
-        'Completeaza numarul de telefon in cont inainte de finalizarea comenzii.',
+        'Completeaza adresa de livrare inainte de finalizarea comenzii.',
       );
     }
 
     const cartItems = await this.cartService.findAll(userId);
     if (!cartItems.length) throw new BadRequestException('Cart is empty');
 
-    const items = await this.buildOrderItems(cartItems);
+    const items = await this.buildOrderItems(cartItems, {
+      type: 'user',
+      userId,
+    });
     if (!items.length) throw new BadRequestException('No valid products in cart');
 
     const subtotal = items.reduce((sum, i) => sum + i.lineTotalRon, 0);
     const total = subtotal + DELIVERY_FEE_RON + CASH_OPERATIONAL_FEE_RON;
-    const orderId = `COD-${Date.now()}`;
-
-    const effectiveAddress = deliveryAddress || {
-      county: user.county,
-      city: user.city,
-      street: user.street,
-      postalCode: user.postal_code,
-      recipientName: `${user.first_name} ${user.last_name}`.trim(),
-      recipientPhone: user.phone,
+    const orderPlacer: OrderContact = {
+      firstName: user.first_name,
+      lastName: user.last_name,
+      email: user.email,
+      phone,
     };
+    const isGift = this.isGiftOrder(
+      orderPlacer,
+      effectiveAddress.recipientName,
+    );
+
+    const persistedOrder = await this.ordersService.createCashOrder({
+      userId,
+      customer: {
+        firstName:
+          effectiveAddress.recipientName?.split(' ').slice(0, 1).join(' ') ||
+          user.first_name,
+        lastName:
+          effectiveAddress.recipientName?.split(' ').slice(1).join(' ') ||
+          user.last_name,
+        email: user.email,
+        phone: effectiveAddress.recipientPhone || user.phone,
+        county: effectiveAddress.county,
+        city: effectiveAddress.city,
+        street: effectiveAddress.street,
+        postalCode: effectiveAddress.postalCode,
+        recipientName: effectiveAddress.recipientName,
+        recipientPhone: effectiveAddress.recipientPhone,
+      },
+      billingDetails: this.toOrderBillingDetails(billingDetails),
+      items,
+      subtotalRon: subtotal,
+      deliveryFeeRon: DELIVERY_FEE_RON,
+      cashOperationalFeeRon: CASH_OPERATIONAL_FEE_RON,
+      totalRon: total,
+    });
 
     await this.sendOrderNotification({
-      orderId,
+      orderId: persistedOrder.publicOrderNumber,
       paymentMethod: 'cash',
       customer: {
         firstName:
@@ -619,6 +862,8 @@ export class CheckoutService {
         street: effectiveAddress.street,
         postalCode: effectiveAddress.postalCode,
       },
+      orderPlacer: isGift ? orderPlacer : undefined,
+      isGift,
       billingDetails,
       items,
       subtotalRon: subtotal,
@@ -627,14 +872,26 @@ export class CheckoutService {
       totalRon: total,
     });
 
+    await this.stockReservationsService.fulfillOrder(
+      items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      })),
+      { type: 'user', userId },
+    );
     await this.cartService.clearCart(userId);
-    return { success: true, message: 'Comanda plasata cu succes.', orderId };
+    return {
+      success: true,
+      message: 'Comanda plasata cu succes.',
+      orderId: persistedOrder.publicOrderNumber,
+    };
   }
 
   async createCheckoutSessionForGuest(
     payload: {
       successUrl: string;
       cancelUrl: string;
+      guestCartId?: string;
       items: { productId: number; quantity: number }[];
       guest: {
         firstName: string;
@@ -659,15 +916,40 @@ export class CheckoutService {
       throw new BadRequestException('Cart is empty');
     }
 
-    const items = await this.buildOrderItems(payload.items);
+    const guestHolder = payload.guestCartId?.trim()
+      ? { type: 'guest' as const, guestId: payload.guestCartId.trim() }
+      : undefined;
+
+    const items = await this.buildOrderItems(payload.items, guestHolder);
     if (!items.length) {
       throw new BadRequestException('No valid products in cart');
     }
 
-    const orderId = `MIL-${Date.now()}`;
+    const subtotal = items.reduce((sum, i) => sum + i.lineTotalRon, 0);
+    const totalRon = Number((subtotal + DELIVERY_FEE_RON).toFixed(2));
+
+    const persistedOrder = await this.ordersService.createCardOrder({
+      userId: null,
+      customer: {
+        firstName: payload.guest.firstName,
+        lastName: payload.guest.lastName,
+        email: payload.guest.email,
+        phone: payload.guest.phone,
+        county: payload.guest.county,
+        city: payload.guest.city,
+        street: payload.guest.street,
+        postalCode: payload.guest.postalCode,
+      },
+      billingDetails: this.toOrderBillingDetails(payload.billingDetails),
+      items,
+      subtotalRon: subtotal,
+      deliveryFeeRon: DELIVERY_FEE_RON,
+      cashOperationalFeeRon: 0,
+      totalRon,
+    });
 
     return this.createNetopiaPayment({
-      orderId,
+      orderId: persistedOrder.publicOrderNumber,
       items,
       customer: this.toNetopiaContact({
         email: payload.guest.email,
@@ -693,6 +975,7 @@ export class CheckoutService {
       cancelUrl: payload.cancelUrl,
       metadata: {
         customerType: 'guest',
+        guestCartId: payload.guestCartId?.trim() || '',
         guestFirstName: payload.guest.firstName,
         guestLastName: payload.guest.lastName,
         guestPhone: payload.guest.phone,
@@ -706,6 +989,7 @@ export class CheckoutService {
   }
 
   async createCashOrderForGuest(payload: {
+    guestCartId?: string;
     items: { productId: number; quantity: number }[];
     guest: {
       firstName: string;
@@ -728,15 +1012,29 @@ export class CheckoutService {
       throw new BadRequestException('Cart is empty');
     }
 
-    const items = await this.buildOrderItems(payload.items);
+    const guestHolder = payload.guestCartId?.trim()
+      ? { type: 'guest' as const, guestId: payload.guestCartId.trim() }
+      : undefined;
+
+    const items = await this.buildOrderItems(payload.items, guestHolder);
     if (!items.length) throw new BadRequestException('No valid products in cart');
 
     const subtotal = items.reduce((sum, i) => sum + i.lineTotalRon, 0);
     const total = subtotal + DELIVERY_FEE_RON + CASH_OPERATIONAL_FEE_RON;
-    const orderId = `COD-${Date.now()}`;
+
+    const persistedOrder = await this.ordersService.createCashOrder({
+      userId: null,
+      customer: payload.guest,
+      billingDetails: this.toOrderBillingDetails(payload.billingDetails),
+      items,
+      subtotalRon: subtotal,
+      deliveryFeeRon: DELIVERY_FEE_RON,
+      cashOperationalFeeRon: CASH_OPERATIONAL_FEE_RON,
+      totalRon: total,
+    });
 
     await this.sendOrderNotification({
-      orderId,
+      orderId: persistedOrder.publicOrderNumber,
       paymentMethod: 'cash',
       customer: payload.guest,
       billingDetails: payload.billingDetails,
@@ -747,41 +1045,67 @@ export class CheckoutService {
       totalRon: total,
     });
 
-    return { success: true, message: 'Comanda plasata cu succes.', orderId };
+    await this.stockReservationsService.fulfillOrder(
+      items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      })),
+      guestHolder,
+    );
+
+    return {
+      success: true,
+      message: 'Comanda plasata cu succes.',
+      orderId: persistedOrder.publicOrderNumber,
+    };
+  }
+
+  private toOrderBillingDetails(
+    billing?: BillingDetailsDto,
+  ): OrderBillingDetails | null {
+    if (!billing) {
+      return null;
+    }
+    return billing as OrderBillingDetails;
   }
 
   private async buildOrderItems(
     items: { productId: number; quantity: number }[],
-  ): Promise<
-    {
-      productId: number;
-      title: string;
-      quantity: number;
-      unitPriceRon: number;
-      lineTotalRon: number;
-      imageUrl?: string;
-    }[]
-  > {
-    const result: {
-      productId: number;
-      title: string;
-      quantity: number;
-      unitPriceRon: number;
-      lineTotalRon: number;
-      imageUrl?: string;
-    }[] = [];
+    holder?: CartHolder,
+  ): Promise<OrderItemSnapshot[]> {
+    await this.stockReservationsService.releaseExpired();
+    const result: OrderItemSnapshot[] = [];
     for (const item of items) {
       if (!Number.isInteger(item.productId) || item.quantity < 1) continue;
-      const product = await this.productsService.findOne(item.productId);
+      const product = await this.productsService.findOnePublic(item.productId);
       if (!product) continue;
+      const availableStock =
+        await this.stockReservationsService.getAvailableForHolder(
+          product,
+          holder,
+        );
+      if (availableStock <= 0) {
+        throw new BadRequestException(
+          `Produsul "${product.title}" nu mai este in stoc.`,
+        );
+      }
+      if (item.quantity > availableStock) {
+        throw new BadRequestException(
+          `Cantitatea pentru "${product.title}" depaseste stocul disponibil.`,
+        );
+      }
       const unitPriceRon = Number(product.price);
       result.push({
         productId: item.productId,
+        artistId: product.artistId,
+        artistDisplayName: product.artist?.displayName ?? 'Maini in Lut',
         title: product.title,
         quantity: item.quantity,
         unitPriceRon,
         lineTotalRon: unitPriceRon * item.quantity,
-        imageUrl: product.image ? this.toAbsoluteImageUrl(product.image) : undefined,
+        imageUrl: product.image
+          ? this.toAbsoluteImageUrl(product.image)
+          : undefined,
       });
     }
     return result;
@@ -800,9 +1124,12 @@ export class CheckoutService {
       street: string;
       postalCode: string;
     };
+    orderPlacer?: OrderContact;
+    isGift?: boolean;
     billingDetails?: BillingDetailsDto;
     items: {
       productId: number;
+      artistId: number;
       title: string;
       quantity: number;
       unitPriceRon: number;
@@ -817,27 +1144,32 @@ export class CheckoutService {
     const adminEmail =
       this.configService.get<string>('ORDER_NOTIFICATION_EMAIL') ||
       this.configService.get<string>('SMTP_FROM_EMAIL');
-    const itemRows = payload.items
-      .map(
-        (i) =>
-          `<tr><td style="padding:6px 8px;border:1px solid #ddd;">${i.title}</td><td style="padding:6px 8px;border:1px solid #ddd;">${i.quantity}</td><td style="padding:6px 8px;border:1px solid #ddd;">${i.unitPriceRon} RON</td><td style="padding:6px 8px;border:1px solid #ddd;">${i.lineTotalRon} RON</td></tr>`,
-      )
-      .join('');
+    const isGift = !!payload.isGift && !!payload.orderPlacer;
+    const buildItemRows = (
+      orderItems: typeof payload.items,
+    ) =>
+      orderItems
+        .map(
+          (i) =>
+            `<tr><td style="padding:6px 8px;border:1px solid #ddd;">${i.title}</td><td style="padding:6px 8px;border:1px solid #ddd;">${i.quantity}</td><td style="padding:6px 8px;border:1px solid #ddd;">${i.unitPriceRon} RON</td><td style="padding:6px 8px;border:1px solid #ddd;">${i.lineTotalRon} RON</td></tr>`,
+        )
+        .join('');
+    const itemRows = buildItemRows(payload.items);
     const cashFeeRow =
       payload.cashOperationalFeeRon > 0
         ? `Taxa operationala cash: ${payload.cashOperationalFeeRon} RON<br/>`
         : '';
     const billingHtml = this.formatBillingHtml(payload.billingDetails);
+    const orderPlacerHtml = this.formatOrderPlacerHtml(
+      isGift ? payload.orderPlacer : undefined,
+    );
+    const deliveryHtml = this.formatDeliveryHtml(payload.customer, isGift);
     const adminHtml = `
       <h2>Comanda noua (${payload.orderId})</h2>
       <p><strong>Metoda plata:</strong> ${payload.paymentMethod}</p>
-      <h3>Date livrare</h3>
-      <p>
-        ${payload.customer.firstName} ${payload.customer.lastName}<br/>
-        Email: ${payload.customer.email}<br/>
-        Telefon: ${payload.customer.phone}<br/>
-        Adresa: ${payload.customer.street}, ${payload.customer.city}, ${payload.customer.county}, ${payload.customer.postalCode}
-      </p>
+      ${isGift ? '<p><strong>Tip comanda:</strong> Cadou</p>' : ''}
+      ${orderPlacerHtml}
+      ${deliveryHtml}
       ${billingHtml}
       <h3>Produse</h3>
       <table style="border-collapse:collapse;">
@@ -882,7 +1214,7 @@ export class CheckoutService {
       .join('');
     const customerHtml = `
       <div style="font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.45;">
-        <h2 style="margin:0 0 8px;">Iti multumim pentru comanda, ${payload.customer.firstName}!</h2>
+        <h2 style="margin:0 0 8px;">Iti multumim pentru comanda, ${isGift && payload.orderPlacer ? payload.orderPlacer.firstName : payload.customer.firstName}!</h2>
         <p style="margin:0 0 14px;color:#4b5563;">
           Iti multumim ca ai ales Maini in lut. Inseamna foarte mult pentru noi fiecare comanda si fiecare client care sustine munca noastra.
         </p>
@@ -895,7 +1227,7 @@ export class CheckoutService {
           <tbody>${customerItemsHtml}</tbody>
         </table>
 
-        <h3 style="margin:16px 0 8px;">Detalii livrare</h3>
+        <h3 style="margin:16px 0 8px;">${isGift ? 'Detalii livrare (destinatar cadou)' : 'Detalii livrare'}</h3>
         <p style="margin:0 0 14px;color:#4b5563;">
           ${payload.customer.firstName} ${payload.customer.lastName}<br/>
           Telefon: ${payload.customer.phone}<br/>
@@ -953,9 +1285,59 @@ export class CheckoutService {
         adminHtml,
       );
     }
-    if (payload.customer.email) {
+
+    const itemsByArtist = new Map<number, typeof payload.items>();
+    for (const item of payload.items) {
+      const current = itemsByArtist.get(item.artistId) || [];
+      current.push(item);
+      itemsByArtist.set(item.artistId, current);
+    }
+
+    for (const [artistId, artistItems] of itemsByArtist.entries()) {
+      const artist = await this.artistsService.findByIdWithUser(artistId);
+      const artistEmail = artist?.user?.email;
+      if (!artistEmail) {
+        continue;
+      }
+
+      const artistItemRows = buildItemRows(artistItems);
+      const artistSubtotal = artistItems.reduce(
+        (sum, item) => sum + item.lineTotalRon,
+        0,
+      );
+      const artistHtml = `
+        <h2>Comanda noua pentru produsele tale (${payload.orderId})</h2>
+        <p><strong>Metoda plata:</strong> ${payload.paymentMethod}</p>
+        ${isGift ? '<p><strong>Tip comanda:</strong> Cadou</p>' : ''}
+        ${orderPlacerHtml}
+        ${deliveryHtml}
+        <h3>Produsele tale</h3>
+        <table style="border-collapse:collapse;">
+          <thead><tr><th style="padding:6px 8px;border:1px solid #ddd;">Produs</th><th style="padding:6px 8px;border:1px solid #ddd;">Cantitate</th><th style="padding:6px 8px;border:1px solid #ddd;">Pret</th><th style="padding:6px 8px;border:1px solid #ddd;">Total</th></tr></thead>
+          <tbody>${artistItemRows}</tbody>
+        </table>
+        <p style="margin-top:12px;">
+          <strong>Subtotal produse tale: ${artistSubtotal} RON</strong>
+        </p>
+      `;
+
       await this.emailService.sendOrderNotificationEmail(
-        payload.customer.email,
+        artistEmail,
+        `Comanda noua ${payload.orderId} - ${artist?.displayName || 'Artist'}`,
+        artistHtml,
+      );
+    }
+
+    if (payload.customer.email || payload.orderPlacer?.email) {
+      const confirmationEmail =
+        isGift && payload.orderPlacer?.email
+          ? payload.orderPlacer.email
+          : payload.customer.email;
+      if (!confirmationEmail) {
+        return;
+      }
+      await this.emailService.sendOrderNotificationEmail(
+        confirmationEmail,
         `Confirmare comanda ${payload.orderId}`,
         customerHtmlWithInlineImages,
         attachments,
@@ -1031,6 +1413,13 @@ export class CheckoutService {
 
     if (!order?.orderID) return;
 
+    const existingOrder = await this.ordersService.findByPublicOrderNumber(
+      order.orderID,
+    );
+    if (existingOrder?.paymentStatus === OrderPaymentStatus.PAID) {
+      return;
+    }
+
     const metadata = order.data || {};
     let items: OrderItemSnapshot[] = [];
     if (metadata.itemsJson) {
@@ -1041,7 +1430,41 @@ export class CheckoutService {
       }
     }
 
+    const paidOrder = await this.ordersService.markCardOrderPaid(order.orderID);
+    if (paidOrder?.items?.length) {
+      items = paidOrder.items.map((item) => ({
+        productId: item.productId,
+        artistId: item.artistId,
+        artistDisplayName: item.artistDisplayName,
+        title: item.title,
+        quantity: item.quantity,
+        unitPriceRon: Number(item.unitPriceRon),
+        lineTotalRon: Number(item.lineTotalRon),
+        imageUrl: item.image ? this.toAbsoluteImageUrl(item.image) : undefined,
+      }));
+    }
+
+    if (items.length) {
+      const userId = metadata.userId ? Number(metadata.userId) : null;
+      const guestCartId = metadata.guestCartId?.trim();
+      const holder: CartHolder | undefined =
+        userId && Number.isFinite(userId)
+          ? { type: 'user', userId }
+          : guestCartId
+            ? { type: 'guest', guestId: guestCartId }
+            : undefined;
+      await this.stockReservationsService.fulfillOrder(
+        items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+        holder,
+      );
+    }
+
     const billing = order.billing;
+    const orderPlacer = this.orderPlacerFromMetadata(metadata);
+    const isGift = metadata.isGift === '1' && !!orderPlacer;
     const subtotal = items.reduce((sum, i) => sum + i.lineTotalRon, 0);
     const totalRon = Number(
       (payment?.amount ?? order.amount ?? subtotal + DELIVERY_FEE_RON).toFixed(2),
@@ -1062,7 +1485,12 @@ export class CheckoutService {
           metadata.guestLastName ||
           billing?.lastName ||
           '',
-        email: billing?.email || metadata.billingEmail || '',
+        email:
+          metadata.deliveryRecipientEmail ||
+          metadata.guestEmail ||
+          billing?.email ||
+          orderPlacer?.email ||
+          '',
         phone:
           metadata.deliveryRecipientPhone ||
           metadata.guestPhone ||
@@ -1086,6 +1514,8 @@ export class CheckoutService {
           billing?.postalCode ||
           '',
       },
+      orderPlacer,
+      isGift,
       billingDetails: this.billingFromMetadata(metadata),
       items,
       subtotalRon: subtotal,

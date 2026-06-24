@@ -25,6 +25,7 @@ type CheckoutBody = {
   };
   billingDetails?: BillingDetailsDto;
   items?: { productId: number; quantity: number }[];
+  guestCartId?: string;
   guest?: {
     firstName?: string;
     lastName?: string;
@@ -41,6 +42,7 @@ type CashOrderBody = {
   deliveryAddress?: CheckoutBody['deliveryAddress'];
   billingDetails?: BillingDetailsDto;
   items?: { productId: number; quantity: number }[];
+  guestCartId?: string;
   guest?: CheckoutBody['guest'];
 };
 

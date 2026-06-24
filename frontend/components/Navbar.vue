@@ -35,6 +35,13 @@
         </div>
 
         <div class="flex items-center space-x-4">
+          <NuxtLink
+            v-if="showAdminLink"
+            :to="$localePath('/admin')"
+            class="site-navbar__admin-link hidden md:inline-flex"
+          >
+            {{ t("admin") }}
+          </NuxtLink>
           <nuxt-link
             :to="$localePath('/favorite')"
             class="h-color-secondary hover:text-gray-900 relative"
@@ -86,6 +93,14 @@
 
     <div class="md:hidden" v-if="isOpen">
       <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+        <NuxtLink
+          v-if="showAdminLink"
+          :to="$localePath('/admin')"
+          class="site-navbar__admin-link site-navbar__admin-link--mobile block text-center mb-2"
+          @click="isOpen = false"
+        >
+          {{ t("admin") }}
+        </NuxtLink>
         <nuxt-link
           v-for="item in menuItems"
           :key="item.to"
@@ -100,12 +115,14 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 
 const { favoritesCount, loadFavorites } = useFavorites();
 const { cartCount } = useCart();
+const { user, isAuthenticated, syncFromStorage } = useAuthState();
 
 onMounted(() => {
+  syncFromStorage();
   loadFavorites();
 });
 
@@ -115,28 +132,48 @@ const { t } = useI18n({
 
 const isOpen = ref(false);
 
-const menuItems = [
-  {
-    label: t("home"),
-    to: "/",
-  },
-  {
-    label: t("products"),
-    to: "/produse",
-  },
-  {
-    label: t("workshops"),
-    to: "/ateliere",
-  },
-  {
-    label: t("blog"),
-    to: "/blog",
-  },
-  {
-    label: t("contact"),
-    to: "/contact",
-  },
-];
+const showAdminLink = computed(() => {
+  if (!isAuthenticated.value) {
+    return false;
+  }
+  const role = user.value.role;
+  return role === "SUPER_ADMIN" || role === "ARTIST";
+});
+
+const menuItems = computed(() => {
+  const items = [
+    {
+      label: t("home"),
+      to: "/",
+    },
+    {
+      label: t("products"),
+      to: "/produse",
+    },
+    {
+      label: t("workshops"),
+      to: "/ateliere",
+    },
+    {
+      label: t("sellWithUs"),
+      to: "/vinde-cu-noi",
+    },
+    {
+      label: t("blog"),
+      to: "/blog",
+    },
+    {
+      label: t("contact"),
+      to: "/contact",
+    },
+  ];
+
+  if (showAdminLink.value) {
+    return items.filter((item) => item.to !== "/vinde-cu-noi");
+  }
+
+  return items;
+});
 </script>
 
 <style scoped>
@@ -148,6 +185,33 @@ const menuItems = [
   user-select: none;
   -webkit-touch-callout: none;
 }
+
+.site-navbar__admin-link {
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  color: #144111;
+  background: rgba(255, 249, 245, 0.92);
+  border: 1px solid rgba(255, 249, 245, 0.55);
+  box-shadow: 0 1px 2px rgba(20, 65, 17, 0.12);
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.site-navbar__admin-link:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.site-navbar__admin-link--mobile {
+  display: inline-flex;
+  width: fit-content;
+  margin-left: 0.75rem;
+}
 </style>
 
 <i18n lang="json">
@@ -156,15 +220,19 @@ const menuItems = [
     "home": "Home",
     "products": "Products",
     "workshops": "Workshops",
+    "sellWithUs": "Sell with us",
     "blog": "Blog",
-    "contact": "Contact"
+    "contact": "Contact",
+    "admin": "Admin"
   },
   "ro": {
     "home": "Acasă",
     "products": "Produse",
     "workshops": "Ateliere",
+    "sellWithUs": "Vinde cu noi",
     "blog": "Blog",
-    "contact": "Contact"
+    "contact": "Contact",
+    "admin": "Admin"
   }
 }
 </i18n>

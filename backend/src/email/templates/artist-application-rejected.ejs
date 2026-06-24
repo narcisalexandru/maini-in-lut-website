@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cerere respinsă</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #ece4d4;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 24px;
+        margin-top: 20px;
+      }
+      h1 {
+        color: #546a50;
+        margin-top: 0;
+      }
+      .reason {
+        background: #fdf2f2;
+        border-left: 4px solid #c53030;
+        padding: 12px 16px;
+        margin: 16px 0;
+        white-space: pre-wrap;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 20px;
+        background-color: #546a50;
+        color: #ece4d4 !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 24px 0 8px;
+        font-weight: bold;
+      }
+      .footer {
+        margin-top: 24px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Cererea ta nu a fost aprobată</h1>
+      <p>
+        Bună <%= firstName %>, din păcate cererea pentru atelierul
+        <strong><%= displayName %></strong> a fost respinsă.
+      </p>
+
+      <p><strong>Motiv:</strong></p>
+      <div class="reason"><%= rejectionReason %></div>
+
+      <p>Poți actualiza informațiile și trimite o nouă cerere.</p>
+
+      <a href="<%= reapplyUrl %>" class="button">Reaplică și editează datele</a>
+
+      <div class="footer">
+        <p>Dacă ai întrebări, răspunde la acest email.</p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -2,12 +2,13 @@
   <div
     class="bg-white flex flex-col flex-1 shrink rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative"
   >
-    <NuxtLink
-      :to="$localePath(`/produs/${product.id}`)"
+    <component
+      :is="preview ? 'div' : NuxtLink"
+      v-bind="preview ? {} : { to: $localePath(`/produs/${product.id}`) }"
       class="block relative h-48"
     >
       <img
-        :src="product.image"
+        :src="resolveProductImageUrl(product.image)"
         :alt="product.title"
         class="w-full h-full object-cover"
       />
@@ -30,6 +31,7 @@
         Popular
       </span>
       <button
+        v-if="!preview"
         type="button"
         class="absolute bottom-2 right-2 h-font-size-20 flex items-center justify-center transition-all duration-300 w-10 h-10 h-bg-white rounded-full group hover:scale-110"
         :aria-label="
@@ -48,9 +50,10 @@
           ]"
         ></i>
       </button>
-    </NuxtLink>
-    <NuxtLink
-      :to="$localePath(`/produs/${product.id}`)"
+    </component>
+    <component
+      :is="preview ? 'div' : NuxtLink"
+      v-bind="preview ? {} : { to: $localePath(`/produs/${product.id}`) }"
       class="flex flex-col h-36 p-2 md:p-3 flex-1 hover:opacity-90 transition-opacity no-underline text-inherit"
     >
       <h3 class="flex flex-1 text-sm font-semibold text-gray-800 mb-1">
@@ -70,28 +73,47 @@
         <button
           type="button"
           class="maini-ui-button__buy w-full flex justify-center items-center border-none cursor-pointer"
-          aria-label="Adaugă în coș"
-          @click.prevent.stop="addToCart(product.id)"
+          :class="{ 'pointer-events-none opacity-70': preview }"
+          :aria-label="preview ? undefined : 'Adaugă în coș'"
+          @click.prevent.stop="!preview && handleAddToCart()"
         >
           Adaugă în coș
         </button>
       </div>
-    </NuxtLink>
+    </component>
   </div>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, resolveComponent } from "vue";
+import { resolveProductImageUrl } from "~/utils/product-image";
+import {
+  getProductStockQuantity,
+  isProductAvailable,
+} from "~/utils/product-stock";
 
-const { product } = defineProps({
+const NuxtLink = resolveComponent("NuxtLink");
+
+const { product, preview = false } = defineProps({
   product: {
     type: Object,
     required: true,
+  },
+  preview: {
+    type: Boolean,
+    default: false,
   },
 });
 
 const { toggleFavorite, isFavorite } = useFavorites();
 const { addToCart } = useCart();
+
+function handleAddToCart() {
+  if (!isProductAvailable(product)) {
+    return;
+  }
+  addToCart(product.id, 1, getProductStockQuantity(product));
+}
 
 const isNew = computed(() => {
   const now = new Date();

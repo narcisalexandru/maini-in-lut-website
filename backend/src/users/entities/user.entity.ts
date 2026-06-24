@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { UserRole } from '../../common/enums/user-role.enum';
 
 @Entity()
 export class User {
@@ -49,6 +50,13 @@ export class User {
 
   @Column()
   password: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.CLIENT,
+  })
+  role: UserRole;
 
   @Column({ default: false })
   is_email_verified: boolean;

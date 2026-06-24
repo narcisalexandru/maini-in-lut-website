@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cerere aprobată</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #ece4d4;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 24px;
+        margin-top: 20px;
+      }
+      h1 {
+        color: #546a50;
+        margin-top: 0;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 20px;
+        background-color: #546a50;
+        color: #ece4d4 !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 24px 0 8px;
+        font-weight: bold;
+      }
+      .footer {
+        margin-top: 24px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Felicitări, <%= firstName %>!</h1>
+      <p>
+        Cererea ta pentru atelierul <strong><%= displayName %></strong> a fost
+        <strong>aprobată</strong>. Poți începe să adaugi produse și să gestionezi
+        comenzile din panoul de artist.
+      </p>
+
+      <a href="<%= panelUrl %>" class="button">Deschide panoul artist</a>
+
+      <div class="footer">
+        <p>Îți mulțumim că vinzi alături de noi pe Maini in Lut.</p>
+      </div>
+    </div>
+  </body>
+</html>

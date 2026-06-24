@@ -1,24 +1,6 @@
-import { ref } from "vue";
-import { useRouter } from "vue-router";
-import { useI18n } from "vue-i18n";
-
-interface User {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  county: string;
-  locality: string;
-  street: string;
-  street_number: string;
-  phone: string;
-  picture?: string;
-}
-
-interface AuthResponse {
-  access_token: string;
-  user: User;
-}
+import { computed } from "vue";
+import type { AuthUser } from "~/types/user";
+import { useAuthState } from "./useAuthState";
 
 interface AuthError {
   message: string;
@@ -28,37 +10,29 @@ interface AuthError {
 export const useAuth = () => {
   const router = useRouter();
   const { locale, t } = useI18n();
-  const isLoading = ref(false);
-  const error = ref<AuthError | null>(null);
+  const {
+    isLoading,
+    error,
+    user,
+    isAuthenticated,
+    syncFromStorage,
+    setAuthData,
+    clearAuthData,
+  } = useAuthState();
 
-  const user = ref<User>({
-    id: "",
-    email: "",
-    first_name: "",
-    last_name: "",
-    county: "",
-    locality: "",
-    street: "",
-    street_number: "",
-    phone: "",
-    picture: "",
-  });
+  const userRole = computed(() => user.value.role || "CLIENT");
+  const isSuperAdmin = computed(() => userRole.value === "SUPER_ADMIN");
+  const isArtist = computed(() => userRole.value === "ARTIST");
+  const canAccessAdmin = computed(
+    () => isSuperAdmin.value || isArtist.value,
+  );
 
-  const isAuthenticated = ref(false);
-
-  const setAuthData = (data: AuthResponse) => {
-    if (data.access_token) {
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      user.value = data.user;
-      isAuthenticated.value = true;
-    }
-  };
-
-  const handleAuthError = (err: any): AuthError => {
+  const handleAuthError = (err: unknown): AuthError => {
     console.error("Authentication error:", err);
     const errorMessage =
-      err.message || "An error occurred during authentication";
+      err instanceof Error
+        ? err.message
+        : "An error occurred during authentication";
     error.value = { message: errorMessage };
     return error.value;
   };
@@ -74,7 +48,7 @@ export const useAuth = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
-        }
+        },
       );
 
       const data = await response.json();
@@ -88,10 +62,10 @@ export const useAuth = () => {
       }
 
       setAuthData(data);
-      return { success: true, data };
+      return { success: true as const, data };
     } catch (err) {
-      const error = handleAuthError(err);
-      return { success: false, error };
+      const authError = handleAuthError(err);
+      return { success: false as const, error: authError };
     } finally {
       isLoading.value = false;
     }
@@ -118,7 +92,7 @@ export const useAuth = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(userData),
-        }
+        },
       );
 
       const data = await response.json();
@@ -147,9 +121,9 @@ export const useAuth = () => {
       router.push(
         locale.value === "en"
           ? "/en/auth/email-verification"
-          : "/auth/email-verification"
+          : "/auth/email-verification",
       );
-      return data;
+      return { success: true as const, data };
     } catch (err) {
       if (err instanceof Error) {
         return handleAuthError(err);
@@ -165,12 +139,7 @@ export const useAuth = () => {
   };
 
   const checkAuth = () => {
-    const token = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-
-    if (token && storedUser) {
-      isAuthenticated.value = true;
-      user.value = JSON.parse(storedUser);
+    if (syncFromStorage()) {
       return true;
     }
 
@@ -182,8 +151,11 @@ export const useAuth = () => {
 
   const loadUser = async () => {
     try {
+      syncFromStorage();
+
       const token = localStorage.getItem("token");
       if (!token) {
+        isAuthenticated.value = false;
         return;
       }
 
@@ -193,24 +165,27 @@ export const useAuth = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
-        throw new Error("Failed to load user data");
+        if (response.status === 401) {
+          clearAuthData();
+        }
+        return;
       }
 
       const userData = await response.json();
       user.value = userData;
+      isAuthenticated.value = true;
       localStorage.setItem("user", JSON.stringify(userData));
-    } catch (error) {
-      console.error("Error loading user data:", error);
+    } catch (loadError) {
+      console.error("Error loading user data:", loadError);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearAuthData();
     const { loadFavorites } = useFavorites();
     const { clearCart } = useCart();
     loadFavorites();
@@ -219,7 +194,7 @@ export const useAuth = () => {
     router.push(loginPath);
   };
 
-  const updateProfile = async (updateData: Partial<User>) => {
+  const updateProfile = async (updateData: Partial<AuthUser>) => {
     try {
       isLoading.value = true;
       error.value = null;
@@ -238,7 +213,7 @@ export const useAuth = () => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(updateData),
-        }
+        },
       );
 
       const data = await response.json();
@@ -251,10 +226,10 @@ export const useAuth = () => {
       user.value = updatedUser;
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      return { success: true, data: updatedUser };
+      return { success: true as const, data: updatedUser };
     } catch (err) {
-      const error = handleAuthError(err);
-      return { success: false, error };
+      const authError = handleAuthError(err);
+      return { success: false as const, error: authError };
     } finally {
       isLoading.value = false;
     }
@@ -263,6 +238,11 @@ export const useAuth = () => {
   return {
     user,
     isAuthenticated,
+    userRole,
+    isSuperAdmin,
+    isArtist,
+    canAccessAdmin,
+    syncFromStorage,
     checkAuth,
     loadUser,
     logout,
