@@ -1,7 +1,9 @@
 <template>
-  <div>
+  <div class="layout-default">
     <Navbar />
-    <slot />
+    <main class="layout-default__main">
+      <slot />
+    </main>
     <Footer v-if="!isAuthRoute" />
     <Toast />
   </div>
@@ -15,6 +17,11 @@ import { useRoute } from "vue-router";
 import { computed } from "vue";
 
 const route = useRoute();
+const { loadFavorites } = useFavorites();
+
+onMounted(() => {
+  loadFavorites();
+});
 const isAuthRoute = computed(() => {
   return [
     "/login",
@@ -24,3 +31,15 @@ const isAuthRoute = computed(() => {
   ].includes(route.path);
 });
 </script>
+
+<style scoped lang="scss">
+.layout-default {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+
+  &__main {
+    flex: 1 0 auto;
+  }
+}
+</style>

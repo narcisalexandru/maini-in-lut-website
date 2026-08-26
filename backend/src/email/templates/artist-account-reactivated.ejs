@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cont reactivat</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #ece4d4;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 24px;
+        margin-top: 20px;
+      }
+      h1 {
+        color: #546a50;
+        margin-top: 0;
+      }
+      .label {
+        font-weight: bold;
+        color: #546a50;
+        margin-top: 16px;
+      }
+      .value {
+        margin: 4px 0 0;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 20px;
+        background-color: #546a50;
+        color: #ece4d4 !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 24px 0 8px;
+        font-weight: bold;
+      }
+      .footer {
+        margin-top: 24px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Contul tău de artist a fost reactivat</h1>
+      <p>
+        Bună <%= firstName %>, contul tău de artist pentru atelierul
+        <strong><%= displayName %></strong> a fost reactivat pe platforma Mâini în lut.
+      </p>
+
+      <p class="label">Data reactivării</p>
+      <p class="value"><%= reactivatedAt %></p>
+
+      <p>
+        Poți accesa din nou panoul de artist, iar produsele tale aprobate vor fi
+        din nou vizibile pe site.
+      </p>
+
+      <a href="<%= panelUrl %>" class="button">Deschide panoul artist</a>
+
+      <div class="footer">
+        <p>Dacă ai întrebări, ne poți contacta oricând prin pagina de Contact.</p>
+      </div>
+    </div>
+  </body>
+</html>

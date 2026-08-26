@@ -3,14 +3,66 @@
     <div class="maini-ui__container">
       <h1 class="maini-ui__heading text-left">{{ t("title") }}</h1>
       <div class="h-font-size-16 text-left mb-8">{{ t("sub-title") }}</div>
+
+      <div
+        v-if="showSuspensionNotice"
+        class="relative mb-8 p-4 md:p-6 rounded-xl border border-red-300 bg-red-50 text-red-900 shadow-sm"
+      >
+        <button
+          type="button"
+          class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors"
+          :aria-label="t('dismissSuspensionNotice')"
+          @click="handleDismissSuspensionNotice"
+        >
+          <i class="ph ph-x text-lg"></i>
+        </button>
+        <h2 class="font-semibold text-lg pr-10 mb-2">{{ t("suspensionNoticeTitle") }}</h2>
+        <p class="text-sm mb-3">{{ t("suspensionNoticeBody") }}</p>
+        <p v-if="artistApplication?.suspensionReason" class="text-sm mb-3">
+          <span class="font-medium">{{ t("suspensionReasonLabel") }}:</span>
+          <span class="whitespace-pre-wrap block mt-1">{{ artistApplication.suspensionReason }}</span>
+        </p>
+        <NuxtLink
+          :to="$localePath('/contact')"
+          class="inline-flex items-center gap-1 text-sm font-medium text-red-800 underline hover:text-red-950"
+        >
+          {{ t("suspensionContactLink") }}
+          <i class="ph ph-arrow-right"></i>
+        </NuxtLink>
+      </div>
+
+      <div
+        v-if="showReactivationNotice"
+        class="relative mb-8 p-4 md:p-6 rounded-xl border border-green-300 bg-green-50 text-green-900 shadow-sm"
+      >
+        <button
+          type="button"
+          class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-green-100 transition-colors"
+          :aria-label="t('dismissReactivationNotice')"
+          @click="handleDismissReactivationNotice"
+        >
+          <i class="ph ph-x text-lg"></i>
+        </button>
+        <h2 class="font-semibold text-lg pr-10 mb-2">{{ t("reactivationNoticeTitle") }}</h2>
+        <p class="text-sm mb-3">{{ t("reactivationNoticeBody") }}</p>
+        <NuxtLink
+          :to="$localePath('/admin')"
+          class="inline-flex items-center gap-1 text-sm font-medium text-green-800 underline hover:text-green-950"
+        >
+          {{ t("reactivationPanelLink") }}
+          <i class="ph ph-arrow-right"></i>
+        </NuxtLink>
+      </div>
+
       <div class="h-bg-white p-4 md:p-8 rounded-xl shadow-md">
         <div class="flex flex-col md:flex-row">
-          <div class="flex w-full justify-start md:w-1/6 md:justify-start">
+          <div class="flex flex-col items-start md:items-center w-full md:w-1/6 shrink-0 gap-3">
             <nuxt-img
               :src="user.picture"
               :alt="user.name"
               class="w-24 h-24 rounded-full"
             />
+            <UserRoleBadge variant="profile" />
           </div>
           <div class="flex flex-col w-full">
             <div class="flex flex-col md:flex-row md:gap-96 w-full">
@@ -197,36 +249,41 @@
           {{ t("orders-histroy") }}
         </h2>
         <div ref="ordersContainer">
-          <div
+          <div v-if="ordersLoading" class="h-color-lunar-green">{{ t("loadingOrders") }}</div>
+          <div v-else-if="!orders.length" class="h-color-lunar-green">
+            {{ t("noOrders") }}
+          </div>
+          <NuxtLink
             v-for="order in displayedOrders"
             :key="order.id"
-            class="flex flex-col p-4 border-1 h-border-color-dusty-gray rounded-lg mb-4"
+            :to="$localePath(`/profil/comenzi/${order.id}`)"
+            class="flex flex-col p-4 border-1 h-border-color-dusty-gray rounded-lg mb-4 hover:bg-gray-50 transition-colors no-underline text-inherit"
           >
             <div class="flex flex-row justify-between items-center">
-              <div class="h-font-weight-600">{{ order.id }}</div>
+              <div class="h-font-weight-600">{{ order.publicOrderNumber }}</div>
               <div
-                class="flex items-center rounded-xl px-4 py-1"
-                :class="{
-                  'h-bg-aero-blue h-color-castleton-green':
-                    order.status === 'Delivered',
-                  'bg-yellow-100 text-yellow-800':
-                    order.status === 'Processing',
-                  'bg-red-100 text-red-800': order.status === 'Cancelled',
-                }"
+                class="flex items-center rounded-xl px-4 py-1 text-sm"
+                :class="orderStatusClass(order)"
               >
-                {{ order.status }}
+                {{ formatOrderStatus(order) }}
               </div>
             </div>
-            <div class="flex flex-col h-color-lunar-green">
-              <div class="flex">{{ order.date }}</div>
-              <div class="flex">
-                {{ order.items }} {{ t("items") }} | {{ order.currency
-                }}{{ order.total.toFixed(2) }}
+            <div class="flex flex-col h-color-lunar-green mt-2">
+              <div>{{ formatOrderDate(order.createdAt) }}</div>
+              <div>
+                {{ order.itemCount }} {{ t("items") }} | {{ order.totalRon.toFixed(2) }} RON
+              </div>
+              <div
+                v-for="artistStatus in order.artistStatuses"
+                :key="artistStatus.artistId"
+                class="text-sm mt-1"
+              >
+                {{ artistStatus.artistDisplayName }} — {{ t(`itemStatus.${artistStatus.status}`) }}
               </div>
             </div>
-          </div>
+          </NuxtLink>
         </div>
-        <div v-if="mockOrders.length > 2" class="flex justify-center mt-4">
+        <div v-if="orders.length > 2" class="flex justify-center mt-4">
           <Button
             type="button"
             class="maini-ui-button__primary"
@@ -234,6 +291,40 @@
           >
             {{ showAllOrders ? t("show-less") : t("show-more") }}
           </Button>
+        </div>
+      </div>
+      <div v-if="!canAccessAdmin" class="h-bg-white p-4 md:p-8 rounded-xl shadow-md mt-8">
+        <h2
+          class="h-font-size-18 text-left h-color-palm-leaf h-font-weight-700 mb-2"
+        >
+          {{ t("sellOnPlatform") }}
+        </h2>
+        <p class="h-color-lunar-green mb-4">{{ t("sellOnPlatformDesc") }}</p>
+
+        <div v-if="artistApplication?.status === 'PENDING'" class="space-y-3">
+          <p class="h-color-lunar-green">{{ t("artistPending") }}</p>
+          <p class="text-sm h-color-lunar-green">
+            <span class="font-medium">{{ artistApplication.displayName }}</span>
+          </p>
+        </div>
+        <div v-else-if="artistApplication?.status === 'REJECTED'" class="space-y-3">
+          <p class="h-color-lunar-green">{{ t("artistRejected") }}</p>
+          <p v-if="artistApplication.rejectionReason" class="text-sm text-red-700 whitespace-pre-wrap">
+            {{ artistApplication.rejectionReason }}
+          </p>
+          <NuxtLink :to="$localePath('/vinde-cu-noi?reapply=1')">
+            <Button :label="t('reapplyArtist')" class="maini-ui-button__primary mt-2" />
+          </NuxtLink>
+        </div>
+        <div v-else-if="isArtist || artistApplication?.status === 'APPROVED'">
+          <NuxtLink :to="$localePath('/admin')">
+            <Button :label="t('artistPanel')" class="maini-ui-button__primary" />
+          </NuxtLink>
+        </div>
+        <div v-else>
+          <NuxtLink :to="$localePath('/vinde-cu-noi')">
+            <Button :label="t('becomeArtist')" class="maini-ui-button__primary" />
+          </NuxtLink>
         </div>
       </div>
       <div class="h-bg-white p-4 md:p-8 rounded-xl shadow-md mt-8">
@@ -306,9 +397,10 @@ import FormInput from "~/components/FormInput.vue";
 import Button from "primevue/button";
 import { useFormValidation } from "~/composables/useFormValidation";
 import { useToast } from "primevue/usetoast";
-import { useRuntimeConfig } from "nuxt/app";
 import autoAnimate from "@formkit/auto-animate";
 import Dialog from "primevue/dialog";
+import { normalizeRomanianPhone } from "~/utils/phone";
+import { extractApiErrorMessage, formatPhoneApiError } from "~/utils/api-error";
 
 defineI18nRoute({
   paths: {
@@ -317,22 +409,66 @@ defineI18nRoute({
   },
 });
 
-const { t } = useI18n({
+const { t, locale } = useI18n({
   useScope: "local",
 });
 
-const { user, isAuthenticated, checkAuth, loadUser, logout, updateProfile } =
+const { user, isAuthenticated, checkAuth, loadUser, logout, updateProfile, isArtist, canAccessAdmin } =
   useAuth();
+const { getMyOrders } = useOrders();
+const { getMyApplication, dismissSuspensionNotice, dismissReactivationNotice } = useArtist();
 const isEditingAddress = ref(false);
 const isEditingPhone = ref(false);
 const isLoading = ref(false);
 const toast = useToast();
-const config = useRuntimeConfig();
+const { getBaseUrl } = useApi();
 const showAllOrders = ref(false);
 const addressContainer = ref(null);
 const phoneContainer = ref(null);
 const ordersContainer = ref(null);
 const deleteAccountDialogVisible = ref(false);
+const orders = ref([]);
+const ordersLoading = ref(true);
+const artistApplication = ref(null);
+
+const showSuspensionNotice = computed(
+  () =>
+    artistApplication.value?.status === "SUSPENDED" &&
+    !artistApplication.value?.suspensionNoticeDismissedAt,
+);
+
+const showReactivationNotice = computed(
+  () =>
+    artistApplication.value?.status === "APPROVED" &&
+    artistApplication.value?.lastReactivatedAt &&
+    !artistApplication.value?.reactivationNoticeDismissedAt,
+);
+
+const handleDismissSuspensionNotice = async () => {
+  try {
+    artistApplication.value = await dismissSuspensionNotice();
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: t("error-title"),
+      detail: error.message || t("error-dismiss-suspension"),
+      life: 4000,
+    });
+  }
+};
+
+const handleDismissReactivationNotice = async () => {
+  try {
+    artistApplication.value = await dismissReactivationNotice();
+  } catch (error) {
+    toast.add({
+      severity: "error",
+      summary: t("error-title"),
+      detail: error.message || t("error-dismiss-reactivation"),
+      life: 4000,
+    });
+  }
+};
 
 const addressForm = ref({
   county: "",
@@ -384,7 +520,7 @@ const validationRules = {
   ],
   phone: [
     {
-      pattern: /^[0-9]{10}$/,
+      custom: (value) => !!normalizeRomanianPhone(value),
       message: t("phone-must-be-10-digits"),
     },
   ],
@@ -393,48 +529,70 @@ const validationRules = {
 const { formErrors, errorMessages, validateField, validateForm } =
   useFormValidation(validationRules);
 
-const mockOrders = [
-  {
-    id: "#ORD-600-121",
-    status: "Delivered",
-    date: "3 January, 2025",
-    items: 1,
-    total: 89.0,
-    currency: "$",
-  },
-  {
-    id: "#ORD-600-122",
-    status: "Processing",
-    date: "5 January, 2025",
-    items: 2,
-    total: 145.5,
-    currency: "$",
-  },
-  {
-    id: "#ORD-600-123",
-    status: "Cancelled",
-    date: "7 January, 2025",
-    items: 3,
-    total: 210.75,
-    currency: "$",
-  },
-  {
-    id: "#ORD-600-124",
-    status: "Delivered",
-    date: "10 January, 2025",
-    items: 1,
-    total: 65.99,
-    currency: "$",
-  },
-];
-
 const displayedOrders = computed(() => {
-  return showAllOrders.value ? mockOrders : mockOrders.slice(0, 2);
+  return showAllOrders.value ? orders.value : orders.value.slice(0, 2);
 });
+
+const formatOrderDate = (value) =>
+  new Date(value).toLocaleDateString(
+    locale.value === "en" ? "en-GB" : "ro-RO",
+    { day: "numeric", month: "long", year: "numeric" },
+  );
+
+const formatOrderStatus = (order) => {
+  if (order.paymentStatus === "PENDING") {
+    return t("paymentPending");
+  }
+  if (order.paymentStatus === "FAILED") {
+    return t("paymentFailed");
+  }
+  const statuses = order.artistStatuses?.map((entry) => entry.status) || [];
+  if (statuses.every((status) => status === "DELIVERED")) {
+    return t("itemStatus.DELIVERED");
+  }
+  if (statuses.some((status) => status === "CANCELLED")) {
+    return t("itemStatus.CANCELLED");
+  }
+  return t("itemStatus.PROCESSING");
+};
+
+const orderStatusClass = (order) => {
+  const label = formatOrderStatus(order);
+  if (label === t("itemStatus.DELIVERED")) {
+    return "h-bg-aero-blue h-color-castleton-green";
+  }
+  if (label === t("itemStatus.CANCELLED") || label === t("paymentFailed")) {
+    return "bg-red-100 text-red-800";
+  }
+  return "bg-yellow-100 text-yellow-800";
+};
+
+const loadOrders = async () => {
+  ordersLoading.value = true;
+  try {
+    orders.value = await getMyOrders();
+  } catch {
+    orders.value = [];
+  } finally {
+    ordersLoading.value = false;
+  }
+};
+
+const loadArtistApplication = async () => {
+  try {
+    artistApplication.value = await getMyApplication();
+  } catch {
+    artistApplication.value = null;
+  }
+};
 
 onMounted(async () => {
   if (checkAuth()) {
-    loadUser();
+    await loadUser();
+    await Promise.all([
+      loadOrders(),
+      ...(canAccessAdmin.value ? [] : [loadArtistApplication()]),
+    ]);
   }
 
   if (addressContainer.value) {
@@ -451,12 +609,12 @@ onMounted(async () => {
 const toggleAddressEdit = async () => {
   try {
     const response = await fetch(
-      `${config.public.apiBase}/users/profile/address-status`,
+      `${getBaseUrl()}/users/profile/address-status`,
       {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -539,7 +697,7 @@ const saveAddress = async () => {
   isLoading.value = true;
   try {
     const response = await fetch(
-      `${config.public.apiBase}/users/profile/address`,
+      `${getBaseUrl()}/users/profile/address`,
       {
         method: "PUT",
         headers: {
@@ -547,7 +705,7 @@ const saveAddress = async () => {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify(addressForm.value),
-      }
+      },
     );
 
     const result = await response.json();
@@ -604,13 +762,14 @@ const cancelPhoneEdit = () => {
 };
 
 const savePhone = async () => {
-  if (!phoneForm.value.phone || !phoneForm.value.phone.match(/^[0-9]{10}$/)) {
+  const normalizedPhone = normalizeRomanianPhone(phoneForm.value.phone);
+  if (!normalizedPhone) {
     formErrors.phone = true;
     errorMessages.phone = t("phone-must-be-10-digits");
     return;
   }
 
-  const hasChanges = phoneForm.value.phone !== user.value.phone;
+  const hasChanges = normalizedPhone !== user.value.phone;
 
   if (!hasChanges) {
     isEditingPhone.value = false;
@@ -626,19 +785,29 @@ const savePhone = async () => {
   isLoading.value = true;
   try {
     const response = await fetch(
-      `${config.public.apiBase}/users/profile/phone`,
+      `${getBaseUrl()}/users/profile/phone`,
       {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({ phone: phoneForm.value.phone }),
-      }
+        body: JSON.stringify({ phone: normalizedPhone }),
+      },
     );
 
+    const result = await response.json().catch(() => ({}));
+
     if (!response.ok) {
-      throw new Error(result.message || "Failed to update phone number");
+      throw new Error(
+        formatPhoneApiError(result, t, {
+          "Phone number must be exactly 10 digits": "phone-must-be-10-digits",
+          "Phone number is already in use by another user":
+            "phone-already-in-use",
+        }) ||
+          extractApiErrorMessage(result) ||
+          t("error-saving-phone"),
+      );
     }
 
     isEditingPhone.value = false;
@@ -661,10 +830,15 @@ const savePhone = async () => {
     }
   } catch (error) {
     console.error("Error saving phone number:", error);
+    const isNetworkError =
+      error instanceof TypeError ||
+      (error instanceof Error && error.message === "Failed to fetch");
     toast.add({
       severity: "error",
       summary: t("error-title"),
-      detail: error.message || t("error-saving-phone"),
+      detail: isNetworkError
+        ? t("network-error")
+        : error.message || t("error-saving-phone"),
       life: 3000,
     });
   } finally {
@@ -682,7 +856,7 @@ const showDeleteAccountDialog = () => {
 
 const handleDeleteAccount = async () => {
   try {
-    const response = await fetch(`${config.public.apiBase}/users/profile`, {
+    const response = await fetch(`${getBaseUrl()}/users/profile`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -693,10 +867,27 @@ const handleDeleteAccount = async () => {
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.message || t("error-deleting-account"));
+      const errorMessage =
+        typeof result.message === "string"
+          ? result.message
+          : Array.isArray(result.message)
+            ? result.message[0]
+            : t("error-deleting-account");
+      throw new Error(errorMessage);
     }
 
     deleteAccountDialogVisible.value = false;
+
+    if (result.requiresAdminApproval) {
+      toast.add({
+        severity: "info",
+        summary: t("artist-delete-request-title"),
+        detail: t("artist-delete-request-message"),
+        life: 8000,
+      });
+      return;
+    }
+
     toast.add({
       severity: "success",
       summary: t("success-title"),
@@ -753,9 +944,11 @@ const handleDeleteAccount = async () => {
     "address-updated": "Address updated successfully",
     "error-loading-user-data": "An error occurred while reloading user data",
     "phone-must-be-10-digits": "Phone number must be exactly 10 digits",
+    "phone-already-in-use": "This phone number is already used by another account.",
     "phone-required": "Phone number is required",
     "phone-updated": "Phone number updated successfully",
     "error-saving-phone": "An error occurred while saving your phone number",
+    "network-error": "Could not reach the server. Check your connection and try again.",
     "orders-histroy": "Orders History",
     "items": "items",
     "show-more": "Show More Orders",
@@ -767,7 +960,38 @@ const handleDeleteAccount = async () => {
     "delete-account-message": "Once you delete your account, there is no going back. Please be certain.",
     "delete-account-confirmation": "Are you sure you want to delete your account?",
     "error-deleting-account": "An error occurred while deleting your account",
-    "account-deleted-successfully": "Your account has been deleted successfully"
+    "artist-delete-request-title": "Deletion request sent",
+    "artist-delete-request-message": "We will call you shortly to confirm that you wish to proceed with this action. Thank you for your understanding!",
+    "account-deleted-successfully": "Your account has been deleted successfully",
+    "suspensionNoticeTitle": "Your artist account has been suspended",
+    "suspensionNoticeBody": "Your products are no longer visible on the site and you cannot sell on the platform for now. If you have questions or believe this was a mistake, please contact us.",
+    "suspensionReasonLabel": "Reason",
+    "suspensionContactLink": "Contact us",
+    "dismissSuspensionNotice": "Dismiss notice",
+    "error-dismiss-suspension": "Could not dismiss the notice. Please try again.",
+    "reactivationNoticeTitle": "Your artist account has been reactivated",
+    "reactivationNoticeBody": "You can access the artist panel again and your approved products are visible on the site.",
+    "reactivationPanelLink": "Open artist panel",
+    "dismissReactivationNotice": "Dismiss notice",
+    "error-dismiss-reactivation": "Could not dismiss the notice. Please try again.",
+    "sellOnPlatform": "Sell on the platform",
+    "sellOnPlatformDesc": "Have handmade products? Join as an artist and reach our customers.",
+    "becomeArtist": "Become an artist",
+    "artistPanel": "Artist panel",
+    "artistPending": "Your artist application is under review.",
+    "artistRejected": "Your previous application was rejected. You can submit a new one.",
+    "reapplyArtist": "Reapply and edit details",
+    "loadingOrders": "Loading orders...",
+    "noOrders": "You have no orders yet.",
+    "paymentPending": "Awaiting payment",
+    "paymentFailed": "Payment failed",
+    "itemStatus": {
+      "PENDING": "Pending",
+      "PROCESSING": "Processing",
+      "SHIPPED": "Shipped",
+      "DELIVERED": "Delivered",
+      "CANCELLED": "Cancelled"
+    }
   },
   "ro": {
     "title": "Profilul meu",
@@ -804,9 +1028,11 @@ const handleDeleteAccount = async () => {
     "address-updated": "Adresa a fost actualizată cu succes",
     "error-loading-user-data": "A apărut o eroare la reîncărcarea datelor utilizatorului",
     "phone-must-be-10-digits": "Numărul de telefon trebuie să aibă exact 10 cifre",
+    "phone-already-in-use": "Acest număr de telefon este deja folosit de alt cont.",
     "phone-required": "Numărul de telefon este obligatoriu",
     "phone-updated": "Numărul de telefon a fost actualizat cu succes",
     "error-saving-phone": "A apărut o eroare la salvarea numărului de telefon",
+    "network-error": "Nu am putut contacta serverul. Verifica conexiunea si incearca din nou.",
     "orders-histroy": "Istoricul comenzilor",
     "items": "produse",
     "show-more": "Afișează mai multe comenzi",
@@ -818,7 +1044,38 @@ const handleDeleteAccount = async () => {
     "delete-account-message": "Odată șters contul, nu mai poți reveni. Te rugăm să fii sigur.",
     "delete-account-confirmation": "Esti sigur ca vrei sa ștergi contul?",
     "error-deleting-account": "A apărut o eroare la ștergerea contului",
-    "account-deleted-successfully": "Contul a fost șters cu succes"
+    "artist-delete-request-title": "Cerere trimisă",
+    "artist-delete-request-message": "O sa revenim cu un apel catre dumneavoastra in cel mai scurt timp, pentru a confirma ca dumneavoastra doriti sa faceti aceasta actiune. Multumim de intelegere !",
+    "account-deleted-successfully": "Contul a fost șters cu succes",
+    "suspensionNoticeTitle": "Contul tău de artist a fost suspendat",
+    "suspensionNoticeBody": "Produsele tale nu mai sunt vizibile pe site și nu poți vinde temporar pe platformă. Dacă ai întrebări sau consideri că această decizie a fost luată din greșeală, ne poți contacta.",
+    "suspensionReasonLabel": "Motiv",
+    "suspensionContactLink": "Contactează-ne",
+    "dismissSuspensionNotice": "Închide notificarea",
+    "error-dismiss-suspension": "Notificarea nu a putut fi închisă. Încearcă din nou.",
+    "reactivationNoticeTitle": "Contul tău de artist a fost reactivat",
+    "reactivationNoticeBody": "Poți accesa din nou panoul de artist, iar produsele tale aprobate sunt vizibile pe site.",
+    "reactivationPanelLink": "Deschide panoul artist",
+    "dismissReactivationNotice": "Închide notificarea",
+    "error-dismiss-reactivation": "Notificarea nu a putut fi închisă. Încearcă din nou.",
+    "sellOnPlatform": "Vinde pe platformă",
+    "sellOnPlatformDesc": "Ai produse handmade? Înscrie-te ca artist și ajunge la clienții noștri.",
+    "becomeArtist": "Devino artist",
+    "artistPanel": "Panou artist",
+    "artistPending": "Cererea ta de artist este în evaluare.",
+    "artistRejected": "Cererea anterioară a fost respinsă. Poți trimite una nouă.",
+    "reapplyArtist": "Reaplică și editează datele",
+    "loadingOrders": "Se încarcă comenzile...",
+    "noOrders": "Nu ai comenzi încă.",
+    "paymentPending": "În așteptarea plății",
+    "paymentFailed": "Plată eșuată",
+    "itemStatus": {
+      "PENDING": "În așteptare",
+      "PROCESSING": "În procesare",
+      "SHIPPED": "Expediat",
+      "DELIVERED": "Livrat",
+      "CANCELLED": "Anulat"
+    }
   }
 }
 </i18n>

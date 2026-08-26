@@ -97,6 +97,7 @@ import { useAuth } from "~/composables/useAuth";
 import { useFormValidation } from "~/composables/useFormValidation";
 
 const router = useRouter();
+const route = useRoute();
 
 defineI18nRoute({
   paths: {
@@ -110,6 +111,8 @@ const { t } = useI18n({
 });
 
 const { login, googleAuth, isLoading, error } = useAuth();
+const { mergeGuestFavorites } = useFavorites();
+const { mergeGuestCart } = useCart();
 
 const formData = ref({
   email: "",
@@ -155,12 +158,16 @@ const handleSubmit = async () => {
 
     if (!result.success) {
       showError.value = true;
-      errorMessage.value = t("invalid-credentials");
+      errorMessage.value =
+        result.error?.message || t("invalid-credentials");
       return;
     }
 
     showError.value = false;
-    router.push("/");
+    await mergeGuestFavorites();
+    await mergeGuestCart();
+    const redirect = (route.query.redirect as string) || "/";
+    router.push(redirect.startsWith("/") ? redirect : "/");
   } catch (error) {
     showError.value = true;
     errorMessage.value = t("invalid-credentials");

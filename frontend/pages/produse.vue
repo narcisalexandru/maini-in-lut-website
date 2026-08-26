@@ -143,7 +143,7 @@ defineI18nRoute({
 onMounted(async () => {
   try {
     const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/products`
+      `${import.meta.env.VITE_BACKEND_URL}/products`,
     );
     const data = await response.json();
     products.value = data;
@@ -161,11 +161,11 @@ const filteredProducts = computed(() => {
   let filtered = products.value;
   if (!selectedCategories.value.includes("All")) {
     filtered = filtered.filter((p) =>
-      selectedCategories.value.includes(p.category)
+      selectedCategories.value.includes(p.category),
     );
   }
   filtered = filtered.filter(
-    (p) => p.price >= priceRange.value[0] && p.price <= priceRange.value[1]
+    (p) => p.price >= priceRange.value[0] && p.price <= priceRange.value[1],
   );
   switch (sortBy.value) {
     case "popularity":
@@ -173,7 +173,7 @@ const filteredProducts = computed(() => {
       break;
     case "newest":
       filtered = [...filtered].sort(
-        (a, b) => new Date(b.datePublished) - new Date(a.datePublished)
+        (a, b) => new Date(b.datePublished) - new Date(a.datePublished),
       );
       break;
     case "price-asc":
@@ -204,7 +204,7 @@ function handleAllChange(checked) {
     nextTick(() => {
       console.log(
         "Selected categories after unchecking All:",
-        selectedCategories.value
+        selectedCategories.value,
       );
     });
   }
@@ -215,7 +215,7 @@ function toggleCategory(cat, checked) {
 
   if (selectedCategories.value.includes("All")) {
     selectedCategories.value = selectedCategories.value.filter(
-      (c) => c !== "All"
+      (c) => c !== "All",
     );
   }
 
@@ -223,7 +223,7 @@ function toggleCategory(cat, checked) {
     selectedCategories.value.push(cat);
   } else {
     selectedCategories.value = selectedCategories.value.filter(
-      (c) => c !== cat
+      (c) => c !== cat,
     );
   }
 

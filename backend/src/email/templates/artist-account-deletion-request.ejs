@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cerere ștergere cont artist</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #ece4d4;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 24px;
+        margin-top: 20px;
+      }
+      h1 {
+        color: #546a50;
+        margin-top: 0;
+      }
+      .label {
+        font-weight: bold;
+        color: #546a50;
+        margin-top: 16px;
+      }
+      .value {
+        margin: 4px 0 0;
+        white-space: pre-wrap;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 20px;
+        background-color: #546a50;
+        color: #ece4d4 !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 24px 0 8px;
+        font-weight: bold;
+      }
+      .footer {
+        margin-top: 24px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Cerere de ștergere cont artist</h1>
+      <p>
+        <strong><%= applicantName %></strong> a solicitat ștergerea contului de
+        artist de pe platformă. Contactați persoana pentru confirmare înainte de
+        a procesa cererea.
+      </p>
+
+      <p class="label">Data cererii</p>
+      <p class="value"><%= requestedAt %></p>
+
+      <p class="label">Cont utilizator</p>
+      <p class="value"><%= userFirstName %> <%= userLastName %></p>
+
+      <p class="label">Email cont</p>
+      <p class="value"><%= userEmail %></p>
+
+      <% if (userPhone) { %>
+      <p class="label">Telefon cont</p>
+      <p class="value"><%= userPhone %></p>
+      <% } %>
+
+      <% if (displayName) { %>
+      <p class="label">Nume pe site</p>
+      <p class="value"><%= displayName %></p>
+      <% } %>
+
+      <% if (artistFirstName || artistLastName) { %>
+      <p class="label">Artist</p>
+      <p class="value"><%= artistFirstName %> <%= artistLastName %></p>
+      <% } %>
+
+      <% if (companyCui) { %>
+      <p class="label">CUI firmă</p>
+      <p class="value"><%= companyCui %></p>
+      <% } %>
+
+      <% if (companyLegalName) { %>
+      <p class="label">Denumire legală firmă</p>
+      <p class="value"><%= companyLegalName %></p>
+      <% } %>
+
+      <% if (contactEmail) { %>
+      <p class="label">Email contact</p>
+      <p class="value"><%= contactEmail %></p>
+      <% } %>
+
+      <% if (contactPhone) { %>
+      <p class="label">Telefon contact</p>
+      <p class="value"><%= contactPhone %></p>
+      <% } %>
+
+      <% if (adminUrl) { %>
+      <a href="<%= adminUrl %>" class="button">Vezi profilul artistului în admin</a>
+      <% } %>
+
+      <div class="footer">
+        <p>
+          Ștergerea contului unui artist necesită confirmare telefonică și
+          acțiune manuală din panoul de administrare.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

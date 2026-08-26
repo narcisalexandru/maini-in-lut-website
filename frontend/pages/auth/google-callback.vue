@@ -10,17 +10,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { useRouter, useRoute } from "vue-router";
+definePageMeta({
+  layout: "empty",
+  ssr: false,
+});
 
 const router = useRouter();
 const route = useRoute();
+const localePath = useLocalePath();
+const { loadUser } = useAuth();
 
-definePageMeta({
-  layout: "empty",
-});
-
-onMounted(() => {
+onMounted(async () => {
   try {
     const tokenParam = route.query.token as string;
     if (!tokenParam) {
@@ -31,14 +31,19 @@ onMounted(() => {
     if (data.access_token) {
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      router.push("/");
+      await loadUser();
+      const { mergeGuestFavorites } = useFavorites();
+      const { mergeGuestCart } = useCart();
+      await mergeGuestFavorites();
+      await mergeGuestCart();
+      await router.push(localePath("/"));
     } else {
       console.error("No access token found in response");
-      router.push("/login");
+      await router.push(localePath("/login"));
     }
   } catch (error) {
     console.error("Failed to process Google login:", error);
-    router.push("/login");
+    await router.push(localePath("/login"));
   }
 });
 </script>

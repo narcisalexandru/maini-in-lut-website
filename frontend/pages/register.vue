@@ -246,8 +246,10 @@
                 >
                   {{ t("accept-terms-message") }}
                   <nuxt-link
-                    to="/terms-and-conditions"
+                    :to="$localePath({ name: 'terms-and-conditions' })"
                     class="underline h-color-palm-leaf"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     >{{ t("terms-and-conditions") }}</nuxt-link
                   >
                 </div>

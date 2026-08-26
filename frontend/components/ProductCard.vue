@@ -2,9 +2,13 @@
   <div
     class="bg-white flex flex-col flex-1 shrink rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative"
   >
-    <div class="relative h-48">
+    <component
+      :is="preview ? 'div' : NuxtLink"
+      v-bind="preview ? {} : { to: $localePath(`/produs/${product.id}`) }"
+      class="block relative h-48"
+    >
       <img
-        :src="product.image"
+        :src="getProductPrimaryImageUrl(product)"
         :alt="product.title"
         class="w-full h-full object-cover"
       />
@@ -27,17 +31,31 @@
         Popular
       </span>
       <button
+        v-if="!preview"
+        type="button"
         class="absolute bottom-2 right-2 h-font-size-20 flex items-center justify-center transition-all duration-300 w-10 h-10 h-bg-white rounded-full group hover:scale-110"
+        :aria-label="
+          isFavorite(product.id) ? 'Elimină din favorite' : 'Adaugă în favorite'
+        "
+        @click.prevent="toggleFavorite(product.id)"
       >
         <i
+          v-show="!isFavorite(product.id)"
           class="ph ph-heart transition-all duration-300 group-hover:hidden h-color-primary"
         ></i>
         <i
-          class="ph ph-fill transition-all duration-300 ph-heart hidden group-hover:block h-color-primary"
+          :class="[
+            'ph ph-heart ph-fill transition-all duration-300 h-color-primary',
+            isFavorite(product.id) ? 'block' : 'hidden group-hover:block',
+          ]"
         ></i>
       </button>
-    </div>
-    <div class="flex flex-col h-36 p-2 md:p-3">
+    </component>
+    <component
+      :is="preview ? 'div' : NuxtLink"
+      v-bind="preview ? {} : { to: $localePath(`/produs/${product.id}`) }"
+      class="flex flex-col h-36 p-2 md:p-3 flex-1 hover:opacity-90 transition-opacity no-underline text-inherit"
+    >
       <h3 class="flex flex-1 text-sm font-semibold text-gray-800 mb-1">
         {{ product.title }}
       </h3>
@@ -52,25 +70,50 @@
         >
       </div>
       <div class="flex w-full">
-        <Button
-          class="maini-ui-button__buy w-full flex justify-center items-center border-none"
+        <button
+          type="button"
+          class="maini-ui-button__buy w-full flex justify-center items-center border-none cursor-pointer"
+          :class="{ 'pointer-events-none opacity-70': preview }"
+          :aria-label="preview ? undefined : 'Adaugă în coș'"
+          @click.prevent.stop="!preview && handleAddToCart()"
         >
           Adaugă în coș
-        </Button>
+        </button>
       </div>
-    </div>
+    </component>
   </div>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, resolveComponent } from "vue";
+import { getProductPrimaryImageUrl } from "~/utils/product-image";
+import {
+  getProductStockQuantity,
+  isProductAvailable,
+} from "~/utils/product-stock";
 
-const { product } = defineProps({
+const NuxtLink = resolveComponent("NuxtLink");
+
+const { product, preview = false } = defineProps({
   product: {
     type: Object,
     required: true,
   },
+  preview: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const { toggleFavorite, isFavorite } = useFavorites();
+const { addToCart } = useCart();
+
+function handleAddToCart() {
+  if (!isProductAvailable(product)) {
+    return;
+  }
+  addToCart(product.id, 1, getProductStockQuantity(product));
+}
 
 const isNew = computed(() => {
   const now = new Date();
