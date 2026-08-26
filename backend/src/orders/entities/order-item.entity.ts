@@ -61,6 +61,9 @@ export class OrderItem {
   @Column({ type: 'timestamp', nullable: true })
   statusUpdatedAt: Date | null;
 
+  @Column({ default: false })
+  isUnarchived: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

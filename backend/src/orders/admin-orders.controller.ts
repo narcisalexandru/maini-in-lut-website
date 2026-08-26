@@ -16,36 +16,16 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
 import { AuthenticatedRequest } from '../common/types/authenticated-request.interface';
 import { UpdateOrderItemStatusDto } from './dto/update-order-item-status.dto';
+import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import {
   toOrderDetailResponse,
   toOrderItemResponse,
   toOrderSummaryResponse,
 } from './utils/order-response.util';
-import {
-  OrderItemStatus,
-  OrderPaymentStatus,
-} from '../common/enums/order-status.enum';
-import { IsEnum, IsInt, IsOptional } from 'class-validator';
-import { Type } from 'class-transformer';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuditAction } from '../audit-log/enums/audit-action.enum';
 import { AuditTargetType } from '../audit-log/enums/audit-target-type.enum';
 import { orderItemAuditContext } from '../audit-log/utils/audit-log-context.util';
-
-class ListOrdersQueryDto {
-  @IsOptional()
-  @IsEnum(OrderPaymentStatus)
-  paymentStatus?: OrderPaymentStatus;
-
-  @IsOptional()
-  @IsEnum(OrderItemStatus)
-  itemStatus?: OrderItemStatus;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  artistId?: number;
-}
 
 @Controller('admin/orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -73,6 +53,24 @@ export class AdminOrdersController {
   async findAll(@Query() query: ListOrdersQueryDto) {
     const orders = await this.ordersService.findAllForAdmin(query);
     return orders.map(toOrderSummaryResponse);
+  }
+
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)
+  @Patch(':id/unarchive')
+  async unarchive(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const order = await this.ordersService.unarchiveOrder(req.user, id);
+    await this.auditLogService.record(req.user, {
+      action: AuditAction.ORDER_UNARCHIVED,
+      targetType: AuditTargetType.ORDER,
+      targetId: order.id,
+      metadata: {
+        publicOrderNumber: order.publicOrderNumber,
+      },
+    });
+    return toOrderDetailResponse(order);
   }
 
   @Roles(UserRole.SUPER_ADMIN)

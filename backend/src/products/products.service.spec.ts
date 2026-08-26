@@ -6,6 +6,9 @@ import { ProductsService } from './products.service';
 import { Product } from './entities/product.entity';
 import { ProductChangeProposal } from './entities/product-change-proposal.entity';
 import { ArtistsService } from '../artists/artists.service';
+import { UsersService } from '../users/users.service';
+import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import { ProductStatus } from '../common/enums/product-status.enum';
 
 describe('ProductsService', () => {
@@ -14,6 +17,18 @@ describe('ProductsService', () => {
 
   const artistsService = {
     findApprovedByUserId: jest.fn(),
+  };
+
+  const usersService = {
+    findSuperAdminEmails: jest.fn().mockResolvedValue([]),
+  };
+
+  const emailService = {
+    sendProductChangeRequestNotification: jest.fn(),
+  };
+
+  const configService = {
+    get: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -44,6 +59,18 @@ describe('ProductsService', () => {
         {
           provide: ArtistsService,
           useValue: artistsService,
+        },
+        {
+          provide: UsersService,
+          useValue: usersService,
+        },
+        {
+          provide: EmailService,
+          useValue: emailService,
+        },
+        {
+          provide: ConfigService,
+          useValue: configService,
         },
       ],
     }).compile();

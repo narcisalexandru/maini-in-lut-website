@@ -2,7 +2,9 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -18,7 +20,10 @@ import { UserRole } from '../common/enums/user-role.enum';
 import { AuthenticatedRequest } from '../common/types/authenticated-request.interface';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { AdminUpdateProductDto } from './dto/admin-update-product.dto';
+import { SaveProductDraftDto } from './dto/save-product-draft.dto';
 import { RejectProductDto } from './dto/reject-product.dto';
+import { ReviewProductChangesDto } from './dto/review-product-changes.dto';
 import { RejectProposalDto } from './dto/propose-product-changes.dto';
 import { ProductStatus } from '../common/enums/product-status.enum';
 import { toAdminProductResponse } from './utils/product-response.util';
@@ -83,6 +88,37 @@ export class AdminProductsController {
     );
   }
 
+  @Roles(UserRole.ARTIST)
+  @Get('active-draft')
+  async findActiveDraft(@Request() req: AuthenticatedRequest) {
+    const product = await this.productsService.findActiveDraftForArtist(
+      req.user.id,
+    );
+    if (!product) {
+      return null;
+    }
+    const pendingProposal = await this.productsService.getPendingProposal(
+      product.id,
+    );
+    return toAdminProductResponse(product, pendingProposal);
+  }
+
+  @Roles(UserRole.ARTIST)
+  @Put('draft')
+  async saveDraft(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: SaveProductDraftDto,
+  ) {
+    const product = await this.productsService.saveDraftForArtist(
+      req.user.id,
+      dto,
+    );
+    const pendingProposal = await this.productsService.getPendingProposal(
+      product.id,
+    );
+    return toAdminProductResponse(product, pendingProposal);
+  }
+
   @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)
   @Get(':id')
   async findOne(
@@ -113,18 +149,25 @@ export class AdminProductsController {
     return toAdminProductResponse(product);
   }
 
-  @Roles(UserRole.ARTIST)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)
   @Patch(':id')
   async update(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateProductDto,
+    @Body() dto: AdminUpdateProductDto,
   ) {
-    const product = await this.productsService.updateForArtist(
-      req.user.id,
-      id,
-      dto,
-    );
+    const product =
+      req.user.role === UserRole.SUPER_ADMIN
+        ? await this.productsService.updateForSuperAdmin(
+            req.user.id,
+            id,
+            dto,
+          )
+        : await this.productsService.updateForArtist(
+            req.user.id,
+            id,
+            dto,
+          );
     const withArtist = await this.productsService.findOneForAdmin(req.user, product.id);
     await this.auditLogService.record(req.user, {
       action: AuditAction.PRODUCT_UPDATED,
@@ -132,6 +175,55 @@ export class AdminProductsController {
       ...productAuditContext(withArtist),
     });
     return toAdminProductResponse(product);
+  }
+
+  @Roles(UserRole.ARTIST)
+  @Delete(':id/draft')
+  async deleteDraft(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    await this.productsService.deleteDraftForArtist(req.user.id, id);
+    return { success: true };
+  }
+
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)
+  @Delete(':id')
+  async deleteProduct(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const product = await this.productsService.findOneForAdmin(req.user, id);
+    await this.productsService.deleteForAdmin(req.user, id);
+    await this.auditLogService.record(req.user, {
+      action: AuditAction.PRODUCT_DELETED,
+      targetType: AuditTargetType.PRODUCT,
+      ...productAuditContext(product),
+    });
+    return { success: true };
+  }
+
+  @Roles(UserRole.ARTIST)
+  @Post(':id/submit-changes')
+  async submitChanges(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProductDto,
+  ) {
+    const product = await this.productsService.submitChangeRequestForArtist(
+      req.user.id,
+      id,
+      dto,
+    );
+    const withArtist = await this.productsService.findOneForAdmin(req.user, product.id);
+    await this.auditLogService.record(req.user, {
+      action: AuditAction.PRODUCT_SUBMITTED,
+      targetType: AuditTargetType.PRODUCT,
+      ...productAuditContext(withArtist),
+      metadata: { changeRequest: true, changes: dto },
+    });
+    const pendingProposal = await this.productsService.getPendingProposal(id);
+    return toAdminProductResponse(product, pendingProposal);
   }
 
   @Roles(UserRole.ARTIST)
@@ -148,6 +240,35 @@ export class AdminProductsController {
       ...productAuditContext(withArtist),
     });
     return toAdminProductResponse(product);
+  }
+
+  @Roles(UserRole.SUPER_ADMIN)
+  @Patch(':id/review-changes')
+  async reviewChanges(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ReviewProductChangesDto,
+  ) {
+    const product = await this.productsService.reviewProductChanges(
+      id,
+      req.user.id,
+      dto.action,
+      dto.fields,
+      dto.reason,
+    );
+    const withArtist = await this.productsService.findOneForAdmin(req.user, product.id);
+    await this.auditLogService.record(req.user, {
+      action: AuditAction.PRODUCT_UPDATED,
+      targetType: AuditTargetType.PRODUCT,
+      ...productAuditContext(withArtist),
+      metadata: {
+        reviewAction: dto.action,
+        fields: dto.fields ?? null,
+        reason: dto.reason?.trim() || null,
+      },
+    });
+    const pendingProposal = await this.productsService.getPendingProposal(id);
+    return toAdminProductResponse(product, pendingProposal);
   }
 
   @Roles(UserRole.SUPER_ADMIN)

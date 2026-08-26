@@ -158,7 +158,8 @@ const handleSubmit = async () => {
 
     if (!result.success) {
       showError.value = true;
-      errorMessage.value = t("invalid-credentials");
+      errorMessage.value =
+        result.error?.message || t("invalid-credentials");
       return;
     }
 

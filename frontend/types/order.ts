@@ -17,6 +17,7 @@ export interface ArtistOrderStatus {
 export interface OrderSummary {
   id: number;
   publicOrderNumber: string;
+  userId: number | null;
   paymentMethod: PaymentMethod;
   paymentStatus: OrderPaymentStatus;
   totalRon: number;
@@ -37,6 +38,7 @@ export interface OrderItem {
   lineTotalRon: number;
   status: OrderItemStatus;
   statusUpdatedAt: string | null;
+  isUnarchived?: boolean;
 }
 
 export interface OrderDetail extends OrderSummary {

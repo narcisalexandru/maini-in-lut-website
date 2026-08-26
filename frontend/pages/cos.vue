@@ -62,7 +62,7 @@
             <section v-if="currentStep === 1" class="space-y-4">
                 <article v-for="item in cartProducts" :key="item.product.id" class="flex flex-col sm:flex-row gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
                   <NuxtLink :to="$localePath(`/produs/${item.product.id}`)" class="w-full sm:w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    <img :src="item.product.image" :alt="item.product.title" class="w-full h-full object-cover" />
+                    <img :src="getProductPrimaryImageUrl(item.product)" :alt="item.product.title" class="w-full h-full object-cover" />
                   </NuxtLink>
                   <div class="flex-1 min-w-0">
                     <NuxtLink :to="$localePath(`/produs/${item.product.id}`)" class="font-semibold text-gray-800 hover:h-color-primary block">
@@ -419,7 +419,7 @@
               <h2 class="text-3xl font-semibold h-color-lunar-green mb-4">{{ t('summaryTitle') }}</h2>
               <div class="space-y-3 mb-4 border-b border-gray-100 pb-4">
                 <div v-for="item in cartProducts" :key="`summary-${item.product.id}`" class="flex items-center gap-3">
-                  <img :src="item.product.image" :alt="item.product.title" class="w-14 h-14 rounded-md object-cover bg-gray-100" />
+                  <img :src="getProductPrimaryImageUrl(item.product)" :alt="item.product.title" class="w-14 h-14 rounded-md object-cover bg-gray-100" />
                   <div class="min-w-0 flex-1">
                     <p class="text-sm font-medium truncate">{{ item.product.title }}</p>
                     <p class="text-xs text-gray-500">{{ t('qty') }}: {{ item.quantity }}</p>
@@ -503,6 +503,7 @@ import { extractApiErrorMessage, formatPhoneApiError } from '~/utils/api-error';
 import { syncStoredUserProfile } from '~/utils/sync-user-profile';
 import { getOrCreateGuestCartId, buildGuestCartHeaders } from '~/utils/guest-cart-id';
 import { getProductStockQuantity } from '~/utils/product-stock';
+import { getProductPrimaryImageUrl } from '~/utils/product-image';
 defineI18nRoute({ paths: { ro: '/cos', en: '/cart' } });
 const { t } = useI18n({ useScope: 'local' });
 const { cartItems, setQuantity, removeFromCart, clearCart, refreshGuestReservations } = useCart();

@@ -4,6 +4,8 @@ type OrderListFilters = {
   paymentStatus?: string;
   itemStatus?: string;
   artistId?: number;
+  userId?: number;
+  archived?: boolean;
 };
 
 function buildOrderQuery(filters?: OrderListFilters) {
@@ -16,6 +18,12 @@ function buildOrderQuery(filters?: OrderListFilters) {
   }
   if (filters?.artistId) {
     searchParams.set("artistId", String(filters.artistId));
+  }
+  if (filters?.userId) {
+    searchParams.set("userId", String(filters.userId));
+  }
+  if (filters?.archived !== undefined) {
+    searchParams.set("archived", String(filters.archived));
   }
   const query = searchParams.toString();
   return query ? `?${query}` : "";
@@ -46,6 +54,11 @@ export function useOrders() {
       body: JSON.stringify({ status }),
     });
 
+  const unarchiveOrder = (orderId: number) =>
+    apiFetch<OrderDetail>(`/admin/orders/${orderId}/unarchive`, {
+      method: "PATCH",
+    });
+
   return {
     getMyOrders,
     getMyOrder,
@@ -53,5 +66,6 @@ export function useOrders() {
     getAdminOrder,
     getArtistOrders,
     updateOrderItemStatus,
+    unarchiveOrder,
   };
 }

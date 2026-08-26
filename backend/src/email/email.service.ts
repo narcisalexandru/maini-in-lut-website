@@ -217,6 +217,34 @@ export class EmailService {
     });
   }
 
+  async sendProductChangeRequestNotification(
+    to: string,
+    payload: {
+      artistName: string;
+      productTitle: string;
+      adminUrl: string;
+      changeItems: Array<{
+        label: string;
+        before: string;
+        after: string;
+      }>;
+    },
+  ): Promise<void> {
+    const html = await renderFile(
+      this.templateFile('product-change-request.ejs'),
+      payload,
+    );
+
+    await this.transporter.sendMail({
+      from: `"${this.configService.get(
+        'SMTP_FROM_NAME',
+      )}" <${this.configService.get('SMTP_FROM_EMAIL')}>`,
+      to,
+      subject: `Modificări produs de validat: ${payload.productTitle}`,
+      html,
+    });
+  }
+
   async sendArtistAccountDeletionRequest(
     to: string,
     payload: {

@@ -31,9 +31,6 @@ export class AuthService {
   ): Promise<UserWithoutPassword | null> {
     const user = await this.usersService.findOneByEmail(email);
     if (user && (await bcrypt.compare(password, user.password))) {
-      if (!user.is_email_verified) {
-        throw new UnauthorizedException('Please verify your email first');
-      }
       const { password, ...result } = user;
       return result;
     }

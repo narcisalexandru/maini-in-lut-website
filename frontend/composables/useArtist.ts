@@ -85,6 +85,28 @@ export function useArtist() {
       body: JSON.stringify(payload),
     });
 
+  const getActiveDraft = () =>
+    apiFetch<AdminProduct | null>("/admin/products/active-draft");
+
+  const getProduct = (id: number) =>
+    apiFetch<AdminProduct>(`/admin/products/${id}`);
+
+  const saveProductDraft = (payload: Record<string, unknown>) =>
+    apiFetch<AdminProduct>("/admin/products/draft", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+  const deleteProductDraft = (id: number) =>
+    apiFetch<{ success: boolean }>(`/admin/products/${id}/draft`, {
+      method: "DELETE",
+    });
+
+  const deleteProduct = (id: number) =>
+    apiFetch<{ success: boolean }>(`/admin/products/${id}`, {
+      method: "DELETE",
+    });
+
   const updateProduct = (id: number, payload: Record<string, unknown>) =>
     apiFetch<AdminProduct>(`/admin/products/${id}`, {
       method: "PATCH",
@@ -96,9 +118,28 @@ export function useArtist() {
       method: "POST",
     });
 
+  const submitProductChanges = (id: number, payload: Record<string, unknown>) =>
+    apiFetch<AdminProduct>(`/admin/products/${id}/submit-changes`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
   const approveProduct = (id: number) =>
     apiFetch<AdminProduct>(`/admin/products/${id}/approve`, {
       method: "PATCH",
+    });
+
+  const reviewProductChanges = (
+    id: number,
+    payload: {
+      action: "accept-fields" | "reject-fields" | "accept-all" | "reject-all";
+      fields?: string[];
+      reason?: string;
+    },
+  ) =>
+    apiFetch<AdminProduct>(`/admin/products/${id}/review-changes`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
     });
 
   const rejectProduct = (id: number, reason: string) =>
@@ -151,9 +192,16 @@ export function useArtist() {
     listMyProducts,
     listReviewQueue,
     createProduct,
+    getActiveDraft,
+    getProduct,
+    saveProductDraft,
+    deleteProductDraft,
+    deleteProduct,
     updateProduct,
     submitProduct,
+    submitProductChanges,
     approveProduct,
+    reviewProductChanges,
     rejectProduct,
     proposeProductChanges,
     acceptProductChanges,

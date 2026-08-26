@@ -16,11 +16,18 @@ import {
 import { UserRole } from '../common/enums/user-role.enum';
 import { User } from '../users/entities/user.entity';
 import { ArtistsService } from '../artists/artists.service';
+import {
+  applyActiveOrdersFilter,
+  applyArchivedOrdersFilter,
+  TERMINAL_ORDER_ITEM_STATUSES,
+} from '../common/utils/order-archive.util';
 
 export type AdminOrdersFilter = {
   paymentStatus?: OrderPaymentStatus;
   itemStatus?: OrderItemStatus;
   artistId?: number;
+  userId?: number;
+  archived?: boolean;
 };
 
 export type OrderLineInput = {
@@ -153,10 +160,20 @@ export class OrdersService {
       qb.andWhere('item.artistId = :artistId', { artistId: filters.artistId });
     }
 
+    if (filters.userId) {
+      qb.andWhere('order.userId = :userId', { userId: filters.userId });
+    }
+
     if (filters.itemStatus) {
       qb.andWhere('item.status = :itemStatus', {
         itemStatus: filters.itemStatus,
       });
+    }
+
+    if (filters.archived === true) {
+      applyArchivedOrdersFilter(qb, filters.artistId);
+    } else {
+      applyActiveOrdersFilter(qb, filters.artistId);
     }
 
     qb.distinct(true);
@@ -193,6 +210,12 @@ export class OrdersService {
       qb.andWhere('item.status = :itemStatus', {
         itemStatus: filters.itemStatus,
       });
+    }
+
+    if (filters.archived === true) {
+      applyArchivedOrdersFilter(qb, artist.id);
+    } else {
+      applyActiveOrdersFilter(qb, artist.id);
     }
 
     qb.distinct(true);
@@ -242,9 +265,63 @@ export class OrdersService {
       );
     }
 
+    const previousStatus = item.status;
     item.status = status;
     item.statusUpdatedAt = new Date();
+    if (previousStatus !== status) {
+      item.isUnarchived = false;
+    }
     return this.orderItemsRepository.save(item);
+  }
+
+  async unarchiveOrder(user: User, orderId: number): Promise<Order> {
+    const order = await this.findOneForAdmin(orderId);
+
+    let itemsToUnarchive: OrderItem[];
+
+    if (user.role === UserRole.ARTIST) {
+      const artist = await this.artistsService.findApprovedByUserId(user.id);
+      if (!artist) {
+        throw new ForbiddenException('Approved artist profile required');
+      }
+
+      itemsToUnarchive = (order.items ?? []).filter(
+        (item) => item.artistId === artist.id,
+      );
+      if (!itemsToUnarchive.length) {
+        throw new ForbiddenException('You can only unarchive your own orders');
+      }
+    } else if (user.role === UserRole.SUPER_ADMIN) {
+      itemsToUnarchive = order.items ?? [];
+    } else {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+
+    if (
+      !this.areAllItemsTerminal(itemsToUnarchive) ||
+      itemsToUnarchive.some((item) => item.isUnarchived)
+    ) {
+      throw new BadRequestException('Order is not archived');
+    }
+
+    for (const item of itemsToUnarchive) {
+      item.isUnarchived = true;
+    }
+    await this.orderItemsRepository.save(itemsToUnarchive);
+
+    return this.findOneForAdmin(orderId);
+  }
+
+  private areAllItemsTerminal(items: OrderItem[]): boolean {
+    if (!items.length) {
+      return false;
+    }
+
+    return items.every((item) =>
+      (TERMINAL_ORDER_ITEM_STATUSES as readonly OrderItemStatus[]).includes(
+        item.status,
+      ),
+    );
   }
 
   private async persistOrder(

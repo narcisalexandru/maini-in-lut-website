@@ -183,6 +183,7 @@ const NEGATIVE_ACTIONS = new Set([
   "ARTIST_DELETED",
   "PRODUCT_REJECTED",
   "PRODUCT_CHANGES_REJECTED",
+  "PRODUCT_DELETED",
 ]);
 
 const actionLabel = (action) => {
@@ -353,6 +354,7 @@ onMounted(async () => {
     "action.PRODUCT_CHANGES_PROPOSED": "Modificări propuse produs",
     "action.PRODUCT_CHANGES_ACCEPTED": "Modificări acceptate",
     "action.PRODUCT_CHANGES_REJECTED": "Modificări respinse",
+    "action.PRODUCT_DELETED": "Produs șters",
     "action.ORDER_ITEM_STATUS_UPDATED": "Status comandă actualizat"
   },
   "en": {
@@ -393,6 +395,7 @@ onMounted(async () => {
     "action.PRODUCT_CHANGES_PROPOSED": "Product changes proposed",
     "action.PRODUCT_CHANGES_ACCEPTED": "Product changes accepted",
     "action.PRODUCT_CHANGES_REJECTED": "Product changes rejected",
+    "action.PRODUCT_DELETED": "Product deleted",
     "action.ORDER_ITEM_STATUS_UPDATED": "Order item status updated"
   }
 }

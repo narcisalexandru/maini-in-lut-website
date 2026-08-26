@@ -21,6 +21,7 @@ export function toOrderItemResponse(item: OrderItem) {
     lineTotalRon: toNumber(item.lineTotalRon),
     status: item.status,
     statusUpdatedAt: item.statusUpdatedAt,
+    isUnarchived: item.isUnarchived,
   };
 }
 
@@ -31,6 +32,7 @@ export function toOrderSummaryResponse(order: Order) {
   return {
     id: order.id,
     publicOrderNumber: order.publicOrderNumber,
+    userId: order.userId,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     totalRon: toNumber(order.totalRon),
@@ -47,6 +49,7 @@ export function toOrderDetailResponse(order: Order) {
   return {
     id: order.id,
     publicOrderNumber: order.publicOrderNumber,
+    userId: order.userId,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     customer: {

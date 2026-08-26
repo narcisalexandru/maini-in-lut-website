@@ -9,6 +9,9 @@
       :id="id"
       :name="name"
       :autocomplete="autocomplete"
+      :min="min"
+      :max="max"
+      :step="step"
       :class="[
         'h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm',
         { 'border border-red-500': error },
@@ -41,6 +44,9 @@ defineProps<{
   helpText?: string;
   required?: boolean;
   autocomplete?: string;
+  min?: string | number;
+  max?: string | number;
+  step?: string | number;
 }>();
 
 const emit = defineEmits<{

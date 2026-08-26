@@ -1,6 +1,7 @@
 import { computed } from "vue";
 import type { AuthUser } from "~/types/user";
 import { useAuthState } from "./useAuthState";
+import { getApiBaseUrl } from "~/utils/api-base";
 
 interface AuthError {
   message: string;
@@ -43,7 +44,7 @@ export const useAuth = () => {
       error.value = null;
 
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/auth/login`,
+        `${getApiBaseUrl()}/auth/login`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -87,7 +88,7 @@ export const useAuth = () => {
       error.value = null;
 
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/auth/register`,
+        `${getApiBaseUrl()}/auth/register`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -135,7 +136,7 @@ export const useAuth = () => {
   };
 
   const googleAuth = () => {
-    window.location.href = `${import.meta.env.VITE_BACKEND_URL}/auth/google`;
+    window.location.href = `${getApiBaseUrl()}/auth/google`;
   };
 
   const checkAuth = () => {
@@ -160,7 +161,7 @@ export const useAuth = () => {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/users/profile`,
+        `${getApiBaseUrl()}/users/profile`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -205,7 +206,7 @@ export const useAuth = () => {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/users/profile`,
+        `${getApiBaseUrl()}/users/profile`,
         {
           method: "PUT",
           headers: {

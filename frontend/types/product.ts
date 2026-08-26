@@ -1,6 +1,7 @@
 export type ProductStatus =
   | "DRAFT"
   | "PENDING_REVIEW"
+  | "PENDING_UPDATE_REVIEW"
   | "PENDING_ARTIST_CONFIRMATION"
   | "APPROVED"
   | "REJECTED";

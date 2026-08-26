@@ -6,6 +6,7 @@ import {
   UseGuards,
   Req,
   Query,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
@@ -27,7 +28,7 @@ export class AuthController {
       loginDto.password,
     );
     if (!user) {
-      return { message: 'Invalid credentials' };
+      throw new UnauthorizedException('Invalid credentials');
     }
     return this.authService.login(user);
   }

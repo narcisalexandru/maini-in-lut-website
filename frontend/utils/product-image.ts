@@ -1,11 +1,4 @@
-export function getApiBaseUrl(): string {
-  const config = useRuntimeConfig();
-  return (
-    config.public.apiBase ||
-    import.meta.env.VITE_BACKEND_URL ||
-    "http://localhost:4000"
-  );
-}
+import { getApiBaseUrl } from "./api-base";
 
 export function resolveProductImageUrl(src: string | null | undefined): string {
   if (!src) return "";
@@ -16,4 +9,12 @@ export function resolveProductImageUrl(src: string | null | undefined): string {
     return `${getApiBaseUrl()}${src}`;
   }
   return src;
+}
+
+export function getProductPrimaryImageUrl(product: {
+  image?: string | null;
+  images?: string[] | null;
+}): string {
+  const src = product.images?.[0] ?? product.image;
+  return resolveProductImageUrl(src);
 }

@@ -1,4 +1,5 @@
 import type { AuthUser } from "~/types/user";
+import { getApiBaseUrl } from "~/utils/api-base";
 
 export async function syncStoredUserProfile(): Promise<AuthUser | null> {
   if (!import.meta.client) {
@@ -10,12 +11,8 @@ export async function syncStoredUserProfile(): Promise<AuthUser | null> {
     return null;
   }
 
-  const config = useRuntimeConfig();
-  const baseUrl =
-    config.public.apiBase || import.meta.env.VITE_BACKEND_URL || "";
-
   try {
-    const response = await fetch(`${baseUrl}/users/profile`, {
+    const response = await fetch(`${getApiBaseUrl()}/users/profile`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 

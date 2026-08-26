@@ -4,6 +4,7 @@ import {
   getGuestCartId,
   getOrCreateGuestCartId,
 } from "~/utils/guest-cart-id";
+import { getApiBaseUrl } from "~/utils/api-base";
 
 export type CartItem = { productId: number; quantity: number };
 
@@ -32,8 +33,7 @@ export const useCart = () => {
     () => null,
   );
 
-  const apiBase = () =>
-    import.meta.env.VITE_BACKEND_URL || useRuntimeConfig().public?.apiBase || "";
+  const apiBase = () => getApiBaseUrl();
 
   const getToken = () => {
     if (import.meta.client) {
@@ -72,6 +72,8 @@ export const useCart = () => {
         body: JSON.stringify({ guestId, items }),
       });
       if (!response.ok) {
+        cartItems.value = items;
+        saveGuestCart(items);
         return items;
       }
       const data = await response.json();
@@ -83,6 +85,8 @@ export const useCart = () => {
       return synced;
     } catch (error) {
       console.error("Failed to sync guest stock reservations:", error);
+      cartItems.value = items;
+      saveGuestCart(items);
       return items;
     }
   };

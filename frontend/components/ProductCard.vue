@@ -8,7 +8,7 @@
       class="block relative h-48"
     >
       <img
-        :src="resolveProductImageUrl(product.image)"
+        :src="getProductPrimaryImageUrl(product)"
         :alt="product.title"
         class="w-full h-full object-cover"
       />
@@ -86,7 +86,7 @@
 
 <script setup>
 import { computed, resolveComponent } from "vue";
-import { resolveProductImageUrl } from "~/utils/product-image";
+import { getProductPrimaryImageUrl } from "~/utils/product-image";
 import {
   getProductStockQuantity,
   isProductAvailable,

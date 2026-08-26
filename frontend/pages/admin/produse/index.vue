@@ -97,6 +97,7 @@ const artistFilter = ref(null);
 const productStatusOptions = computed(() => [
   { label: t("statusDraft"), value: "DRAFT" },
   { label: t("statusPendingReview"), value: "PENDING_REVIEW" },
+  { label: t("statusPendingUpdateReview"), value: "PENDING_UPDATE_REVIEW" },
   { label: t("statusPendingConfirmation"), value: "PENDING_ARTIST_CONFIRMATION" },
   { label: t("statusApproved"), value: "APPROVED" },
   { label: t("statusRejected"), value: "REJECTED" },
@@ -258,6 +259,7 @@ onMounted(async () => {
     "error": "Eroare",
     "statusDraft": "Ciornă",
     "statusPendingReview": "De validat",
+    "statusPendingUpdateReview": "Modificări de validat",
     "statusPendingConfirmation": "Așteaptă confirmare artist",
     "statusApproved": "Aprobat",
     "statusRejected": "Respins"
@@ -276,6 +278,7 @@ onMounted(async () => {
     "error": "Error",
     "statusDraft": "Draft",
     "statusPendingReview": "Pending review",
+    "statusPendingUpdateReview": "Updates pending review",
     "statusPendingConfirmation": "Awaiting artist confirmation",
     "statusApproved": "Approved",
     "statusRejected": "Rejected"

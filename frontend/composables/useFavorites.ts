@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from "~/utils/api-base";
+
 const GUEST_FAVORITES_KEY = "guest_favorites";
 
 function getGuestFavoritesFromStorage(): number[] {
@@ -28,8 +30,7 @@ export const useFavorites = () => {
     }
   }
 
-  const apiBase = () =>
-    import.meta.env.VITE_BACKEND_URL || useRuntimeConfig().public.apiBase || "";
+  const apiBase = () => getApiBaseUrl();
 
   const getToken = () => {
     if (import.meta.client) {

@@ -65,6 +65,12 @@ const visibleItems = computed(() => {
       show: isArtist.value || isSuperAdmin.value,
     },
     {
+      to: "/admin/clienti",
+      label: t("customers"),
+      icon: "ph-user-circle",
+      show: isSuperAdmin.value,
+    },
+    {
       to: "/admin/comenzi",
       label: t("orders"),
       icon: "ph-receipt",
@@ -112,6 +118,7 @@ const visibleItems = computed(() => {
     "panelTitle": "Panou admin",
     "dashboard": "Dashboard",
     "artists": "Artiști",
+    "customers": "Clienți",
     "products": "Produse",
     "orders": "Comenzi",
     "auditLog": "Jurnal activitate",
@@ -121,6 +128,7 @@ const visibleItems = computed(() => {
     "panelTitle": "Admin panel",
     "dashboard": "Dashboard",
     "artists": "Artists",
+    "customers": "Customers",
     "products": "Products",
     "orders": "Orders",
     "auditLog": "Activity log",
