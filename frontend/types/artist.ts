@@ -9,6 +9,9 @@ export interface ArtistApplicationFields {
   artistLastName: string | null;
   companyCui: string | null;
   companyLegalName: string | null;
+  brand: string | null;
+  contactFirstName: string | null;
+  contactLastName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
 }
@@ -31,11 +34,10 @@ export interface ArtistApplication extends ArtistApplicationFields {
 }
 
 export interface ArtistApplyPayload {
-  artistFirstName: string;
-  artistLastName: string;
   companyCui: string;
   companyLegalName: string;
-  displayName: string;
+  contactFirstName: string;
+  contactLastName: string;
   contactEmail: string;
   contactPhone?: string;
   portfolioUrl?: string;

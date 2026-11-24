@@ -70,7 +70,10 @@ export class EmailService {
       artistLastName: string | null;
       companyCui: string | null;
       companyLegalName: string | null;
+      brand: string | null;
       displayName: string;
+      contactFirstName: string | null;
+      contactLastName: string | null;
       contactEmail: string | null;
       contactPhone: string | null;
       portfolioUrl: string | null;
@@ -100,7 +103,10 @@ export class EmailService {
       artistLastName: string | null;
       companyCui: string | null;
       companyLegalName: string | null;
+      brand: string | null;
       displayName: string;
+      contactFirstName: string | null;
+      contactLastName: string | null;
       contactEmail: string | null;
       contactPhone: string | null;
       portfolioUrl: string | null;

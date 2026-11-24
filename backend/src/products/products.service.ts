@@ -27,6 +27,7 @@ import { sanitizeProductImages } from './utils/product-image-path.util';
 import { ProposalStatus } from '../common/enums/proposal-status.enum';
 import { ArtistStatus } from '../common/enums/artist-status.enum';
 import { UserRole } from '../common/enums/user-role.enum';
+import { Artist } from '../artists/entities/artist.entity';
 import { ArtistsService } from '../artists/artists.service';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
@@ -168,15 +169,15 @@ export class ProductsService {
     userId: number,
     dto: CreateProductDto,
   ): Promise<Product> {
-    const artist = await this.artistsService.findApprovedByUserId(userId);
-    if (!artist) {
-      throw new ForbiddenException('Approved artist profile required');
-    }
+    const { artist, publishImmediately } = await this.resolveSellerArtist(userId);
 
     const product = this.productsRepository.create({
       ...this.mapProductInput(dto),
       artistId: artist.id,
-      status: ProductStatus.DRAFT,
+      status: publishImmediately
+        ? ProductStatus.APPROVED
+        : ProductStatus.DRAFT,
+      ...(publishImmediately ? { datePublished: new Date() } : {}),
     });
 
     return this.productsRepository.save(product);
@@ -231,10 +232,7 @@ export class ProductsService {
   }
 
   async findActiveDraftForArtist(userId: number): Promise<Product | null> {
-    const artist = await this.artistsService.findApprovedByUserId(userId);
-    if (!artist) {
-      throw new ForbiddenException('Approved artist profile required');
-    }
+    const { artist } = await this.resolveSellerArtist(userId);
 
     const drafts = await this.productsRepository.find({
       where: { artistId: artist.id, status: ProductStatus.DRAFT },
@@ -257,10 +255,7 @@ export class ProductsService {
       return this.productsRepository.save(product);
     }
 
-    const artist = await this.artistsService.findApprovedByUserId(userId);
-    if (!artist) {
-      throw new ForbiddenException('Approved artist profile required');
-    }
+    const { artist } = await this.resolveSellerArtist(userId);
 
     const product = this.productsRepository.create({
       ...this.mapDraftProductInput(dto, true),
@@ -559,14 +554,36 @@ export class ProductsService {
     await this.productsRepository.save(entities);
   }
 
-  private async getEditableProductForArtist(
-    userId: number,
-    id: number,
-  ): Promise<Product> {
+  private async resolveSellerArtist(userId: number): Promise<{
+    artist: Artist;
+    publishImmediately: boolean;
+  }> {
+    const user = await this.usersService.findOne(userId);
+    if (!user) {
+      throw new ForbiddenException('Approved artist profile required');
+    }
+
+    if (user.role === UserRole.SUPER_ADMIN) {
+      const artist = await this.artistsService.findPlatformArtist();
+      if (!artist || artist.status !== ArtistStatus.APPROVED) {
+        throw new ForbiddenException('Platform artist is not configured');
+      }
+      return { artist, publishImmediately: true };
+    }
+
     const artist = await this.artistsService.findApprovedByUserId(userId);
     if (!artist) {
       throw new ForbiddenException('Approved artist profile required');
     }
+
+    return { artist, publishImmediately: false };
+  }
+
+  private async getEditableProductForArtist(
+    userId: number,
+    id: number,
+  ): Promise<Product> {
+    const { artist } = await this.resolveSellerArtist(userId);
 
     const product = await this.findProductById(id);
     if (product.artistId !== artist.id) {

@@ -8,6 +8,7 @@ import { EmailModule } from '../email/email.module';
 import { OrdersModule } from '../orders/orders.module';
 import { ArtistsModule } from '../artists/artists.module';
 import { StockReservationsModule } from '../stock-reservations/stock-reservations.module';
+import { SiteSettingsModule } from '../site-settings/site-settings.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { StockReservationsModule } from '../stock-reservations/stock-reservation
     OrdersModule,
     ArtistsModule,
     StockReservationsModule,
+    SiteSettingsModule,
   ],
   controllers: [CheckoutController],
   providers: [CheckoutService],

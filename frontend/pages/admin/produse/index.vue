@@ -2,7 +2,7 @@
   <div>
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
       <h1 class="text-2xl font-bold h-color-lunar-green">{{ t("title") }}</h1>
-      <NuxtLink v-if="isArtist" :to="localePath('/admin/produse/nou')">
+      <NuxtLink :to="localePath('/admin/produse/nou')">
         <Button :label="t('addProduct')" icon="ph ph-plus" />
       </NuxtLink>
     </div>
@@ -72,7 +72,7 @@ definePageMeta({
 const { t } = useI18n({ useScope: "local" });
 const toast = useToast();
 const localePath = useLocalePath();
-const { isSuperAdmin, isArtist } = useAuth();
+const { isSuperAdmin } = useAuth();
 const {
   listArtists,
   listMyProducts,

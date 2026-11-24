@@ -98,11 +98,10 @@ describe('ArtistsService', () => {
     });
 
     const result = await service.apply(1, {
-      artistFirstName: 'Narcis',
-      artistLastName: 'Cazacu',
       companyCui: '54003138',
       companyLegalName: 'MAINI IN LUT SRL',
-      displayName: 'Narcis Ceramics',
+      contactFirstName: 'Narcis',
+      contactLastName: 'Cazacu',
       contactEmail: 'test@example.com',
       contactPhone: '0700000000',
     });
@@ -125,11 +124,10 @@ describe('ArtistsService', () => {
 
     await expect(
       service.apply(1, {
-        artistFirstName: 'Narcis',
-        artistLastName: 'Cazacu',
         companyCui: '54003138',
         companyLegalName: 'MAINI IN LUT SRL',
-        displayName: 'Narcis Ceramics',
+        contactFirstName: 'Narcis',
+        contactLastName: 'Cazacu',
         contactEmail: 'test@example.com',
       }),
     ).rejects.toBeInstanceOf(ConflictException);

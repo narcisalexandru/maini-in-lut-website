@@ -26,7 +26,9 @@
           <li>
             <span
               class="font-medium"
-              :class="missingTitle ? 'text-amber-600 italic' : 'h-color-lunar-green'"
+              :class="
+                missingTitle ? 'text-amber-600 italic' : 'h-color-lunar-green'
+              "
             >
               {{ displayTitle }}
             </span>
@@ -105,7 +107,9 @@
           <div class="flex flex-wrap items-center gap-2 mb-2">
             <h1
               class="text-2xl md:text-3xl font-bold m-0"
-              :class="missingTitle ? 'text-amber-600 italic' : 'h-color-lunar-green'"
+              :class="
+                missingTitle ? 'text-amber-600 italic' : 'h-color-lunar-green'
+              "
             >
               {{ displayTitle }}
             </h1>
@@ -139,10 +143,7 @@
           >
             {{ t("missingCategory") }}
           </p>
-          <p
-            v-else-if="product.category"
-            class="text-sm text-gray-500 mb-4"
-          >
+          <p v-else-if="product.category" class="text-sm text-gray-500 mb-4">
             {{ t("categoryLabel") }}: {{ product.category }}
           </p>
 
@@ -153,10 +154,7 @@
             >
               {{ product.priceBeforeDiscount }} RON
             </span>
-            <span
-              v-if="missingPrice"
-              class="text-lg text-amber-600 italic"
-            >
+            <span v-if="missingPrice" class="text-lg text-amber-600 italic">
               {{ t("missingPrice") }}
             </span>
             <span v-else class="h-font-weight-600 h-color-lunar-green text-xl">
@@ -263,7 +261,7 @@
                   </div>
                 </AccordionContent>
               </AccordionPanel>
-              <AccordionPanel :value="1">
+              <AccordionPanel v-if="hasCareInfo" :value="1">
                 <AccordionHeader>{{ t("care") }}</AccordionHeader>
                 <AccordionContent>
                   <ProductCareLabels :product="product" />
@@ -273,7 +271,7 @@
                 <AccordionHeader>{{ t("delivery") }}</AccordionHeader>
                 <AccordionContent>
                   <p class="text-gray-600 text-sm">
-                    {{ t("deliveryPlaceholder") }}
+                    {{ deliveryText }}
                   </p>
                 </AccordionContent>
               </AccordionPanel>
@@ -305,11 +303,7 @@
           </component>
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          <ProductCard
-            v-for="p in relatedProducts"
-            :key="p.id"
-            :product="p"
-          />
+          <ProductCard v-for="p in relatedProducts" :key="p.id" :product="p" />
         </div>
       </section>
     </div>
@@ -388,13 +382,30 @@ const formatDetailLine = (label, value, missingKey) => {
 };
 
 const displayMaterial = computed(() =>
-  formatDetailLine(t("materialLabel"), props.product.material, "missingMaterial"),
+  formatDetailLine(
+    t("materialLabel"),
+    props.product.material,
+    "missingMaterial",
+  ),
 );
 const displayCapacity = computed(() =>
-  formatDetailLine(t("capacityLabel"), props.product.capacity, "missingCapacity"),
+  formatDetailLine(
+    t("capacityLabel"),
+    props.product.capacity,
+    "missingCapacity",
+  ),
 );
 const displayDimensions = computed(() =>
-  formatDetailLine(t("dimensionsLabel"), props.product.dimensions, "missingDimensions"),
+  formatDetailLine(
+    t("dimensionsLabel"),
+    props.product.dimensions,
+    "missingDimensions",
+  ),
+);
+const hasCareInfo = computed(
+  () =>
+    Boolean(props.product.dishwasherSafe) ||
+    Boolean(props.product.microwaveSafe),
 );
 
 const displayTitle = computed(() => {
@@ -407,11 +418,37 @@ const displayDescription = computed(() => {
   return props.product.description;
 });
 
-const stockQuantity = computed(() =>
-  getProductStockQuantity(props.product),
-);
+const stockQuantity = computed(() => getProductStockQuantity(props.product));
 
 const isAvailable = computed(() => isProductAvailable(props.product));
+const siteSettings = ref({
+  easyboxFeeRon: 15,
+  addressFeeRon: 15,
+  deliveryDaysMin: 3,
+  deliveryDaysMax: 7,
+});
+const { getPublicSettings } = useSiteSettings();
+const deliveryText = computed(() =>
+  t("deliveryDetails", {
+    easybox: siteSettings.value.easyboxFeeRon,
+    address: siteSettings.value.addressFeeRon,
+    min: siteSettings.value.deliveryDaysMin,
+    max: siteSettings.value.deliveryDaysMax,
+  }),
+);
+
+onMounted(async () => {
+  try {
+    siteSettings.value = await getPublicSettings();
+  } catch {
+    siteSettings.value = {
+      easyboxFeeRon: 15,
+      addressFeeRon: 15,
+      deliveryDaysMin: 3,
+      deliveryDaysMax: 7,
+    };
+  }
+});
 const imageRevealed = ref(false);
 
 watch(
@@ -641,12 +678,8 @@ $accordion-hover: color.adjust($color-secondary, $lightness: -4%);
     "missingDimensions": "Dimensions need to be added",
     "care": "Care",
     "delivery": "Delivery",
-    "materialPlaceholder": "Material: Textured beige clay, ecological glaze.",
-    "capacityPlaceholder": "Capacity: Approximately 350ml.",
-    "dimensionsPlaceholder": "Dimensions: 9cm height x 8cm diameter.",
     "uniquePieceNote": "Items are handmade; slight differences in color, texture, or dimensions may occur.",
-    "carePlaceholder": "Hand wash recommended. Avoid dishwasher and microwave.",
-    "deliveryPlaceholder": "Delivery within 3-5 business days. Free shipping for orders over 200 RON.",
+    "deliveryDetails": "Easybox {easybox} RON or address delivery {address} RON. Estimated delivery: {min}–{max} business days.",
     "youMightLike": "You might also like",
     "youMightLikeSubtitle": "Other pieces crafted with the same passion.",
     "viewAllCollection": "View all collection",
@@ -682,12 +715,8 @@ $accordion-hover: color.adjust($color-secondary, $lightness: -4%);
     "missingDimensions": "Trebuie adăugate dimensiuni",
     "care": "Îngrijire",
     "delivery": "Livrare",
-    "materialPlaceholder": "Material: Argilă bej texturată, glazură ecologică.",
-    "capacityPlaceholder": "Capacitate: Aproximativ 350ml.",
-    "dimensionsPlaceholder": "Dimensiuni: 9cm înălțime x 8cm diametru.",
     "uniquePieceNote": "Obiectele sunt realizate manual, pot exista mici diferente de culoare, textura sau dimensiuni.",
-    "carePlaceholder": "Spălare recomandată la mână. Evitați mașina de spălat vase și cuptorul cu microunde.",
-    "deliveryPlaceholder": "Livrare în 3-5 zile lucrătoare. Transport gratuit pentru comenzi peste 200 RON.",
+    "deliveryDetails": "Easybox {easybox} RON sau livrare la adresă {address} RON. Termen estimat: {min}–{max} zile lucrătoare.",
     "youMightLike": "S-ar putea să-ți placă",
     "youMightLikeSubtitle": "Alte piese lucrate cu aceeași pasiune.",
     "viewAllCollection": "Vezi toată colecția",

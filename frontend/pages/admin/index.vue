@@ -28,6 +28,16 @@
       </NuxtLink>
 
       <NuxtLink
+        v-if="isSuperAdmin"
+        :to="$localePath('/admin/setari')"
+        class="h-bg-white rounded-xl shadow p-6 hover:shadow-md transition-shadow"
+      >
+        <i class="ph ph-gear text-2xl h-color-palm-leaf mb-3 block"></i>
+        <h2 class="font-semibold h-color-lunar-green">{{ t("settings") }}</h2>
+        <p class="text-sm h-color-lunar-green mt-1">{{ t("settingsDesc") }}</p>
+      </NuxtLink>
+
+      <NuxtLink
         v-if="isArtist || isSuperAdmin"
         :to="$localePath('/admin/comenzi')"
         class="h-bg-white rounded-xl shadow p-6 hover:shadow-md transition-shadow"
@@ -64,7 +74,9 @@ onMounted(() => {
     "products": "Produse",
     "productsDesc": "Publică și validează produsele.",
     "orders": "Comenzi",
-    "ordersDesc": "Urmărește și actualizează statusul comenzilor."
+    "ordersDesc": "Urmărește și actualizează statusul comenzilor.",
+    "settings": "Setări site",
+    "settingsDesc": "Costuri de livrare Easybox și la adresă."
   },
   "en": {
     "title": "Dashboard",
@@ -74,7 +86,9 @@ onMounted(() => {
     "products": "Products",
     "productsDesc": "Publish and review products.",
     "orders": "Orders",
-    "ordersDesc": "Track and update order status."
+    "ordersDesc": "Track and update order status.",
+    "settings": "Site settings",
+    "settingsDesc": "Easybox and address delivery prices."
   }
 }
 </i18n>

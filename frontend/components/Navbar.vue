@@ -159,10 +159,6 @@ const menuItems = computed(() => {
       to: "/vinde-cu-noi",
     },
     {
-      label: t("blog"),
-      to: "/blog",
-    },
-    {
       label: t("contact"),
       to: "/contact",
     },
@@ -221,7 +217,6 @@ const menuItems = computed(() => {
     "products": "Products",
     "workshops": "Workshops",
     "sellWithUs": "Sell with us",
-    "blog": "Blog",
     "contact": "Contact",
     "admin": "Admin"
   },
@@ -230,7 +225,6 @@ const menuItems = computed(() => {
     "products": "Produse",
     "workshops": "Ateliere",
     "sellWithUs": "Vinde cu noi",
-    "blog": "Blog",
     "contact": "Contact",
     "admin": "Admin"
   }

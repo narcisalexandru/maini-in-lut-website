@@ -21,16 +21,25 @@ export class ProductSeedService implements OnApplicationBootstrap {
   }
 
   async seedPlatformCatalog(): Promise<void> {
+    await this.artistsService.ensurePlatformArtist(
+      PLATFORM_ARTIST_NAME,
+      PLATFORM_ARTIST_SLUG,
+      'Produse handmade realizate de echipa Maini in Lut.',
+    );
+
+    if (SEED_PRODUCTS.length === 0) {
+      return;
+    }
+
     const productCount = await this.productsService.countAll();
     if (productCount > 0) {
       return;
     }
 
-    const platformArtist = await this.artistsService.ensurePlatformArtist(
-      PLATFORM_ARTIST_NAME,
-      PLATFORM_ARTIST_SLUG,
-      'Produse handmade realizate de echipa Maini in Lut.',
-    );
+    const platformArtist = await this.artistsService.findPlatformArtist();
+    if (!platformArtist) {
+      return;
+    }
 
     await this.productsService.seedPlatformProducts(
       platformArtist.id,

@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import sharp from 'sharp';
 import { Repository } from 'typeorm';
 import { Artist } from '../artists/entities/artist.entity';
+import { UserRole } from '../common/enums/user-role.enum';
 import { Product } from '../products/entities/product.entity';
 
 const MAX_IMAGES = 3;
@@ -41,6 +42,7 @@ export class UploadsService {
 
   async saveProductImages(
     userId: number,
+    role: UserRole,
     files: Express.Multer.File[],
   ): Promise<{ urls: string[] }> {
     if (!files?.length) {
@@ -51,7 +53,10 @@ export class UploadsService {
       throw new BadRequestException(`Maximum ${MAX_IMAGES} images allowed`);
     }
 
-    const artist = await this.artistsRepository.findOne({ where: { userId } });
+    const artist =
+      role === UserRole.SUPER_ADMIN
+        ? await this.artistsRepository.findOne({ where: { isPlatform: true } })
+        : await this.artistsRepository.findOne({ where: { userId } });
     if (!artist) {
       throw new BadRequestException('Approved artist profile required');
     }

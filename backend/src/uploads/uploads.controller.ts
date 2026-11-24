@@ -21,7 +21,7 @@ import { AuthenticatedRequest } from '../common/types/authenticated-request.inte
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
-  @Roles(UserRole.ARTIST)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)
   @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @Post('product-images')
   @UseInterceptors(
@@ -34,6 +34,10 @@ export class UploadsController {
     @Request() req: AuthenticatedRequest,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    return this.uploadsService.saveProductImages(req.user.id, files);
+    return this.uploadsService.saveProductImages(
+      req.user.id,
+      req.user.role,
+      files,
+    );
   }
 }

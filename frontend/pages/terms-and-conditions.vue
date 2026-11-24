@@ -22,6 +22,7 @@ import {
   roTermsSections,
   enTermsSections,
 } from "~/content/terms-sections";
+import { DEFAULT_SITE_SETTINGS } from "~/composables/useSiteSettings";
 
 defineI18nRoute({
   paths: {
@@ -42,9 +43,35 @@ const backToHref = computed(() =>
   localePath({ name: "cos", query: { step: "3" } }),
 );
 
-const sections = computed(() =>
-  locale.value === "en" ? enTermsSections : roTermsSections,
-);
+const siteSettings = ref({ ...DEFAULT_SITE_SETTINGS });
+const { getPublicSettings } = useSiteSettings();
+
+const sections = computed(() => {
+  const source = locale.value === "en" ? enTermsSections : roTermsSections;
+  const values: Record<string, string> = {
+    easyboxFee: String(siteSettings.value.easyboxFeeRon),
+    addressFee: String(siteSettings.value.addressFeeRon),
+    daysMin: String(siteSettings.value.deliveryDaysMin),
+    daysMax: String(siteSettings.value.deliveryDaysMax),
+  };
+  return source.map((section) => ({
+    ...section,
+    paragraphs: section.paragraphs.map((paragraph) =>
+      paragraph.replace(
+        /\{(easyboxFee|addressFee|daysMin|daysMax)\}/g,
+        (_, key: string) => values[key] ?? "",
+      ),
+    ),
+  }));
+});
+
+onMounted(async () => {
+  try {
+    siteSettings.value = await getPublicSettings();
+  } catch {
+    siteSettings.value = { ...DEFAULT_SITE_SETTINGS };
+  }
+});
 
 useHead({
   title: () => t("metaTitle"),

@@ -127,7 +127,7 @@ export const roTermsSections: LegalSection[] = [
     title: "11. Facturare și plată",
     paragraphs: [
       "Plata se efectuează online cu cardul prin Netopia Payments.",
-      "Taxa de livrare (15 RON) este afișată clar înainte de confirmarea Comenzii.",
+      "Livrarea la Easybox costă {easyboxFee} RON, iar livrarea la adresă costă {addressFee} RON. Tarifele sunt afișate înainte de confirmarea Comenzii.",
       "Vânzătorul emite factura fiscală aferentă Comenzii, în format electronic, la adresa de email furnizată de Cumpărător.",
       `Identificarea fiscală a Vânzătorului: ${COMPANY.legalName}, CUI ${COMPANY.cui}, Nr. Reg. Com. ${COMPANY.tradeRegister}.`,
       "Prin plasarea Comenzii, Cumpărătorul acceptă primirea facturii în format electronic.",
@@ -139,7 +139,7 @@ export const roTermsSections: LegalSection[] = [
     title: "12. Livrare",
     paragraphs: [
       "Livrarea se efectuează pe teritoriul României, la adresa indicată în Comandă.",
-      "Termenul estimat de livrare este de 3–7 zile lucrătoare de la confirmarea Comenzii, în funcție de disponibilitatea produselor și de curier.",
+      "Livrarea se face la Easybox sau la adresa indicată în Comandă. Termenul estimat este de {daysMin}–{daysMax} zile lucrătoare de la confirmarea Comenzii, în funcție de disponibilitatea produselor și de curier.",
       "Vânzătorul ambalează produsele cu grijă pentru transport. Riscul de deteriorare în timpul transportului revine curierului până la predarea coletului.",
       "La primire, te rugăm să verifici integritatea coletului. Deteriorările vizibile trebuie semnalate curierului și notificate Vânzătorului în 48 de ore.",
       "Întârzierile cauzate de factori în afara controlului Vânzătorului (condiții meteo, greve, forță majoră) nu dau dreptul la despăgubiri.",
@@ -312,7 +312,7 @@ export const enTermsSections: LegalSection[] = [
     title: "11. Invoicing and payment",
     paragraphs: [
       "Payment is made online by card via Netopia Payments.",
-      "The delivery fee (15 RON) is shown clearly before Order confirmation.",
+      "Easybox delivery costs {easyboxFee} RON and address delivery costs {addressFee} RON. The fees are shown before Order confirmation.",
       "The Seller issues a tax invoice for the Order electronically to the email provided.",
       `Seller tax identification: ${COMPANY.legalName}, VAT ID ${COMPANY.cui}, Trade Register no. ${COMPANY.tradeRegister}.`,
       "By placing an Order, the Buyer accepts receiving the invoice electronically.",
@@ -324,7 +324,7 @@ export const enTermsSections: LegalSection[] = [
     title: "12. Delivery",
     paragraphs: [
       "Delivery is made within Romania to the address specified in the Order.",
-      "Estimated delivery time is 3–7 business days from Order confirmation, depending on product availability and courier.",
+      "Delivery is made to an Easybox or to the address given in the Order. Estimated time is {daysMin}–{daysMax} business days from Order confirmation, depending on product availability and the courier.",
       "Products are carefully packaged for transport. Transit risk passes to the courier until handover.",
       "Please check package integrity on receipt. Visible damage should be noted with the courier and reported to the Seller within 48 hours.",
       "Delays due to factors beyond the Seller's control (weather, strikes, force majeure) do not entitle the Buyer to compensation.",

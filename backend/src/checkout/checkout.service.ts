@@ -18,6 +18,10 @@ import {
   NETOPIA_STATUS_PAID,
   cardPaymentMatchesOrder,
 } from './card-payment-match.util';
+import {
+  DeliveryMethod,
+  SiteSettingsService,
+} from '../site-settings/site-settings.service';
 
 type OrderContact = {
   firstName: string;
@@ -26,7 +30,6 @@ type OrderContact = {
   phone: string;
 };
 
-const DELIVERY_FEE_RON = 15;
 const MAX_ORDER_LINES = 15;
 const MAX_LINE_QUANTITY = 10;
 
@@ -92,6 +95,7 @@ export class CheckoutService {
     private ordersService: OrdersService,
     private artistsService: ArtistsService,
     private stockReservationsService: StockReservationsService,
+    private siteSettingsService: SiteSettingsService,
   ) {}
 
   private readonly REQUIRED_GUEST_FIELDS = [
@@ -147,6 +151,7 @@ export class CheckoutService {
       postalCode: string;
       recipientName?: string;
       recipientPhone?: string;
+      lockerId?: string;
     },
   ) {
     if (deliveryAddress && this.hasCompleteAddress(deliveryAddress)) {
@@ -159,6 +164,7 @@ export class CheckoutService {
         recipientName:
           deliveryAddress.recipientName ||
           `${user.first_name} ${user.last_name}`.trim(),
+        lockerId: deliveryAddress.lockerId,
       };
     }
     if (this.hasCompleteAddress(user)) {
@@ -169,6 +175,7 @@ export class CheckoutService {
         postalCode: user.postal_code as string,
         recipientPhone: phone,
         recipientName: `${user.first_name} ${user.last_name}`.trim(),
+        lockerId: undefined,
       };
     }
     return null;
@@ -388,6 +395,41 @@ export class CheckoutService {
     };
   }
 
+  getEasyboxPluginConfig(): {
+    enabled: boolean;
+    clientId: string;
+    apiUsername: string;
+  } {
+    const clientId =
+      this.configService.get<string>('SAMEDAY_LOCKER_CLIENT_ID')?.trim() ?? '';
+    const apiUsername =
+      this.configService.get<string>('SAMEDAY_API_USERNAME')?.trim() ?? '';
+    const enabled = clientId.length > 0 && apiUsername.length > 0;
+    return {
+      enabled,
+      clientId: enabled ? clientId : '',
+      apiUsername: enabled ? apiUsername : '',
+    };
+  }
+
+  private streetForMethod(
+    method: DeliveryMethod,
+    street: string,
+    lockerId?: string,
+  ): string {
+    const trimmed = street.trim();
+    if (method !== 'EASYBOX') {
+      return trimmed;
+    }
+    const withLocker = lockerId?.trim()
+      ? `#${lockerId.trim()} ${trimmed}`
+      : trimmed;
+    if (/^easybox\b/i.test(withLocker)) {
+      return withLocker;
+    }
+    return `Easybox: ${withLocker}`;
+  }
+
   private wrapNetopiaContact(contact: NetopiaContact) {
     return {
       ...contact,
@@ -404,9 +446,10 @@ export class CheckoutService {
     successUrl: string;
     cancelUrl: string;
     metadata: Record<string, string>;
+    deliveryFeeRon: number;
   }): Promise<{ url: string; orderId: string }> {
     const subtotal = payload.items.reduce((sum, i) => sum + i.lineTotalRon, 0);
-    const totalRon = Number((subtotal + DELIVERY_FEE_RON).toFixed(2));
+    const totalRon = Number((subtotal + payload.deliveryFeeRon).toFixed(2));
     const backendUrl = this.getBackendUrl();
 
     const configData = {
@@ -459,7 +502,7 @@ export class CheckoutService {
           name: 'Livrare',
           code: 'delivery',
           category: 'Transport',
-          price: DELIVERY_FEE_RON,
+          price: payload.deliveryFeeRon,
           vat: 0,
         },
       ],
@@ -710,8 +753,10 @@ export class CheckoutService {
       postalCode: string;
       recipientName?: string;
       recipientPhone?: string;
+      lockerId?: string;
     },
     billingDetails?: BillingDetailsDto,
+    deliveryMethod?: string,
   ): Promise<{ url: string; orderId: string }> {
     const user = await this.usersService.findOne(userId);
     if (!user) {
@@ -750,8 +795,17 @@ export class CheckoutService {
     }
 
     const recipientParts = (effectiveAddress.recipientName || '').split(' ');
+    const method = this.siteSettingsService.parseDeliveryMethod(
+      deliveryMethod ?? 'ADDRESS',
+    );
+    const deliveryFeeRon = await this.siteSettingsService.feeFor(method);
+    const deliveryStreet = this.streetForMethod(
+      method,
+      effectiveAddress.street,
+      effectiveAddress.lockerId,
+    );
     const subtotal = items.reduce((sum, i) => sum + i.lineTotalRon, 0);
-    const totalRon = Number((subtotal + DELIVERY_FEE_RON).toFixed(2));
+    const totalRon = Number((subtotal + deliveryFeeRon).toFixed(2));
     const orderPlacer: OrderContact = {
       firstName: user.first_name,
       lastName: user.last_name,
@@ -772,7 +826,7 @@ export class CheckoutService {
         phone: effectiveAddress.recipientPhone || user.phone || '',
         county: effectiveAddress.county,
         city: effectiveAddress.city,
-        street: effectiveAddress.street,
+        street: deliveryStreet,
         postalCode: effectiveAddress.postalCode,
         recipientName: effectiveAddress.recipientName,
         recipientPhone: effectiveAddress.recipientPhone,
@@ -780,7 +834,7 @@ export class CheckoutService {
       billingDetails: this.toOrderBillingDetails(billingDetails),
       items,
       subtotalRon: subtotal,
-      deliveryFeeRon: DELIVERY_FEE_RON,
+      deliveryFeeRon,
       cashOperationalFeeRon: 0,
       totalRon,
     });
@@ -795,7 +849,7 @@ export class CheckoutService {
         lastName: recipientParts.slice(1).join(' ') || user.last_name,
         city: effectiveAddress.city,
         county: effectiveAddress.county,
-        street: effectiveAddress.street,
+        street: deliveryStreet,
         postalCode: effectiveAddress.postalCode,
       }),
       shipping: this.toNetopiaContact({
@@ -805,17 +859,20 @@ export class CheckoutService {
         lastName: recipientParts.slice(1).join(' ') || user.last_name,
         city: effectiveAddress.city,
         county: effectiveAddress.county,
-        street: effectiveAddress.street,
+        street: deliveryStreet,
         postalCode: effectiveAddress.postalCode,
       }),
       successUrl,
       cancelUrl,
+      deliveryFeeRon,
       metadata: {
         userId: String(userId),
         customerType: 'user',
         deliveryCounty: effectiveAddress.county,
         deliveryCity: effectiveAddress.city,
-        deliveryStreet: effectiveAddress.street,
+        deliveryMethod: method,
+        deliveryLockerId: effectiveAddress.lockerId?.trim() || '',
+        deliveryStreet,
         deliveryPostalCode: effectiveAddress.postalCode,
         deliveryRecipientName: effectiveAddress.recipientName || '',
         deliveryRecipientPhone: effectiveAddress.recipientPhone || '',
@@ -840,8 +897,10 @@ export class CheckoutService {
         city: string;
         street: string;
         postalCode: string;
+        lockerId?: string;
       };
       billingDetails?: BillingDetailsDto;
+      deliveryMethod?: string;
     },
   ): Promise<{ url: string; orderId: string }> {
     this.validateGuestContact(payload.guest);
@@ -859,8 +918,17 @@ export class CheckoutService {
       throw new BadRequestException('No valid products in cart');
     }
 
+    const method = this.siteSettingsService.parseDeliveryMethod(
+      payload.deliveryMethod ?? 'ADDRESS',
+    );
+    const deliveryFeeRon = await this.siteSettingsService.feeFor(method);
+    const deliveryStreet = this.streetForMethod(
+      method,
+      payload.guest.street,
+      payload.guest.lockerId,
+    );
     const subtotal = items.reduce((sum, i) => sum + i.lineTotalRon, 0);
-    const totalRon = Number((subtotal + DELIVERY_FEE_RON).toFixed(2));
+    const totalRon = Number((subtotal + deliveryFeeRon).toFixed(2));
 
     const persistedOrder = await this.ordersService.createCardOrder({
       userId: null,
@@ -871,13 +939,13 @@ export class CheckoutService {
         phone: payload.guest.phone,
         county: payload.guest.county,
         city: payload.guest.city,
-        street: payload.guest.street,
+        street: deliveryStreet,
         postalCode: payload.guest.postalCode,
       },
       billingDetails: this.toOrderBillingDetails(payload.billingDetails),
       items,
       subtotalRon: subtotal,
-      deliveryFeeRon: DELIVERY_FEE_RON,
+      deliveryFeeRon,
       cashOperationalFeeRon: 0,
       totalRon,
     });
@@ -892,7 +960,7 @@ export class CheckoutService {
         lastName: payload.guest.lastName,
         city: payload.guest.city,
         county: payload.guest.county,
-        street: payload.guest.street,
+        street: deliveryStreet,
         postalCode: payload.guest.postalCode,
       }),
       shipping: this.toNetopiaContact({
@@ -902,13 +970,15 @@ export class CheckoutService {
         lastName: payload.guest.lastName,
         city: payload.guest.city,
         county: payload.guest.county,
-        street: payload.guest.street,
+        street: deliveryStreet,
         postalCode: payload.guest.postalCode,
       }),
       successUrl: payload.successUrl,
       cancelUrl: payload.cancelUrl,
+      deliveryFeeRon,
       metadata: {
         customerType: 'guest',
+        deliveryMethod: method,
         guestCartId: payload.guestCartId?.trim() || '',
         guestFirstName: payload.guest.firstName,
         guestLastName: payload.guest.lastName,
@@ -916,8 +986,9 @@ export class CheckoutService {
         guestPhone: payload.guest.phone,
         guestCounty: payload.guest.county,
         guestCity: payload.guest.city,
-        guestStreet: payload.guest.street,
+        guestStreet: deliveryStreet,
         guestPostalCode: payload.guest.postalCode,
+        deliveryLockerId: payload.guest.lockerId?.trim() || '',
         ...this.billingToMetadata(payload.billingDetails),
       },
     });
@@ -1512,8 +1583,11 @@ export class CheckoutService {
     const orderPlacer = this.orderPlacerFromMetadata(metadata);
     const isGift = metadata.isGift === '1' && !!orderPlacer;
     const subtotal = items.reduce((sum, i) => sum + i.lineTotalRon, 0);
+    const fallbackFee = paidOrder
+      ? Number(paidOrder.deliveryFeeRon)
+      : await this.siteSettingsService.feeFor('ADDRESS');
     const totalRon = Number(
-      (payment?.amount ?? order.amount ?? subtotal + DELIVERY_FEE_RON).toFixed(2),
+      (payment?.amount ?? order.amount ?? subtotal + fallbackFee).toFixed(2),
     );
     const deliveryFeeRon = Number((totalRon - subtotal).toFixed(2));
 
@@ -1578,7 +1652,7 @@ export class CheckoutService {
           (paidOrder?.billingDetails as BillingDetailsDto | undefined),
         items,
         subtotalRon: subtotal,
-        deliveryFeeRon: deliveryFeeRon > 0 ? deliveryFeeRon : DELIVERY_FEE_RON,
+        deliveryFeeRon: deliveryFeeRon > 0 ? deliveryFeeRon : fallbackFee,
         totalRon,
       });
       await this.ordersService.markConfirmationSent(order.orderID);

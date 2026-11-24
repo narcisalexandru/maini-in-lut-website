@@ -65,8 +65,11 @@ export class ArtistsService {
       );
     }
 
-    const slug = await this.generateUniqueSlug(dto.displayName, existing?.id);
     const applicationData = this.mapApplicationDto(dto);
+    const slug = await this.generateUniqueSlug(
+      applicationData.displayName,
+      existing?.id,
+    );
 
     if (existing?.status === ArtistStatus.REJECTED) {
       Object.assign(existing, applicationData, {
@@ -466,7 +469,10 @@ export class ArtistsService {
         artistLastName: artist.artistLastName,
         companyCui: artist.companyCui,
         companyLegalName: artist.companyLegalName,
+        brand: artist.brand,
         displayName: artist.displayName,
+        contactFirstName: artist.contactFirstName,
+        contactLastName: artist.contactLastName,
         contactEmail: artist.contactEmail,
         contactPhone: artist.contactPhone,
         portfolioUrl: artist.portfolioUrl,
@@ -499,7 +505,10 @@ export class ArtistsService {
           artistLastName: artist.artistLastName,
           companyCui: artist.companyCui,
           companyLegalName: artist.companyLegalName,
+          brand: artist.brand,
           displayName: artist.displayName,
+          contactFirstName: artist.contactFirstName,
+          contactLastName: artist.contactLastName,
           contactEmail: artist.contactEmail,
           contactPhone: artist.contactPhone,
           portfolioUrl: artist.portfolioUrl,
@@ -618,11 +627,14 @@ export class ArtistsService {
     const companyLegalName = dto.companyLegalName.trim();
 
     return {
-      artistFirstName: dto.artistFirstName.trim(),
-      artistLastName: dto.artistLastName.trim(),
+      artistFirstName: null,
+      artistLastName: null,
       companyCui: dto.companyCui.replace(/\D/g, ''),
       companyLegalName,
-      displayName: dto.displayName.trim(),
+      brand: null,
+      displayName: companyLegalName.slice(0, 255),
+      contactFirstName: dto.contactFirstName.trim(),
+      contactLastName: dto.contactLastName.trim(),
       contactEmail: dto.contactEmail.trim().toLowerCase(),
       contactPhone: dto.contactPhone?.trim() || null,
       portfolioUrl: dto.portfolioUrl?.trim() || null,

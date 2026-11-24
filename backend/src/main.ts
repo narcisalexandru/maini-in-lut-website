@@ -51,7 +51,12 @@ async function bootstrap() {
     }
     res.status(403).json({ message: 'Cerere respinsa.' });
   });
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads',
+    setHeaders: (res) => {
+      res.setHeader('Access-Control-Allow-Origin', frontendOrigin);
+    },
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

@@ -29,8 +29,10 @@ type CheckoutBody = {
     postalCode: string;
     recipientName?: string;
     recipientPhone?: string;
+    lockerId?: string;
   };
   billingDetails?: BillingDetailsDto;
+  deliveryMethod?: 'EASYBOX' | 'ADDRESS';
   items?: { productId: number; quantity: number }[];
   guestCartId?: string;
   guest?: {
@@ -42,6 +44,7 @@ type CheckoutBody = {
     city?: string;
     street?: string;
     postalCode?: string;
+    lockerId?: string;
   };
 };
 
@@ -51,6 +54,12 @@ export class CheckoutController {
     private readonly checkoutService: CheckoutService,
     private readonly guestHolderService: GuestHolderService,
   ) {}
+
+  @SkipThrottle()
+  @Get('easybox-config')
+  getEasyboxConfig() {
+    return this.checkoutService.getEasyboxPluginConfig();
+  }
 
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Get('company/:cui')
@@ -83,6 +92,7 @@ export class CheckoutController {
         cancelUrl,
         body.deliveryAddress,
         body.billingDetails,
+        body.deliveryMethod,
       );
     }
 
@@ -105,8 +115,10 @@ export class CheckoutController {
         city: body.guest.city || '',
         street: body.guest.street || '',
         postalCode: body.guest.postalCode || '',
+        lockerId: body.guest.lockerId || '',
       },
       billingDetails: body.billingDetails,
+      deliveryMethod: body.deliveryMethod,
     });
   }
 

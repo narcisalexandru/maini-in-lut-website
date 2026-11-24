@@ -1,15 +1,5 @@
 <template>
   <dl class="grid gap-3 text-sm border-t border-gray-100 pt-4">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <div>
-        <dt class="font-medium h-color-lunar-green">{{ t("artistFirstName") }}</dt>
-        <dd>{{ application.artistFirstName || "—" }}</dd>
-      </div>
-      <div>
-        <dt class="font-medium h-color-lunar-green">{{ t("artistLastName") }}</dt>
-        <dd>{{ application.artistLastName || "—" }}</dd>
-      </div>
-    </div>
     <div>
       <dt class="font-medium h-color-lunar-green">{{ t("companyCui") }}</dt>
       <dd>{{ application.companyCui || "—" }}</dd>
@@ -18,9 +8,15 @@
       <dt class="font-medium h-color-lunar-green">{{ t("companyLegalName") }}</dt>
       <dd>{{ application.companyLegalName || "—" }}</dd>
     </div>
-    <div>
-      <dt class="font-medium h-color-lunar-green">{{ t("displayName") }}</dt>
-      <dd>{{ application.displayName }}</dd>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <dt class="font-medium h-color-lunar-green">{{ t("contactFirstName") }}</dt>
+        <dd>{{ application.contactFirstName || "—" }}</dd>
+      </div>
+      <div>
+        <dt class="font-medium h-color-lunar-green">{{ t("contactLastName") }}</dt>
+        <dd>{{ application.contactLastName || "—" }}</dd>
+      </div>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
@@ -62,21 +58,19 @@ const { t } = useI18n({ useScope: "local" });
 <i18n lang="json">
 {
   "ro": {
-    "artistFirstName": "Prenume artist",
-    "artistLastName": "Nume artist",
     "companyCui": "CUI firmă",
     "companyLegalName": "Denumire legală firmă",
-    "displayName": "Nume pe site",
+    "contactFirstName": "Prenume persoană de contact",
+    "contactLastName": "Nume persoană de contact",
     "contactEmail": "Email contact",
     "contactPhone": "Telefon contact",
     "portfolioUrl": "Portofoliu"
   },
   "en": {
-    "artistFirstName": "Artist first name",
-    "artistLastName": "Artist last name",
     "companyCui": "Company VAT ID",
     "companyLegalName": "Legal company name",
-    "displayName": "Name on site",
+    "contactFirstName": "Contact first name",
+    "contactLastName": "Contact last name",
     "contactEmail": "Contact email",
     "contactPhone": "Contact phone",
     "portfolioUrl": "Portfolio"

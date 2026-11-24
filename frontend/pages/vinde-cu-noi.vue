@@ -71,26 +71,6 @@
         </p>
 
         <div>
-          <h2 class="font-semibold h-color-palm-leaf mb-3">{{ t("sectionArtist") }}</h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              id="artistFirstName"
-              name="artistFirstName"
-              :label="t('artistFirstName')"
-              v-model="form.artistFirstName"
-              required
-            />
-            <FormInput
-              id="artistLastName"
-              name="artistLastName"
-              :label="t('artistLastName')"
-              v-model="form.artistLastName"
-              required
-            />
-          </div>
-        </div>
-
-        <div>
           <h2 class="font-semibold h-color-palm-leaf mb-3">{{ t("sectionCompany") }}</h2>
           <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
             <FormInput
@@ -118,20 +98,25 @@
             v-model="form.companyLegalName"
             required
           />
-          <FormInput
-            id="displayName"
-            name="displayName"
-            class="mt-4"
-            :label="t('displayName')"
-            :help-text="t('displayNameHint')"
-            v-model="form.displayName"
-            required
-          />
         </div>
 
         <div>
           <h2 class="font-semibold h-color-palm-leaf mb-3">{{ t("sectionContact") }}</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormInput
+              id="contactFirstName"
+              name="contactFirstName"
+              :label="t('contactFirstName')"
+              v-model="form.contactFirstName"
+              required
+            />
+            <FormInput
+              id="contactLastName"
+              name="contactLastName"
+              :label="t('contactLastName')"
+              v-model="form.contactLastName"
+              required
+            />
             <FormInput
               id="contactEmail"
               name="contactEmail"
@@ -217,11 +202,10 @@ const submitting = ref(false);
 const isEditing = ref(false);
 
 const createEmptyForm = () => ({
-  artistFirstName: "",
-  artistLastName: "",
   companyCui: "",
   companyLegalName: "",
-  displayName: "",
+  contactFirstName: "",
+  contactLastName: "",
   contactEmail: "",
   contactPhone: "",
   portfolioUrl: "",
@@ -288,8 +272,8 @@ const loginUrl = computed(() => {
 const prefillFromUser = () => {
   form.value = {
     ...createEmptyForm(),
-    artistFirstName: user.value.first_name || "",
-    artistLastName: user.value.last_name || "",
+    contactFirstName: user.value.first_name || "",
+    contactLastName: user.value.last_name || "",
     contactEmail: user.value.email || "",
     contactPhone: user.value.phone || "",
   };
@@ -302,11 +286,10 @@ const prefillForm = () => {
   }
 
   form.value = {
-    artistFirstName: application.value.artistFirstName || "",
-    artistLastName: application.value.artistLastName || "",
     companyCui: String(application.value.companyCui || ""),
     companyLegalName: application.value.companyLegalName || "",
-    displayName: application.value.displayName || "",
+    contactFirstName: application.value.contactFirstName || "",
+    contactLastName: application.value.contactLastName || "",
     contactEmail: application.value.contactEmail || "",
     contactPhone: application.value.contactPhone || "",
     portfolioUrl: application.value.portfolioUrl || "",
@@ -321,9 +304,6 @@ const lookupCompany = async () => {
 
   form.value.companyCui = String(result.cui || "");
   form.value.companyLegalName = result.name;
-  if (!form.value.displayName.trim()) {
-    form.value.displayName = result.name;
-  }
 };
 
 const startReapply = () => {
@@ -357,11 +337,10 @@ const handleSubmit = async () => {
   submitting.value = true;
   try {
     application.value = await apply({
-      artistFirstName: form.value.artistFirstName.trim(),
-      artistLastName: form.value.artistLastName.trim(),
       companyCui: String(form.value.companyCui || "").replace(/\D/g, ""),
       companyLegalName: form.value.companyLegalName.trim(),
-      displayName: form.value.displayName.trim(),
+      contactFirstName: form.value.contactFirstName.trim(),
+      contactLastName: form.value.contactLastName.trim(),
       contactEmail: form.value.contactEmail.trim(),
       contactPhone: form.value.contactPhone.trim() || undefined,
       portfolioUrl: form.value.portfolioUrl.trim() || undefined,
@@ -406,16 +385,13 @@ onMounted(async () => {
   "ro": {
     "title": "Vinde cu noi",
     "subtitle": "Ai produse handmade? Înscrie-te ca artist și ajunge la clienții noștri.",
-    "sectionArtist": "Date artist",
     "sectionCompany": "Date firmă",
     "sectionContact": "Date contact",
-    "artistFirstName": "Prenume artist",
-    "artistLastName": "Nume artist",
     "companyCui": "CUI firmă",
     "lookupCui": "Preia date ANAF",
     "companyLegalName": "Denumire legală firmă",
-    "displayName": "Nume pe site",
-    "displayNameHint": "Cum vrei să apară atelierul tău în magazin (ex: Narcis Ceramics).",
+    "contactFirstName": "Prenume persoană de contact",
+    "contactLastName": "Nume persoană de contact",
     "contactEmail": "Email contact",
     "contactPhone": "Telefon contact",
     "portfolioUrl": "Link portofoliu (opțional)",
@@ -441,16 +417,13 @@ onMounted(async () => {
   "en": {
     "title": "Sell with us",
     "subtitle": "Have handmade products? Join as an artist and reach our customers.",
-    "sectionArtist": "Artist details",
     "sectionCompany": "Company details",
     "sectionContact": "Contact details",
-    "artistFirstName": "Artist first name",
-    "artistLastName": "Artist last name",
     "companyCui": "Company VAT ID",
     "lookupCui": "Fetch from ANAF",
     "companyLegalName": "Legal company name",
-    "displayName": "Name on site",
-    "displayNameHint": "How your studio should appear in the shop (e.g. Narcis Ceramics).",
+    "contactFirstName": "Contact first name",
+    "contactLastName": "Contact last name",
     "contactEmail": "Contact email",
     "contactPhone": "Contact phone",
     "portfolioUrl": "Portfolio link (optional)",

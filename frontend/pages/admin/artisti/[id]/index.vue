@@ -35,12 +35,14 @@
       <h2 class="font-semibold h-color-lunar-green text-lg m-0">{{ t("application") }}</h2>
       <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
         <div>
-          <dt class="font-medium h-color-lunar-green">{{ t("artistName") }}</dt>
-          <dd>{{ artist.artistFirstName }} {{ artist.artistLastName }}</dd>
-        </div>
-        <div>
-          <dt class="font-medium h-color-lunar-green">{{ t("displayName") }}</dt>
-          <dd>{{ artist.displayName }}</dd>
+          <dt class="font-medium h-color-lunar-green">{{ t("contactPerson") }}</dt>
+          <dd>
+            {{
+              [artist.contactFirstName, artist.contactLastName]
+                .filter(Boolean)
+                .join(" ") || "—"
+            }}
+          </dd>
         </div>
         <div>
           <dt class="font-medium h-color-lunar-green">{{ t("companyCui") }}</dt>
@@ -302,7 +304,9 @@ const handleDelete = async () => {
     "appliedAt": "Data cererii",
     "application": "Cerere de înscriere",
     "artistName": "Artist",
+    "brand": "Brand",
     "displayName": "Nume pe site",
+    "contactPerson": "Persoană de contact",
     "companyCui": "CUI firmă",
     "companyLegalName": "Denumire legală firmă",
     "contactEmail": "Email contact",
@@ -342,7 +346,9 @@ const handleDelete = async () => {
     "appliedAt": "Application date",
     "application": "Application",
     "artistName": "Artist",
+    "brand": "Brand",
     "displayName": "Name on site",
+    "contactPerson": "Contact person",
     "companyCui": "Company VAT ID",
     "companyLegalName": "Legal company name",
     "contactEmail": "Contact email",

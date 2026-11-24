@@ -89,6 +89,30 @@
               </section>
 
               <section v-else-if="currentStep === 2" class="space-y-4">
+                <div class="rounded-xl border border-gray-200 p-4 md:p-5 space-y-3">
+                  <h3 class="text-base font-semibold h-color-lunar-green">{{ t('deliveryMethodTitle') }}</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      class="delivery-option"
+                      :class="{ 'delivery-option--selected': deliveryMethod === 'EASYBOX' }"
+                      @click="deliveryMethod = 'EASYBOX'"
+                    >
+                      <span class="block text-sm font-semibold text-gray-800">{{ t('easyboxMethod') }}</span>
+                      <span class="block text-xs text-gray-600 mt-1">{{ siteSettings.easyboxFeeRon }} RON</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="delivery-option"
+                      :class="{ 'delivery-option--selected': deliveryMethod === 'ADDRESS' }"
+                      @click="deliveryMethod = 'ADDRESS'"
+                    >
+                      <span class="block text-sm font-semibold text-gray-800">{{ t('addressMethod') }}</span>
+                      <span class="block text-xs text-gray-600 mt-1">{{ siteSettings.addressFeeRon }} RON</span>
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-600 m-0">{{ deliveryWindowText }}</p>
+                </div>
                 <template v-if="isLoggedIn">
                   <div class="rounded-xl border border-gray-200 p-4 md:p-5 space-y-4">
                     <div>
@@ -139,12 +163,18 @@
                     </div>
                   </div>
 
-                  <div class="rounded-xl border border-gray-200 p-4 md:p-5 space-y-4">
+                  <EasyboxPicker
+                    v-if="deliveryMethod === 'EASYBOX'"
+                    v-model="selectedLocker"
+                    @configured="easyboxConfigured = $event"
+                  />
+
+                  <div v-if="deliveryMethod === 'ADDRESS'" class="rounded-xl border border-gray-200 p-4 md:p-5 space-y-4">
                     <div class="flex items-center justify-between">
                       <h3 class="text-base font-semibold h-color-lunar-green">{{ t('chooseDeliveryAddress') }}</h3>
                       <button
                         type="button"
-                        class="text-sm font-semibold h-color-primary px-3 py-1.5 rounded-md transition-colors hover:bg-[#e3eadb] hover:text-[#4f5f42]"
+                        class="shrink-0 rounded-lg bg-[#3f5134] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#4f5f42]"
                         @click="openNewSecondaryAddress"
                       >
                         + {{ t('addNewAddressShort') }}
@@ -156,8 +186,8 @@
                         v-for="(addr, idx) in visibleSavedAddressCards"
                         :key="`saved-${idx}`"
                         type="button"
-                        class="w-full rounded-lg border px-4 py-3 text-left transition-colors"
-                        :class="selectedSavedAddressKey === addr.key ? 'border-[#6f825d] bg-[#f8faf6]' : 'border-gray-200 bg-white hover:border-gray-300'"
+                        class="delivery-option w-full"
+                        :class="{ 'delivery-option--selected': selectedSavedAddressKey === addr.key }"
                         @click="selectSavedAddress(addr)"
                       >
                         <div class="flex items-center justify-between gap-3">
@@ -199,8 +229,8 @@
 
                     <button
                       type="button"
-                      class="w-full rounded-lg border px-4 py-3 text-left transition-colors"
-                      :class="isGiftDelivery ? 'border-[#6f825d] bg-[#f8faf6]' : 'border-gray-200 bg-white hover:border-gray-300'"
+                      class="delivery-option w-full"
+                      :class="{ 'delivery-option--selected': isGiftDelivery }"
                       @click="toggleGiftDelivery"
                     >
                       <span class="flex items-start gap-3">
@@ -221,7 +251,7 @@
                     </button>
                   </div>
 
-                  <div v-if="loggedAddressMode === 'newSecondary'" class="rounded-xl border border-gray-200 p-4 md:p-5 space-y-4">
+                  <div v-if="deliveryMethod === 'ADDRESS' && loggedAddressMode === 'newSecondary'" class="rounded-xl border border-gray-200 p-4 md:p-5 space-y-4">
                     <p class="text-xs text-amber-700 font-medium">{{ t('requiredFieldsNote') }}</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="md:col-span-2">
@@ -235,8 +265,8 @@
                       />
                     </div>
                     <div>
-                      <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestStreet') }} <span class="text-red-600">*</span></label>
-                      <input v-model="newSecondaryForm.street" type="text" :placeholder="t('guestStreetExample')" class="w-full rounded-lg border px-3 py-2" @input="markAddressDirty" />
+                      <label class="block text-sm font-medium text-gray-700 mb-1">{{ streetLabel }} <span class="text-red-600">*</span></label>
+                      <input v-model="newSecondaryForm.street" type="text" :placeholder="streetPlaceholder" class="w-full rounded-lg border px-3 py-2" @input="markAddressDirty" />
                     </div>
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('guestCity') }} <span class="text-red-600">*</span></label>
@@ -274,11 +304,11 @@
                     </div>
                   </div>
 
-                  <div v-if="loggedAddressMode === 'gift'" class="rounded-xl border border-gray-200 p-4 md:p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div v-if="deliveryMethod === 'ADDRESS' && loggedAddressMode === 'gift'" class="rounded-xl border border-gray-200 p-4 md:p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input v-model="giftForm.recipientFirstName" type="text" :placeholder="t('giftRecipientFirstName')" class="w-full rounded-lg border px-3 py-2" />
                     <input v-model="giftForm.recipientLastName" type="text" :placeholder="t('giftRecipientLastName')" class="w-full rounded-lg border px-3 py-2" />
                     <input v-model="giftForm.recipientPhone" type="text" :placeholder="t('guestPhoneExample')" class="w-full rounded-lg border px-3 py-2 md:col-span-2" />
-                    <input v-model="giftForm.street" type="text" :placeholder="t('guestStreetExample')" class="w-full rounded-lg border px-3 py-2" />
+                    <input v-model="giftForm.street" type="text" :placeholder="streetPlaceholder" class="w-full rounded-lg border px-3 py-2" />
                     <input v-model="giftForm.city" type="text" :placeholder="t('guestCityExample')" class="w-full rounded-lg border px-3 py-2" />
                     <input v-model="giftForm.county" type="text" :placeholder="t('guestCountyExample')" class="w-full rounded-lg border px-3 py-2" />
                     <input v-model="giftForm.postalCode" type="text" :placeholder="t('guestPostalCodeExample')" class="w-full rounded-lg border px-3 py-2" />
@@ -365,6 +395,11 @@
                 </template>
 
                 <template v-else>
+                <EasyboxPicker
+                  v-if="deliveryMethod === 'EASYBOX'"
+                  v-model="selectedLocker"
+                  @configured="easyboxConfigured = $event"
+                />
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div v-for="field in deliveryFields" :key="field.name">
                     <label class="block text-sm text-gray-700 mb-1">{{ t(field.label) }} *</label>
@@ -421,7 +456,7 @@
 
               <dl class="space-y-2 mb-4">
                 <div class="flex justify-between text-gray-600"><dt>{{ t('subtotal') }}</dt><dd>{{ subtotal }} RON</dd></div>
-                <div class="flex justify-between text-gray-600"><dt>{{ t('delivery') }}</dt><dd>{{ deliveryFee }} RON</dd></div>
+                <div v-if="deliveryMethod" class="flex justify-between text-gray-600"><dt>{{ t('delivery') }}</dt><dd>{{ deliveryFee }} RON</dd></div>
                 <div class="flex justify-between text-xl font-bold h-color-lunar-green pt-2 border-t border-gray-200"><dt>{{ t('total') }}</dt><dd>{{ total }} RON</dd></div>
               </dl>
 
@@ -569,16 +604,40 @@ const contactForm = ref({ firstName: '', lastName: '', phone: '' });
 const loggedContactTouched = ref({ firstName: false, lastName: false, phone: false });
 const loggedSubmitAttempted = ref(false);
 const steps = [{ id: 1, label: 'steps.cart' }, { id: 2, label: 'steps.delivery' }, { id: 3, label: 'steps.payment' }];
-const deliveryFields = [
-  { name: 'firstName', label: 'guestFirstName', placeholder: 'guestFirstNameExample', autocomplete: 'given-name' },
-  { name: 'lastName', label: 'guestLastName', placeholder: 'guestLastNameExample', autocomplete: 'family-name' },
-  { name: 'email', label: 'guestEmail', placeholder: 'guestEmailExample', type: 'email', autocomplete: 'email' },
-  { name: 'phone', label: 'guestPhone', placeholder: 'guestPhoneExample', autocomplete: 'tel' },
-  { name: 'street', label: 'guestStreet', placeholder: 'guestStreetExample', autocomplete: 'street-address' },
-  { name: 'county', label: 'guestCounty', placeholder: 'guestCountyExample', autocomplete: 'address-level1' },
-  { name: 'city', label: 'guestCity', placeholder: 'guestCityExample', autocomplete: 'address-level2' },
-  { name: 'postalCode', label: 'guestPostalCode', placeholder: 'guestPostalCodeExample', autocomplete: 'postal-code' },
-];
+const deliveryMethod = ref(null);
+const selectedLocker = ref(null);
+const easyboxConfigured = ref(false);
+const siteSettings = ref({
+  easyboxFeeRon: 15,
+  addressFeeRon: 15,
+  deliveryDaysMin: 3,
+  deliveryDaysMax: 7,
+});
+const { getPublicSettings } = useSiteSettings();
+const streetLabel = computed(() => t('guestStreet'));
+const streetPlaceholder = computed(() => t('guestStreetExample'));
+const deliveryWindowText = computed(() => t('deliveryWindow', {
+  min: siteSettings.value.deliveryDaysMin,
+  max: siteSettings.value.deliveryDaysMax,
+}));
+const deliveryFields = computed(() => {
+  const contactFields = [
+    { name: 'firstName', label: 'guestFirstName', placeholder: 'guestFirstNameExample', autocomplete: 'given-name' },
+    { name: 'lastName', label: 'guestLastName', placeholder: 'guestLastNameExample', autocomplete: 'family-name' },
+    { name: 'email', label: 'guestEmail', placeholder: 'guestEmailExample', type: 'email', autocomplete: 'email' },
+    { name: 'phone', label: 'guestPhone', placeholder: 'guestPhoneExample', autocomplete: 'tel' },
+  ];
+  if (deliveryMethod.value !== 'ADDRESS') {
+    return contactFields;
+  }
+  return [
+    ...contactFields,
+    { name: 'street', label: 'guestStreet', placeholder: 'guestStreetExample', autocomplete: 'street-address' },
+    { name: 'county', label: 'guestCounty', placeholder: 'guestCountyExample', autocomplete: 'address-level1' },
+    { name: 'city', label: 'guestCity', placeholder: 'guestCityExample', autocomplete: 'address-level2' },
+    { name: 'postalCode', label: 'guestPostalCode', placeholder: 'guestPostalCodeExample', autocomplete: 'postal-code' },
+  ];
+});
 const guestForm = ref({ firstName: '', lastName: '', email: '', phone: '', county: '', city: '', street: '', postalCode: '' });
 const guestTouched = ref({ firstName: false, lastName: false, email: false, phone: false, county: false, city: false, street: false, postalCode: false });
 const cartProducts = computed(() => {
@@ -595,7 +654,11 @@ const recommendedProducts = computed(() => {
   ).slice(0, 4);
 });
 const subtotal = computed(() => cartProducts.value.reduce((sum, { product, quantity }) => sum + Number(product.price) * quantity, 0));
-const deliveryFee = computed(() => 15);
+const deliveryFee = computed(() => {
+  if (deliveryMethod.value === 'EASYBOX') return Number(siteSettings.value.easyboxFeeRon);
+  if (deliveryMethod.value === 'ADDRESS') return Number(siteSettings.value.addressFeeRon);
+  return 0;
+});
 const total = computed(() => subtotal.value + deliveryFee.value);
 const checkoutButtonLabel = computed(() => t('checkout'));
 const stepTitle = computed(() => (currentStep.value === 1 ? 'title' : currentStep.value === 2 ? 'deliveryTitle' : 'paymentTitle'));
@@ -660,7 +723,16 @@ function isLoggedContactValid() {
   return ['firstName', 'lastName', 'phone'].every((field) => !validateGuestField(field, contactForm.value[field]));
 }
 const loggedContactValid = computed(() => isLoggedContactValid());
-const hasGuestFormErrors = computed(() => Object.keys(guestForm.value).some((field) => !!validateGuestField(field, guestForm.value[field])));
+const hasGuestFormErrors = computed(() => {
+  if (!deliveryMethod.value) return true;
+  const fields = deliveryMethod.value === 'EASYBOX'
+    ? ['firstName', 'lastName', 'email', 'phone']
+    : Object.keys(guestForm.value);
+  if (fields.some((field) => !!validateGuestField(field, guestForm.value[field]))) {
+    return true;
+  }
+  return deliveryMethod.value === 'EASYBOX' && !selectedLocker.value;
+});
 const showTermsError = computed(() => (termsTouched.value || guestSubmitAttempted.value) && !termsAccepted.value);
 const canPlaceOrder = computed(() => (isLoggedIn.value ? termsAccepted.value : termsAccepted.value && !hasGuestFormErrors.value));
 function buildBillingFromDelivery() {
@@ -694,10 +766,31 @@ const billingDetailsPayload = computed(() => {
     phone: normalizeRomanianPhone(billingForm.value.phone) || billingForm.value.phone,
   };
 });
+function applyLockerToGuest() {
+  const locker = selectedLocker.value;
+  if (!locker) return;
+  guestForm.value.street = `${locker.name}, ${locker.address}`.trim();
+  guestForm.value.city = locker.city;
+  guestForm.value.county = locker.county;
+  guestForm.value.postalCode = locker.postalCode;
+}
 const selectedDeliveryAddress = computed(() => {
   const recipientName = `${contactForm.value.firstName} ${contactForm.value.lastName}`.trim();
   const recipientPhone = normalizeRomanianPhone(contactForm.value.phone);
   if (!isLoggedIn.value) return null;
+  if (deliveryMethod.value === 'EASYBOX') {
+    const locker = selectedLocker.value;
+    if (!locker) return null;
+    return {
+      county: locker.county,
+      city: locker.city,
+      street: `${locker.name}, ${locker.address}`.trim(),
+      postalCode: locker.postalCode,
+      recipientName,
+      recipientPhone,
+      lockerId: String(locker.lockerId),
+    };
+  }
   if (loggedAddressMode.value === 'primary') {
     return primaryAddress.value
       ? {
@@ -1251,9 +1344,10 @@ watch(billingType, (type) => {
 const loggedAddressValid = computed(() =>
   isLoggedIn.value ? !!selectedDeliveryAddress.value : true,
 );
-const canAccessStep3 = computed(() =>
-  isLoggedIn.value ? loggedAddressValid.value && loggedContactValid.value : !hasGuestFormErrors.value,
-);
+const canAccessStep3 = computed(() => {
+  if (!deliveryMethod.value) return false;
+  return isLoggedIn.value ? loggedAddressValid.value && loggedContactValid.value : !hasGuestFormErrors.value;
+});
 function isStepLocked(step) { return step === 3 && !canAccessStep3.value; }
 function navigateToStep(step) {
   if (step === currentStep.value) return;
@@ -1272,9 +1366,24 @@ function navigateToStep(step) {
 function goToDeliveryStep() { if (!cartProducts.value.length) return; checkoutError.value = ''; currentStep.value = 2; }
 async function goToPaymentStep() {
   checkoutError.value = '';
+  if (!deliveryMethod.value) {
+    checkoutError.value = t('selectDeliveryMethod');
+    return;
+  }
   if (!isLoggedIn.value) {
     guestSubmitAttempted.value = true;
     Object.keys(guestTouched.value).forEach((field) => { guestTouched.value[field] = true; });
+    if (deliveryMethod.value === 'EASYBOX' && !easyboxConfigured.value) {
+      checkoutError.value = t('easyboxNotConfigured');
+      return;
+    }
+    if (deliveryMethod.value === 'EASYBOX' && !selectedLocker.value) {
+      checkoutError.value = t('selectEasybox');
+      return;
+    }
+    if (deliveryMethod.value === 'EASYBOX') {
+      applyLockerToGuest();
+    }
     if (hasGuestFormErrors.value) { checkoutError.value = t('guestMissingFields'); return; }
   } else {
     loggedSubmitAttempted.value = true;
@@ -1283,11 +1392,15 @@ async function goToPaymentStep() {
       checkoutError.value = t('loggedMissingContact');
       return;
     }
-    if (!loggedAddressValid.value) {
-      checkoutError.value = t('selectValidAddress');
+    if (deliveryMethod.value === 'EASYBOX' && !easyboxConfigured.value) {
+      checkoutError.value = t('easyboxNotConfigured');
       return;
     }
-    if (loggedAddressMode.value === 'newSecondary') {
+    if (!loggedAddressValid.value) {
+      checkoutError.value = deliveryMethod.value === 'EASYBOX' ? t('selectEasybox') : t('selectValidAddress');
+      return;
+    }
+    if (deliveryMethod.value === 'ADDRESS' && loggedAddressMode.value === 'newSecondary') {
       const saved = await saveAddressFromForm();
       if (!saved) {
         checkoutError.value = checkoutError.value || t('addressSaveFailed');
@@ -1304,12 +1417,37 @@ async function goToCheckout() {
   checkoutError.value = '';
   guestSubmitAttempted.value = true;
   termsTouched.value = true;
+  if (!token && deliveryMethod.value === 'EASYBOX') {
+    if (!easyboxConfigured.value) {
+      checkoutError.value = t('easyboxNotConfigured');
+      currentStep.value = 2;
+      return;
+    }
+    if (!selectedLocker.value) {
+      checkoutError.value = t('selectEasybox');
+      currentStep.value = 2;
+      return;
+    }
+    applyLockerToGuest();
+  }
   if (!canPlaceOrder.value) { checkoutError.value = !termsAccepted.value ? t('guestTermsRequired') : t('guestMissingFields'); return; }
   if (token) {
     loggedSubmitAttempted.value = true;
     Object.keys(loggedContactTouched.value).forEach((field) => { loggedContactTouched.value[field] = true; });
+    if (deliveryMethod.value === 'EASYBOX') {
+      if (!easyboxConfigured.value) {
+        checkoutError.value = t('easyboxNotConfigured');
+        currentStep.value = 2;
+        return;
+      }
+      if (!selectedLocker.value) {
+        checkoutError.value = t('selectEasybox');
+        currentStep.value = 2;
+        return;
+      }
+    }
     if (!loggedContactValid.value || !loggedAddressValid.value) {
-      checkoutError.value = t('loggedMissingContactOrAddress');
+      checkoutError.value = deliveryMethod.value === 'EASYBOX' ? t('selectEasybox') : t('loggedMissingContactOrAddress');
       currentStep.value = 2;
       return;
     }
@@ -1319,18 +1457,25 @@ async function goToCheckout() {
       return;
     }
   }
+  if (!isLoggedIn.value && deliveryMethod.value === 'EASYBOX') {
+    applyLockerToGuest();
+  }
   checkoutLoading.value = true;
   const base = getBaseUrl();
   const successPath = localePath('/plata/succes');
   const cancelPath = localePath('/plata/anulata');
   try {
     const payload = token
-      ? { successUrl: successPath, cancelUrl: cancelPath, deliveryAddress: selectedDeliveryAddress.value, billingDetails: billingDetailsPayload.value }
+      ? { successUrl: successPath, cancelUrl: cancelPath, deliveryMethod: deliveryMethod.value, deliveryAddress: selectedDeliveryAddress.value, billingDetails: billingDetailsPayload.value }
       : {
           successUrl: successPath,
           cancelUrl: cancelPath,
+          deliveryMethod: deliveryMethod.value,
           items: cartItems.value,
-          guest: guestForm.value,
+          guest: {
+            ...guestForm.value,
+            lockerId: selectedLocker.value ? String(selectedLocker.value.lockerId) : '',
+          },
           billingDetails: billingDetailsPayload.value,
         };
     const res = await apiFetch(`${base}/checkout/create-session`, { method: 'POST', headers: token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -1372,6 +1517,7 @@ onMounted(async () => {
     billingForm.value.phone = user.phone || '';
   }
   const base = getBaseUrl();
+  try { siteSettings.value = await getPublicSettings(); } catch (error) { console.error('Failed to load site settings:', error); }
   try { const res = await apiFetch(`${base}/products`); if (res.ok) allProducts.value = await res.json(); } catch (error) { console.error('Failed to fetch products for cart:', error); }
   await refreshGuestReservations();
   clampCartQuantitiesToStock();
@@ -1428,6 +1574,20 @@ watch(cartProducts, (items) => {
 .step-badge { width: 28px; height: 28px; border-radius: 9999px; border: 1px solid #d1d5db; color: #6b7280; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
 .step-badge--active { background: #6f825d; border-color: #6f825d; color: #fff; }
 .step-line { width: 52px; height: 1px; background: #d1d5db; }
+.delivery-option {
+  border-radius: 0.5rem;
+  border: 1px solid #e6ddd6;
+  background: #fff9f5;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  box-shadow: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.delivery-option--selected {
+  background: #d7e3cc;
+  border-color: #3f5134;
+  box-shadow: 0 0 0 1px #3f5134, 0 8px 18px rgba(63, 81, 52, 0.18);
+}
 </style>
 
 <i18n lang="json">
@@ -1436,6 +1596,15 @@ watch(cartProducts, (items) => {
     "steps": { "cart": "Cart", "delivery": "Delivery", "payment": "Payment" },
     "title": "Your Cart",
     "deliveryTitle": "Delivery Information",
+    "deliveryMethodTitle": "Delivery method",
+    "easyboxMethod": "Easybox",
+    "addressMethod": "Home address",
+    "easyboxPoint": "Easybox point",
+    "easyboxPointExample": "Locker name or address",
+    "selectDeliveryMethod": "Choose a delivery method before continuing.",
+    "selectEasybox": "Choose an Easybox locker before continuing.",
+    "easyboxNotConfigured": "Easybox is not available until the Sameday locker map is configured.",
+    "deliveryWindow": "Estimated delivery: {min}–{max} business days.",
     "paymentTitle": "Checkout",
     "empty": "Your cart is empty.",
     "emptySubtitle": "Discover handcrafted pieces you might love.",
@@ -1545,6 +1714,15 @@ watch(cartProducts, (items) => {
     "steps": { "cart": "Cos", "delivery": "Livrare", "payment": "Plata" },
     "title": "Cosul tau de cumparaturi",
     "deliveryTitle": "Informatii de livrare",
+    "deliveryMethodTitle": "Metodă de livrare",
+    "easyboxMethod": "Easybox",
+    "addressMethod": "La adresă",
+    "easyboxPoint": "Punct Easybox",
+    "easyboxPointExample": "Numele sau adresa lockerului",
+    "selectDeliveryMethod": "Alege o metodă de livrare înainte să continui.",
+    "selectEasybox": "Alege un locker Easybox înainte să continui.",
+    "easyboxNotConfigured": "Easybox nu este disponibil până când harta Sameday este configurată.",
+    "deliveryWindow": "Livrare estimată: {min}–{max} zile lucrătoare.",
     "paymentTitle": "Finalizare comanda",
     "empty": "Cosul tau este gol.",
     "emptySubtitle": "Descopera piese lucrate manual care ti-ar putea placea.",

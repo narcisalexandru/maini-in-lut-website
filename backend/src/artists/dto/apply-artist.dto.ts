@@ -12,18 +12,6 @@ import {
 export class ApplyArtistDto {
   @IsString()
   @IsNotEmpty()
-  @MinLength(2)
-  @MaxLength(120)
-  artistFirstName: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(2)
-  @MaxLength(120)
-  artistLastName: string;
-
-  @IsString()
-  @IsNotEmpty()
   @Matches(/^\d{2,10}$/, { message: 'CUI must contain between 2 and 10 digits' })
   companyCui: string;
 
@@ -37,7 +25,13 @@ export class ApplyArtistDto {
   @IsNotEmpty()
   @MinLength(2)
   @MaxLength(120)
-  displayName: string;
+  contactFirstName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(2)
+  @MaxLength(120)
+  contactLastName: string;
 
   @IsEmail()
   @MaxLength(255)

@@ -88,7 +88,7 @@ export class AdminProductsController {
     );
   }
 
-  @Roles(UserRole.ARTIST)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)
   @Get('active-draft')
   async findActiveDraft(@Request() req: AuthenticatedRequest) {
     const product = await this.productsService.findActiveDraftForArtist(
@@ -103,7 +103,7 @@ export class AdminProductsController {
     return toAdminProductResponse(product, pendingProposal);
   }
 
-  @Roles(UserRole.ARTIST)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)
   @Put('draft')
   async saveDraft(
     @Request() req: AuthenticatedRequest,
@@ -130,7 +130,7 @@ export class AdminProductsController {
     return toAdminProductResponse(product, pendingProposal);
   }
 
-  @Roles(UserRole.ARTIST)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)
   @Post()
   async create(
     @Request() req: AuthenticatedRequest,
@@ -177,7 +177,7 @@ export class AdminProductsController {
     return toAdminProductResponse(product);
   }
 
-  @Roles(UserRole.ARTIST)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)
   @Delete(':id/draft')
   async deleteDraft(
     @Request() req: AuthenticatedRequest,

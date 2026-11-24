@@ -123,7 +123,10 @@
         />
       </div>
 
-      <div class="flex flex-wrap gap-3 pt-2 border-t border-gray-200">
+      <div class="sticky bottom-0 z-10 flex flex-wrap gap-3 pt-3 pb-2 border-t border-gray-200 bg-[#fff9f5]">
+        <p v-if="!canSave" class="w-full text-xs text-amber-800 m-0">
+          {{ t("saveMissing", { fields: saveMissing.join(", ") }) }}
+        </p>
         <p v-if="!changeRequest && !superAdminEdit && draftSavedHint" class="w-full text-xs text-gray-500 m-0 flex items-center gap-1.5">
           <i v-if="draftSaving" class="ph ph-spinner animate-spin"></i>
           <i v-else class="ph ph-cloud-check"></i>
@@ -236,6 +239,7 @@ const {
   deleteProductDraft,
 } = useArtist();
 const { saveDraft, loadDraft, clearDraft } = useProductDraft();
+const { isSuperAdmin } = useAuth();
 
 const createEmptyForm = () => ({
   title: "",
@@ -281,13 +285,18 @@ const hasFormChanges = computed(() => {
   return snapshotForm() !== initialFormSnapshot.value;
 });
 
+const saveMissing = computed(() => {
+  const missing = [];
+  if (!form.value.title.trim()) missing.push(t("productTitle"));
+  if (form.value.description.trim().length < 10) missing.push(t("description"));
+  if (!(Number(form.value.price) > 0)) missing.push(t("price"));
+  if (!form.value.images.length) missing.push(t("images"));
+  if (!form.value.category.trim()) missing.push(t("category"));
+  return missing;
+});
+
 const canSave = computed(() => {
-  const valid =
-    form.value.title.trim().length > 0 &&
-    form.value.description.trim().length >= 10 &&
-    Number(form.value.price) > 0 &&
-    form.value.images.length > 0 &&
-    form.value.category.trim().length > 0;
+  const valid = saveMissing.value.length === 0;
 
   if (props.changeRequest) {
     return valid && hasFormChanges.value;
@@ -499,6 +508,14 @@ const saveProduct = async () => {
   try {
     const payload = buildSavePayload();
     const existingId = draftProductId.value ?? props.productId;
+    if (
+      existingId &&
+      isSuperAdmin.value &&
+      !props.superAdminEdit &&
+      !props.changeRequest
+    ) {
+      payload.status = "APPROVED";
+    }
     if (props.changeRequest) {
       await submitProductChanges(props.productId, payload);
       toast.add({ severity: "success", summary: t("changesSubmitted"), life: 3000 });
@@ -751,6 +768,8 @@ onBeforeRouteLeave(async () => {
     "draftSaved": "Ciornă salvată automat",
     "cancel": "Anulare",
     "save": "Salvează",
+    "saveMissing": "Ca să salvezi, completează: {fields}.",
+    "images": "Imagini",
     "saved": "Produs salvat",
     "error": "Eroare",
     "back": "Înapoi la produse",
@@ -802,6 +821,8 @@ onBeforeRouteLeave(async () => {
     "draftSaved": "Draft auto-saved",
     "cancel": "Cancel",
     "save": "Save",
+    "saveMissing": "To save, fill in: {fields}.",
+    "images": "Images",
     "saved": "Product saved",
     "error": "Error",
     "back": "Back to products",

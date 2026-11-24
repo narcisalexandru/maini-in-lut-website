@@ -30,6 +30,15 @@ export class Artist {
   @Column({ type: 'text', nullable: true })
   companyLegalName: string | null;
 
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  brand: string | null;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  contactFirstName: string | null;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  contactLastName: string | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   contactEmail: string | null;
 

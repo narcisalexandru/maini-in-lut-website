@@ -5,12 +5,12 @@
     <component
       :is="preview ? 'div' : NuxtLink"
       v-bind="preview ? {} : { to: $localePath(`/produs/${product.id}`) }"
-      class="group/photo block relative h-48"
+      class="group/photo block relative h-48 bg-[#f4f1ee]"
     >
       <img
         :src="getProductPrimaryImageUrl(product)"
         :alt="product.title"
-        class="w-full h-full object-cover transition-[filter] duration-300"
+        class="w-full h-full object-cover transition-[object-fit,filter] duration-300 group-hover/photo:object-contain"
         :class="{
           'brightness-[0.62] group-hover/photo:brightness-100': !available,
         }"

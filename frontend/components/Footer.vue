@@ -133,7 +133,6 @@ const companyAddress = computed(() =>
 
 const infoLinks = [
   { labelKey: "deliveryReturns", name: "terms-and-conditions" },
-  { labelKey: "ceramicCare", name: "blog" },
   { labelKey: "terms", name: "terms-and-conditions" },
   { labelKey: "privacy", name: "privacy-policy" },
   { labelKey: "cookies", name: "cookie-policy" },
@@ -536,7 +535,6 @@ watch(netopiaBadgeRef, (container) => {
     "workshopHeading": "Date firmă",
     "companyIds": "CUI {cui} · Reg. Com. {tradeRegister}",
     "deliveryReturns": "Livrare & Retur",
-    "ceramicCare": "Întreținere ceramică",
     "terms": "Termeni și condiții",
     "privacy": "Prelucrarea datelor cu caracter personal",
     "cookies": "Politica de utilizare Cookie-uri",
@@ -553,7 +551,6 @@ watch(netopiaBadgeRef, (container) => {
     "workshopHeading": "Company details",
     "companyIds": "VAT ID {cui} · Trade Register {tradeRegister}",
     "deliveryReturns": "Shipping & Returns",
-    "ceramicCare": "Ceramic care",
     "terms": "Terms and conditions",
     "privacy": "Personal data processing",
     "cookies": "Cookie Policy",

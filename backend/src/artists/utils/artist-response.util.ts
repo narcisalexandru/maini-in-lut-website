@@ -17,6 +17,9 @@ export function toArtistApplicationFields(artist: Artist) {
     artistLastName: artist.artistLastName,
     companyCui: artist.companyCui,
     companyLegalName: artist.companyLegalName,
+    brand: artist.brand,
+    contactFirstName: artist.contactFirstName,
+    contactLastName: artist.contactLastName,
     contactEmail: artist.contactEmail,
     contactPhone: artist.contactPhone,
   };

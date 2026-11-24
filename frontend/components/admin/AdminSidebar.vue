@@ -76,6 +76,12 @@ const visibleItems = computed(() => {
       icon: "ph-receipt",
       show: isArtist.value || isSuperAdmin.value,
     },
+    {
+      to: "/admin/setari",
+      label: t("settings"),
+      icon: "ph-gear",
+      show: isSuperAdmin.value,
+    },
   ];
   return items.filter((item) => item.show);
 });
@@ -121,6 +127,7 @@ const visibleItems = computed(() => {
     "customers": "Clienți",
     "products": "Produse",
     "orders": "Comenzi",
+    "settings": "Setări site",
     "auditLog": "Jurnal activitate",
     "backToShop": "Înapoi la magazin"
   },
@@ -131,6 +138,7 @@ const visibleItems = computed(() => {
     "customers": "Customers",
     "products": "Products",
     "orders": "Orders",
+    "settings": "Site settings",
     "auditLog": "Activity log",
     "backToShop": "Back to shop"
   }
