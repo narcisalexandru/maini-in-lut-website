@@ -492,7 +492,7 @@ import { normalizeRomanianPhone } from '~/utils/phone';
 import { extractApiErrorMessage, formatPhoneApiError } from '~/utils/api-error';
 import { syncStoredUserProfile } from '~/utils/sync-user-profile';
 import { apiRequest } from '~/utils/api-request';
-import { getProductStockQuantity } from '~/utils/product-stock';
+import { getProductStockQuantity, sortInStockFirst } from '~/utils/product-stock';
 import { getProductPrimaryImageUrl } from '~/utils/product-image';
 defineI18nRoute({ paths: { ro: '/cos', en: '/cart' } });
 const { t } = useI18n({ useScope: 'local' });
@@ -590,7 +590,9 @@ const cartProducts = computed(() => {
 });
 const recommendedProducts = computed(() => {
   const cartIds = new Set(cartItems.value.map((item) => item.productId));
-  return allProducts.value.filter((product) => !cartIds.has(product.id)).slice(0, 4);
+  return sortInStockFirst(
+    allProducts.value.filter((product) => !cartIds.has(product.id)),
+  ).slice(0, 4);
 });
 const subtotal = computed(() => cartProducts.value.reduce((sum, { product, quantity }) => sum + Number(product.price) * quantity, 0));
 const deliveryFee = computed(() => 15);

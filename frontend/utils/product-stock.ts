@@ -16,6 +16,14 @@ export function isProductAvailable(product: StockProduct): boolean {
   return getProductStockQuantity(product) > 0;
 }
 
+export function sortInStockFirst<T extends StockProduct>(items: readonly T[]): T[] {
+  return [...items].sort((left, right) => {
+    const leftRank = isProductAvailable(left) ? 0 : 1;
+    const rightRank = isProductAvailable(right) ? 0 : 1;
+    return leftRank - rightRank;
+  });
+}
+
 export function isLimitedStock(stockQuantity: number): boolean {
   return stockQuantity > 1 && stockQuantity <= LIMITED_STOCK_THRESHOLD;
 }

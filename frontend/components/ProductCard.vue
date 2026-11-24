@@ -5,13 +5,26 @@
     <component
       :is="preview ? 'div' : NuxtLink"
       v-bind="preview ? {} : { to: $localePath(`/produs/${product.id}`) }"
-      class="block relative h-48"
+      class="group/photo block relative h-48"
     >
       <img
         :src="getProductPrimaryImageUrl(product)"
         :alt="product.title"
-        class="w-full h-full object-cover"
+        class="w-full h-full object-cover transition-[filter] duration-300"
+        :class="{
+          'brightness-[0.62] group-hover/photo:brightness-100': !available,
+        }"
       />
+      <div
+        v-if="!available"
+        class="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none transition-opacity duration-300 group-hover/photo:opacity-0"
+      >
+        <span
+          class="bg-black/80 text-white text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-full"
+        >
+          {{ t("outOfStock") }}
+        </span>
+      </div>
       <span
         v-if="product.discount > 0"
         class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow"
@@ -72,12 +85,17 @@
       <div class="flex w-full">
         <button
           type="button"
-          class="maini-ui-button__buy w-full flex justify-center items-center border-none cursor-pointer"
-          :class="{ 'pointer-events-none opacity-70': preview }"
-          :aria-label="preview ? undefined : 'Adaugă în coș'"
+          class="maini-ui-button__buy w-full flex justify-center items-center border-none"
+          :class="
+            preview || !available
+              ? 'pointer-events-none opacity-50 cursor-not-allowed'
+              : 'cursor-pointer'
+          "
+          :disabled="preview || !available"
+          :aria-label="preview ? undefined : available ? t('addToCart') : t('outOfStock')"
           @click.prevent.stop="!preview && handleAddToCart()"
         >
-          Adaugă în coș
+          {{ available ? t("addToCart") : t("outOfStock") }}
         </button>
       </div>
     </component>
@@ -105,8 +123,11 @@ const { product, preview = false } = defineProps({
   },
 });
 
+const { t } = useI18n({ useScope: "local" });
 const { toggleFavorite, isFavorite } = useFavorites();
 const { addToCart } = useCart();
+
+const available = computed(() => isProductAvailable(product));
 
 function handleAddToCart() {
   if (!isProductAvailable(product)) {
@@ -122,3 +143,16 @@ const isNew = computed(() => {
   // return diffDays <= 7;
 });
 </script>
+
+<i18n lang="json">
+{
+  "en": {
+    "addToCart": "Add to cart",
+    "outOfStock": "Out of stock"
+  },
+  "ro": {
+    "addToCart": "Adaugă în coș",
+    "outOfStock": "Stoc epuizat"
+  }
+}
+</i18n>

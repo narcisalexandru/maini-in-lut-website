@@ -41,14 +41,34 @@
       <div v-else class="flex flex-col lg:flex-row gap-8 lg:gap-12">
         <div class="flex-1 lg:max-w-[55%]">
           <div
-            class="aspect-square bg-white rounded-lg overflow-hidden shadow-sm mb-4"
+            class="group/photo aspect-square bg-white rounded-lg overflow-hidden shadow-sm mb-4 relative"
+            :class="{ 'cursor-pointer': hasImages && !isAvailable }"
+            @click="revealOutOfStockImage"
           >
-            <img
-              v-if="hasImages"
-              :src="selectedImage || productImages[0]"
-              :alt="displayTitle"
-              class="w-full h-full object-cover"
-            />
+            <template v-if="hasImages">
+              <img
+                :src="selectedImage || productImages[0]"
+                :alt="displayTitle"
+                class="w-full h-full object-cover transition-[filter] duration-300"
+                :class="{
+                  'brightness-[0.62] group-hover/photo:brightness-100':
+                    !isAvailable && !imageRevealed,
+                }"
+              />
+              <div
+                v-if="!isAvailable"
+                class="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none transition-opacity duration-300"
+                :class="
+                  imageRevealed ? 'opacity-0' : 'group-hover/photo:opacity-0'
+                "
+              >
+                <span
+                  class="bg-black/80 text-white text-sm font-semibold uppercase tracking-wide px-4 py-2 rounded-full"
+                >
+                  {{ t("outOfStock") }}
+                </span>
+              </div>
+            </template>
             <div
               v-else
               class="w-full h-full flex flex-col items-center justify-center gap-3 p-8 text-center bg-gray-50 border-2 border-dashed border-gray-200"
@@ -157,6 +177,7 @@
           <div class="flex flex-wrap items-center gap-4 mb-6">
             <div
               class="quantity-picker flex items-center border border-gray-300 rounded-lg overflow-hidden"
+              :class="{ 'opacity-40 pointer-events-none': !isAvailable }"
             >
               <button
                 type="button"
@@ -200,6 +221,7 @@
 
           <button
             class="maini-ui-button__buy w-1/2 h-10"
+            :class="{ 'opacity-50 cursor-not-allowed': !canAddToCart }"
             :disabled="!canAddToCart"
             @click="handleAddToCart"
           >
@@ -208,7 +230,7 @@
                 class="ph ph-shopping-cart flex items-center justify-center text-lg"
               ></i>
               <span class="text-sm font-medium">
-                {{ t("addToCart") }}
+                {{ isAvailable ? t("addToCart") : t("outOfStock") }}
               </span>
             </span>
           </button>
@@ -390,6 +412,24 @@ const stockQuantity = computed(() =>
 );
 
 const isAvailable = computed(() => isProductAvailable(props.product));
+const imageRevealed = ref(false);
+
+watch(
+  () => props.product?.id,
+  () => {
+    imageRevealed.value = false;
+  },
+);
+
+function revealOutOfStockImage() {
+  if (isAvailable.value || !hasImages.value) {
+    return;
+  }
+  if (window.matchMedia("(hover: hover)").matches) {
+    return;
+  }
+  imageRevealed.value = !imageRevealed.value;
+}
 
 const cartQuantity = computed(() =>
   props.product?.id ? getQuantity(props.product.id) : 0,

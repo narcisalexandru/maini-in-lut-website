@@ -19,6 +19,7 @@
 
 <script setup>
 import { getApiBaseUrl } from "~/utils/api-base";
+import { sortInStockFirst } from "~/utils/product-stock";
 
 defineI18nRoute({
   paths: {
@@ -36,7 +37,7 @@ const products = ref([]);
 
 const favoriteProducts = computed(() => {
   const ids = favoriteIds.value;
-  return products.value.filter((p) => ids.includes(p.id));
+  return sortInStockFirst(products.value.filter((p) => ids.includes(p.id)));
 });
 
 onMounted(async () => {

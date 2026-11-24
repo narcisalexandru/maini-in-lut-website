@@ -45,6 +45,7 @@
 <script setup lang="ts">
 import ProductCard from "~/components/ProductCard.vue";
 import type { PublicProduct } from "~/types/product";
+import { sortInStockFirst } from "~/utils/product-stock";
 
 defineI18nRoute({
   paths: {
@@ -68,8 +69,8 @@ onMounted(async () => {
     artist.value = await getPublicProfile(slug.value);
     const res = await fetch(`${getBaseUrl()}/products`);
     const products = (await res.json()) as PublicProduct[];
-    artistProducts.value = products.filter(
-      (product) => product.artist?.slug === slug.value,
+    artistProducts.value = sortInStockFirst(
+      products.filter((product) => product.artist?.slug === slug.value),
     );
   } catch {
     artist.value = null;

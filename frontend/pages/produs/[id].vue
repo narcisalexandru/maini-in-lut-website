@@ -13,6 +13,7 @@
 <script setup>
 import ProductPageView from "~/components/ProductPageView.vue";
 import { apiRequest } from "~/utils/api-request";
+import { sortInStockFirst } from "~/utils/product-stock";
 
 const route = useRoute();
 const id = computed(() => route.params.id);
@@ -56,7 +57,7 @@ async function fetchRelated() {
     const res = await apiRequest("/products");
     const all = await res.json();
     const others = all.filter((p) => p.id !== product.value?.id);
-    relatedProducts.value = others.slice(0, 4);
+    relatedProducts.value = sortInStockFirst(others).slice(0, 4);
   } catch (e) {
     console.error("Failed to fetch related:", e);
   }

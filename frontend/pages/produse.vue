@@ -110,6 +110,7 @@ import Slider from "primevue/slider";
 import Checkbox from "primevue/checkbox";
 import Select from "primevue/select";
 import { apiRequest } from "~/utils/api-request";
+import { sortInStockFirst } from "~/utils/product-stock";
 
 const products = ref([]);
 const categories = ref([]);
@@ -185,7 +186,7 @@ const filteredProducts = computed(() => {
       filtered = [...filtered].sort((a, b) => b.discount - a.discount);
       break;
   }
-  return filtered;
+  return sortInStockFirst(filtered);
 });
 
 function handleAllChange(checked) {
