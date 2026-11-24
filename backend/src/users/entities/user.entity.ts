@@ -34,7 +34,7 @@ export class User {
   postal_code: string;
 
   @Column({ type: 'text', nullable: true })
-  phone: string;
+  phone: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
   secondary_addresses: {

@@ -18,6 +18,7 @@ import { AuditLogModule } from './audit-log/audit-log.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { StockReservationsModule } from './stock-reservations/stock-reservations.module';
 import { SiteSettingsModule } from './site-settings/site-settings.module';
+import { AdminWorkspaceModule } from './admin-workspace/admin-workspace.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { SiteSettingsModule } from './site-settings/site-settings.module';
     UploadsModule,
     StockReservationsModule,
     SiteSettingsModule,
+    AdminWorkspaceModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -50,7 +50,7 @@ export class Order {
   @Column()
   deliveryCity: string;
 
-  @Column()
+  @Column({ length: 500 })
   deliveryStreet: string;
 
   @Column()

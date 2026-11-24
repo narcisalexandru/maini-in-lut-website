@@ -44,6 +44,18 @@ export class AdminOrdersController {
     const orders = await this.ordersService.findForArtist(req.user.id, query);
     return orders.map((order) => ({
       ...toOrderSummaryResponse(order),
+      customer: {
+        firstName: order.customerFirstName,
+        lastName: order.customerLastName,
+        email: order.customerEmail,
+        phone: order.customerPhone,
+      },
+      delivery: {
+        county: order.deliveryCounty,
+        city: order.deliveryCity,
+        street: order.deliveryStreet,
+        postalCode: order.deliveryPostalCode,
+      },
       items: (order.items ?? []).map(toOrderItemResponse),
     }));
   }

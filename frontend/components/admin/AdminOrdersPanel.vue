@@ -1,68 +1,42 @@
 <template>
-  <div>
+  <div class="orders-panel" :class="{ 'orders-panel--fill': contained }">
     <TabView v-model:active-index="activeTab" @tab-change="onTabChange">
       <TabPanel :header="t('activeOrders')">
-        <AdminFiltersBar
-          :search="searchFilter"
-          :status="itemStatusFilter"
-          :payment-status="paymentStatusFilter"
-          :artist-id="artistFilter"
-          :status-options="itemStatusOptions"
-          :payment-status-options="paymentStatusOptions"
-          :artist-options="artistOptions"
-          :show-artist-filter="showArtistFilter"
-          :show-payment-filter="true"
-          :status-label="t('itemStatus')"
-          :search-placeholder="t('searchPlaceholder')"
-          @update:search="searchFilter = $event"
-          @update:status="itemStatusFilter = $event"
-          @update:payment-status="paymentStatusFilter = $event"
-          @update:artist-id="artistFilter = $event"
-          @clear="clearFilters"
-        />
-        <OrdersListBody
-          :orders="filteredOrders"
+        <OrdersTable
+          class="orders-panel__table"
+          :contained="contained"
+          :orders="visibleOrders"
           :loading="loading"
           :status-options="statusOptions"
+          :payment-status-options="paymentStatusOptions"
           :item-status-label="itemStatusLabel"
           :payment-status-label="paymentStatusLabel"
           :format-date="formatDate"
-          :can-update-status="canUpdateStatus"
           :show-customer-links="showCustomerLinks"
-          @update-status="updateStatus"
+          :show-artist-column="showArtistFilter || !fixedArtistId"
+          :can-edit-delivery="isSuperAdmin"
+          :initial-query="initialQuery"
+          @changed="loadOrders({ silent: true })"
         />
       </TabPanel>
       <TabPanel :header="t('archivedOrders')">
-        <AdminFiltersBar
-          :search="searchFilter"
-          :status="itemStatusFilter"
-          :payment-status="paymentStatusFilter"
-          :artist-id="artistFilter"
+        <OrdersTable
+          class="orders-panel__table"
+          :contained="contained"
+          :orders="visibleOrders"
+          :loading="loading"
+          archived
           :status-options="archivedItemStatusOptions"
           :payment-status-options="paymentStatusOptions"
-          :artist-options="artistOptions"
-          :show-artist-filter="showArtistFilter"
-          :show-payment-filter="true"
-          :status-label="t('itemStatus')"
-          :search-placeholder="t('searchPlaceholder')"
-          @update:search="searchFilter = $event"
-          @update:status="itemStatusFilter = $event"
-          @update:payment-status="paymentStatusFilter = $event"
-          @update:artist-id="artistFilter = $event"
-          @clear="clearFilters"
-        />
-        <OrdersListBody
-          :orders="filteredOrders"
-          :loading="loading"
-          :status-options="statusOptions"
           :item-status-label="itemStatusLabel"
           :payment-status-label="paymentStatusLabel"
           :format-date="formatDate"
-          :can-update-status="canUpdateStatus"
           :show-customer-links="showCustomerLinks"
+          :show-artist-column="showArtistFilter || !fixedArtistId"
+          :can-edit-delivery="isSuperAdmin"
+          :initial-query="initialQuery"
           :unarchiving-order-id="unarchivingOrderId"
-          :archived="true"
-          @update-status="updateStatus"
+          @changed="loadOrders({ silent: true })"
           @unarchive="unarchive"
         />
       </TabPanel>
@@ -73,8 +47,7 @@
 <script setup>
 import TabView from "primevue/tabview";
 import TabPanel from "primevue/tabpanel";
-import AdminFiltersBar from "~/components/admin/AdminFiltersBar.vue";
-import OrdersListBody from "~/components/admin/OrdersListBody.vue";
+import OrdersTable from "~/components/admin/OrdersTable.vue";
 import { useToast } from "primevue/usetoast";
 
 const props = defineProps({
@@ -98,24 +71,22 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  contained: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const { t, locale } = useI18n({ useScope: "local" });
 const toast = useToast();
-const localePath = useLocalePath();
+const route = useRoute();
 const { userRole, isSuperAdmin } = useAuth();
-const { listArtists } = useArtist();
-const { getAllOrders, getAdminOrder, getArtistOrders, updateOrderItemStatus, unarchiveOrder } = useOrders();
+const { getAllOrders, getAdminOrder, getArtistOrders, unarchiveOrder } = useOrders();
 
 const orders = ref([]);
-const artistsForFilter = ref([]);
 const loading = ref(true);
 const unarchivingOrderId = ref(null);
 const activeTab = ref(0);
-const searchFilter = ref("");
-const itemStatusFilter = ref(null);
-const paymentStatusFilter = ref(null);
-const artistFilter = ref(null);
 
 const itemStatusOptions = computed(() => [
   { label: t("statusPending"), value: "PENDING" },
@@ -133,16 +104,10 @@ const archivedItemStatusOptions = computed(() =>
 
 const paymentStatusOptions = computed(() => [
   { label: t("paymentPending"), value: "PENDING" },
+  { label: t("paymentAwaitingCash"), value: "AWAITING_CASH" },
   { label: t("paymentPaid"), value: "PAID" },
   { label: t("paymentFailed"), value: "FAILED" },
 ]);
-
-const artistOptions = computed(() =>
-  artistsForFilter.value.map((artist) => ({
-    label: artist.displayName,
-    value: artist.id,
-  })),
-);
 
 const statusOptions = computed(() => itemStatusOptions.value);
 
@@ -157,9 +122,9 @@ const paymentStatusLabel = (status) =>
 const formatDate = (value) =>
   new Date(value).toLocaleDateString(locale.value === "en" ? "en-GB" : "ro-RO");
 
-const canUpdateStatus = (order) =>
-  activeTab.value === 0 &&
-  (order.paymentStatus === "PAID");
+const initialQuery = computed(() =>
+  typeof route.query.q === "string" ? route.query.q : "",
+);
 
 const visibleItems = (order) => {
   if (!props.filterItemsForArtistId) {
@@ -170,53 +135,23 @@ const visibleItems = (order) => {
   );
 };
 
-const filteredOrders = computed(() => {
-  const query = searchFilter.value.trim().toLowerCase();
-  const withVisibleItems = orders.value
+const visibleOrders = computed(() =>
+  orders.value
     .map((order) => ({
       ...order,
       items: visibleItems(order),
     }))
-    .filter((order) => order.items.length > 0);
-
-  if (!query) return withVisibleItems;
-
-  return withVisibleItems.filter((order) => {
-    const haystack = [
-      order.publicOrderNumber,
-      order.customer?.firstName,
-      order.customer?.lastName,
-      order.customer?.email,
-      order.customer?.phone,
-      ...order.items.flatMap((item) => [item.title, item.artistDisplayName]),
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return haystack.includes(query);
-  });
-});
-
-const clearFilters = () => {
-  searchFilter.value = "";
-  itemStatusFilter.value = null;
-  paymentStatusFilter.value = null;
-  if (!props.fixedArtistId) {
-    artistFilter.value = null;
-  }
-};
+    .filter((order) => order.items.length > 0),
+);
 
 const buildFilters = () => ({
-  paymentStatus: paymentStatusFilter.value || undefined,
-  itemStatus: itemStatusFilter.value || undefined,
-  artistId: props.fixedArtistId ?? (isSuperAdmin.value ? artistFilter.value || undefined : undefined),
+  artistId: props.fixedArtistId || undefined,
   userId: props.fixedUserId ?? undefined,
   archived: activeTab.value === 1,
 });
 
-const loadOrders = async () => {
-  loading.value = true;
+const loadOrders = async ({ silent = false } = {}) => {
+  if (!silent) loading.value = true;
   try {
     const filters = buildFilters();
 
@@ -236,31 +171,7 @@ const loadOrders = async () => {
       life: 4000,
     });
   } finally {
-    loading.value = false;
-  }
-};
-
-const loadArtistOptions = async () => {
-  if (!props.showArtistFilter) return;
-  try {
-    artistsForFilter.value = await listArtists("APPROVED");
-  } catch {
-    artistsForFilter.value = [];
-  }
-};
-
-const updateStatus = async (itemId, status) => {
-  try {
-    await updateOrderItemStatus(itemId, status);
-    toast.add({ severity: "success", summary: t("updated"), life: 3000 });
-    await loadOrders();
-  } catch (error) {
-    toast.add({
-      severity: "error",
-      summary: t("error"),
-      detail: error.message,
-      life: 4000,
-    });
+    if (!silent) loading.value = false;
   }
 };
 
@@ -284,21 +195,10 @@ const unarchive = async (orderId) => {
 };
 
 const onTabChange = () => {
-  itemStatusFilter.value = null;
   loadOrders();
 };
 
-watch([itemStatusFilter, paymentStatusFilter, artistFilter], () => {
-  loadOrders();
-});
-
-onMounted(async () => {
-  if (props.fixedArtistId) {
-    artistFilter.value = props.fixedArtistId;
-  }
-  await loadArtistOptions();
-  await loadOrders();
-});
+onMounted(loadOrders);
 
 defineExpose({ reload: loadOrders });
 </script>
@@ -308,7 +208,6 @@ defineExpose({ reload: loadOrders });
   "ro": {
     "activeOrders": "Active",
     "archivedOrders": "Arhivate",
-    "searchPlaceholder": "Caută după număr comandă, client sau produs...",
     "itemStatus": "Status produs",
     "error": "Eroare",
     "updated": "Status actualizat",
@@ -319,13 +218,13 @@ defineExpose({ reload: loadOrders });
     "statusDelivered": "Livrat",
     "statusCancelled": "Anulat",
     "paymentPending": "Plată în așteptare",
+    "paymentAwaitingCash": "Așteaptă numerar",
     "paymentPaid": "Plătită",
     "paymentFailed": "Plată eșuată"
   },
   "en": {
     "activeOrders": "Active",
     "archivedOrders": "Archived",
-    "searchPlaceholder": "Search by order number, customer, or product...",
     "itemStatus": "Item status",
     "error": "Error",
     "updated": "Status updated",
@@ -336,8 +235,47 @@ defineExpose({ reload: loadOrders });
     "statusDelivered": "Delivered",
     "statusCancelled": "Cancelled",
     "paymentPending": "Payment pending",
+    "paymentAwaitingCash": "Awaiting cash",
     "paymentPaid": "Paid",
     "paymentFailed": "Payment failed"
   }
 }
 </i18n>
+
+<style scoped>
+.orders-panel--fill {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.orders-panel--fill :deep(.p-tabview) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.orders-panel--fill :deep(.p-tabview-panels) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+}
+
+.orders-panel--fill :deep(.p-tabview-panel) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.orders-panel--fill :deep(.orders-panel__table) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+</style>

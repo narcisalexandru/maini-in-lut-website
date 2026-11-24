@@ -355,7 +355,9 @@ onMounted(async () => {
     "action.PRODUCT_CHANGES_ACCEPTED": "Modificări acceptate",
     "action.PRODUCT_CHANGES_REJECTED": "Modificări respinse",
     "action.PRODUCT_DELETED": "Produs șters",
-    "action.ORDER_ITEM_STATUS_UPDATED": "Status comandă actualizat"
+    "action.ORDER_ITEM_STATUS_UPDATED": "Status comandă actualizat",
+    "action.ORDER_DELIVERY_UPDATED": "Adresă de livrare actualizată",
+    "action.CUSTOMER_UPDATED": "Date client actualizate"
   },
   "en": {
     "title": "Admin activity log",
@@ -396,7 +398,9 @@ onMounted(async () => {
     "action.PRODUCT_CHANGES_ACCEPTED": "Product changes accepted",
     "action.PRODUCT_CHANGES_REJECTED": "Product changes rejected",
     "action.PRODUCT_DELETED": "Product deleted",
-    "action.ORDER_ITEM_STATUS_UPDATED": "Order item status updated"
+    "action.ORDER_ITEM_STATUS_UPDATED": "Order item status updated",
+    "action.ORDER_DELIVERY_UPDATED": "Delivery address updated",
+    "action.CUSTOMER_UPDATED": "Customer details updated"
   }
 }
 </i18n>

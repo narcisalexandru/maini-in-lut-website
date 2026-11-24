@@ -14,9 +14,8 @@
       :status-options="productStatusOptions"
       :artist-options="artistOptions"
       :show-artist-filter="isSuperAdmin"
-      :show-status-filter="!isSuperAdmin || activeTab !== 0"
-      :show-search="true"
-      :search-placeholder="t('searchPlaceholder')"
+      :show-status-filter="!isSuperAdmin || activeTab === 0"
+      :show-search="false"
       @update:search="searchFilter = $event"
       @update:status="statusFilter = $event"
       @update:artist-id="artistFilter = $event"
@@ -24,6 +23,14 @@
     />
 
     <TabView v-if="isSuperAdmin" v-model:active-index="activeTab">
+      <TabPanel :header="t('allProducts')">
+        <ProductsTable
+          :products="filteredAllProducts"
+          :loading="loadingProducts"
+          mode="list"
+          @refresh="loadData"
+        />
+      </TabPanel>
       <TabPanel :header="t('reviewQueue')">
         <ProductsTable
           :products="filteredReviewQueue"
@@ -32,14 +39,6 @@
           @refresh="loadData"
           @approve="handleApprove"
           @reject="openRejectProduct"
-        />
-      </TabPanel>
-      <TabPanel :header="t('allProducts')">
-        <ProductsTable
-          :products="filteredAllProducts"
-          :loading="loadingProducts"
-          mode="list"
-          @refresh="loadData"
         />
       </TabPanel>
     </TabView>
@@ -190,7 +189,7 @@ const loadArtistOptions = async () => {
 };
 
 watch([statusFilter, artistFilter], () => {
-  if (activeTab.value === 1 || !isSuperAdmin.value) {
+  if (activeTab.value === 0 || !isSuperAdmin.value) {
     loadProducts();
   }
 });

@@ -38,6 +38,16 @@
       </NuxtLink>
 
       <NuxtLink
+        v-if="isSuperAdmin"
+        :to="$localePath('/admin/clienti')"
+        class="h-bg-white rounded-xl shadow p-6 hover:shadow-md transition-shadow"
+      >
+        <i class="ph ph-user-circle text-2xl h-color-palm-leaf mb-3 block"></i>
+        <h2 class="font-semibold h-color-lunar-green">{{ t("customers") }}</h2>
+        <p class="text-sm h-color-lunar-green mt-1">{{ t("customersDesc") }}</p>
+      </NuxtLink>
+
+      <NuxtLink
         v-if="isArtist || isSuperAdmin"
         :to="$localePath('/admin/comenzi')"
         class="h-bg-white rounded-xl shadow p-6 hover:shadow-md transition-shadow"
@@ -73,6 +83,8 @@ onMounted(() => {
     "artistsDesc": "Aprobă cereri de înscriere și gestionează artiștii.",
     "products": "Produse",
     "productsDesc": "Publică și validează produsele.",
+    "customers": "Clienți",
+    "customersDesc": "Caută clienții și actualizează datele de contact direct din tabel.",
     "orders": "Comenzi",
     "ordersDesc": "Urmărește și actualizează statusul comenzilor.",
     "settings": "Setări site",
@@ -85,6 +97,8 @@ onMounted(() => {
     "artistsDesc": "Approve applications and manage artists.",
     "products": "Products",
     "productsDesc": "Publish and review products.",
+    "customers": "Customers",
+    "customersDesc": "Find customers and update contact details directly in the table.",
     "orders": "Orders",
     "ordersDesc": "Track and update order status.",
     "settings": "Site settings",

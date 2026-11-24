@@ -1,5 +1,5 @@
 <template>
-  <aside class="admin-sidebar h-bg-white border-r border-gray-200 p-4 w-full md:w-64 shrink-0">
+  <aside class="admin-sidebar h-bg-white border-r border-gray-200 p-4 w-full md:w-64 shrink-0 md:min-h-0 md:overflow-y-auto">
     <div class="mb-6">
       <NuxtLink :to="$localePath('/admin')" class="font-bold h-color-palm-leaf text-lg">
         {{ t("panelTitle") }}

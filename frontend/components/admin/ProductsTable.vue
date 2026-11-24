@@ -1,58 +1,53 @@
 <template>
   <div>
-    <div v-if="loading" class="flex justify-center py-12">
-      <i class="ph ph-spinner text-3xl animate-spin h-color-primary"></i>
-    </div>
-
-    <DataTable v-else :value="products" striped-rows class="text-sm">
-      <Column field="title" :header="t('title')" />
-      <Column field="status" :header="t('status')">
-        <template #body="{ data }">
-          <span>{{ statusLabel(data.status) }}</span>
-        </template>
-      </Column>
-      <Column v-if="mode === 'review' || mode === 'list'" field="artist.displayName" :header="t('artist')" />
-      <Column :header="t('price')">
-        <template #body="{ data }">{{ data.price }} RON</template>
-      </Column>
-      <Column v-if="mode === 'review'" :header="t('changes')">
-        <template #body="{ data }">
-          <span
-            v-if="data.pendingProposal"
-            class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800"
-          >
-            {{ changeCount(data) }} {{ t('changesCountLabel') }}
-          </span>
-          <span v-else class="text-xs text-gray-500">{{ t('newProduct') }}</span>
-        </template>
-      </Column>
-      <Column :header="t('actions')">
-        <template #body="{ data }">
-          <div class="flex flex-wrap gap-2">
+    <AdminDataTable
+      table-key="admin-products"
+      :rows="tableRows"
+      :columns="columns"
+      :loading="loading"
+      track-changes
+      :search-fields="['title', 'status', 'artistName', 'category']"
+      :search-placeholder="t('searchPlaceholder')"
+      :empty-label="t('empty')"
+      :pin-to-top="isAwaitingReview"
+      :row-class="reviewRowClass"
+      @changed="emit('refresh')"
+    >
+      <template v-if="mode === 'review'" #cell-changes="{ row }">
+        <span
+          v-if="row.pendingProposal"
+          class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800"
+        >
+          {{ changeCount(row) }} {{ t('changesCountLabel') }}
+        </span>
+        <span v-else class="text-xs text-gray-500">{{ t('newProduct') }}</span>
+      </template>
+      <template #actions="{ row }">
+          <div class="flex flex-nowrap gap-2">
             <Button
-              v-if="mode === 'artist' && ['DRAFT', 'REJECTED'].includes(data.status)"
+              v-if="mode === 'artist' && ['DRAFT', 'REJECTED'].includes(row.status)"
               size="small"
               :label="t('edit')"
-              @click="editProduct(data)"
+              @click="editProduct(row)"
             />
             <Button
-              v-if="mode === 'artist' && data.status === 'APPROVED' && !data.pendingProposal"
+              v-if="mode === 'artist' && row.status === 'APPROVED' && !row.pendingProposal"
               size="small"
               :label="t('editListed')"
-              @click="editListedProduct(data)"
+              @click="editListedProduct(row)"
             />
             <Button
-              v-if="mode === 'artist' && ['DRAFT', 'REJECTED'].includes(data.status)"
+              v-if="mode === 'artist' && ['DRAFT', 'REJECTED'].includes(row.status)"
               size="small"
               severity="success"
               :label="t('submit')"
-              @click="emit('submit', data.id)"
+              @click="emit('submit', row.id)"
             />
             <Button
-              v-if="mode === 'artist' && data.status === 'PENDING_ARTIST_CONFIRMATION'"
+              v-if="mode === 'artist' && row.status === 'PENDING_ARTIST_CONFIRMATION'"
               size="small"
               :label="t('acceptChanges')"
-              @click="emit('accept-changes', data.id)"
+              @click="emit('accept-changes', row.id)"
             />
             <Button
               v-if="mode === 'review' || mode === 'list'"
@@ -60,13 +55,13 @@
               severity="secondary"
               icon="ph ph-list-bullets"
               :label="t('details')"
-              @click="openDetails(data)"
+              @click="openDetails(row)"
             />
             <Button
               v-if="(mode === 'review' || mode === 'list') && isSuperAdmin"
               size="small"
               :label="t('edit')"
-              @click="editProductAsAdmin(data)"
+              @click="editProductAsAdmin(row)"
             />
             <Button
               v-if="mode === 'review' || mode === 'list'"
@@ -74,39 +69,38 @@
               severity="secondary"
               icon="ph ph-eye"
               :label="t('preview')"
-              @click="openPreview(data)"
+              @click="openPreview(row)"
             />
             <Button
               v-if="mode === 'review'"
               size="small"
               severity="success"
               :label="t('approve')"
-              @click="emit('approve', data.id)"
+              @click="emit('approve', row.id)"
             />
             <Button
               v-if="mode === 'review'"
               size="small"
               severity="danger"
               :label="t('reject')"
-              @click="emit('reject', data)"
+              @click="emit('reject', asProduct(row))"
             />
             <Button
               size="small"
               severity="danger"
               icon="ph ph-trash"
               :label="t('delete')"
-              @click="openDeleteDialog(data)"
+              @click="openDeleteDialog(row)"
             />
           </div>
           <p
-            v-if="mode === 'artist' && data.status === 'PENDING_UPDATE_REVIEW'"
+            v-if="mode === 'artist' && row.status === 'PENDING_UPDATE_REVIEW'"
             class="text-xs text-amber-700 mt-2 m-0"
           >
             {{ t("updateReviewPending") }}
           </p>
         </template>
-      </Column>
-    </DataTable>
+    </AdminDataTable>
 
     <Dialog
       v-model:visible="deleteDialogVisible"
@@ -136,12 +130,12 @@
 </template>
 
 <script setup lang="ts">
-import DataTable from "primevue/datatable";
-import Column from "primevue/column";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import { useToast } from "primevue/usetoast";
 import type { AdminProduct } from "~/types/product";
+import type { AdminTableColumn, AdminTableRow } from "~/types/admin-table";
+import AdminDataTable from "~/components/admin/AdminDataTable.vue";
 import { countProductChanges } from "~/utils/product-changes";
 
 const props = defineProps<{
@@ -181,38 +175,110 @@ const statusLabel = (status: string) => {
   return map[status] ?? status;
 };
 
-const changeCount = (product: AdminProduct) => {
-  if (!product.pendingProposal) return 0;
+const REVIEW_STATUSES = new Set(["PENDING_REVIEW", "PENDING_UPDATE_REVIEW"]);
+
+const isAwaitingReview = (row: AdminTableRow) => REVIEW_STATUSES.has(String(row.status));
+
+const reviewRowClass = (row: AdminTableRow) =>
+  isAwaitingReview(row) ? "admin-data-table__row--review" : "";
+
+const canEditProduct = (row: AdminTableRow) => {
+  if (isSuperAdmin.value) return true;
+  return ["DRAFT", "REJECTED"].includes(String(row.status));
+};
+
+const statusOptions = computed(() =>
+  ["DRAFT", "PENDING_REVIEW", "PENDING_UPDATE_REVIEW", "PENDING_ARTIST_CONFIRMATION", "APPROVED", "REJECTED"].map(
+    (value) => ({ value, label: statusLabel(value) }),
+  ),
+);
+
+const tableRows = computed<AdminTableRow[]>(() =>
+  props.products.map((product) => ({
+    ...product,
+    artistName: product.artist?.displayName || "",
+    price: Number(product.price),
+    stockQuantity: Number(product.stockQuantity ?? 0),
+    rowLabel: product.title,
+  })),
+);
+
+const columns = computed<AdminTableColumn[]>(() => {
+  const cols: AdminTableColumn[] = [
+    { field: "title", header: t("title"), width: "28%" },
+    {
+      field: "status",
+      header: t("status"),
+      filter: "select",
+      filterOptions: statusOptions.value,
+      format: (value) => statusLabel(String(value)),
+      width: "12%",
+    },
+  ];
+  if (props.mode === "review" || props.mode === "list") {
+    cols.push({ field: "artistName", header: t("artist"), width: "14%" });
+  }
+  cols.push(
+    { field: "category", header: t("category"), width: "12%" },
+    {
+      field: "price",
+      header: t("price"),
+      editable: "number",
+      editKind: "product-fields",
+      canEdit: canEditProduct,
+      format: (value) => `${value} RON`,
+      width: "10%",
+    },
+    {
+      field: "stockQuantity",
+      header: t("stock"),
+      editable: "number",
+      editKind: "product-fields",
+      canEdit: canEditProduct,
+      width: "8%",
+    },
+  );
+  if (props.mode === "review") {
+    cols.push({ field: "changes", header: t("changes"), sortable: false, minWidth: "9rem" });
+  }
+  return cols;
+});
+
+const asProduct = (row: AdminTableRow) => row as unknown as AdminProduct;
+
+const changeCount = (product: AdminTableRow) => {
+  const item = asProduct(product);
+  if (!item.pendingProposal) return 0;
   return countProductChanges(
-    product,
-    product.pendingProposal.changes,
+    item,
+    item.pendingProposal.changes,
     locale.value,
   );
 };
 
-const editProduct = (product: AdminProduct) => {
+const editProduct = (product: AdminTableRow) => {
   router.push(localePath(`/admin/produse/${product.id}/editare`));
 };
 
-const editListedProduct = (product: AdminProduct) => {
+const editListedProduct = (product: AdminTableRow) => {
   router.push(localePath(`/admin/produse/${product.id}/modificare`));
 };
 
-const openDetails = (product: AdminProduct) => {
+const openDetails = (product: AdminTableRow) => {
   router.push(localePath(`/admin/produse/${product.id}/detalii`));
 };
 
-const editProductAsAdmin = (product: AdminProduct) => {
+const editProductAsAdmin = (product: AdminTableRow) => {
   router.push(localePath(`/admin/produse/${product.id}/editare-admin`));
 };
 
-const openPreview = (product: AdminProduct) => {
+const openPreview = (product: AdminTableRow) => {
   const path = localePath(`/admin/produse/${product.id}/previzualizare`);
   window.open(path, "_blank", "noopener,noreferrer");
 };
 
-const openDeleteDialog = (product: AdminProduct) => {
-  productToDelete.value = product;
+const openDeleteDialog = (product: AdminTableRow) => {
+  productToDelete.value = asProduct(product);
   deleteDialogVisible.value = true;
 };
 
@@ -241,10 +307,6 @@ const confirmDelete = async () => {
   }
 };
 
-watch(
-  () => props.products,
-  () => {},
-);
 </script>
 
 <i18n lang="json">
@@ -254,6 +316,10 @@ watch(
     "status": "Status",
     "artist": "Artist",
     "price": "Preț",
+    "category": "Categorie",
+    "stock": "Stoc",
+    "searchPlaceholder": "Caută titlu, categorie sau artist...",
+    "empty": "Niciun produs nu corespunde filtrelor.",
     "changes": "Modificări",
     "changesCountLabel": "modificări",
     "actions": "Acțiuni",
@@ -286,6 +352,10 @@ watch(
     "status": "Status",
     "artist": "Artist",
     "price": "Price",
+    "category": "Category",
+    "stock": "Stock",
+    "searchPlaceholder": "Search title, category, or artist...",
+    "empty": "No products match the current filters.",
     "changes": "Changes",
     "changesCountLabel": "changes",
     "actions": "Actions",

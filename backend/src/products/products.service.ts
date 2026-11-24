@@ -231,6 +231,32 @@ export class ProductsService {
     return this.productsRepository.save(product);
   }
 
+  async updateCatalogFields(
+    user: User,
+    id: number,
+    patch: { price?: number; stockQuantity?: number; inStock?: boolean },
+  ): Promise<Product> {
+    const product = await this.findOneForAdmin(user, id);
+
+    if (user.role === UserRole.ARTIST && !EDITABLE_STATUSES.has(product.status)) {
+      throw new BadRequestException(
+        'Only draft or rejected products can be edited from the table',
+      );
+    }
+
+    if (patch.price !== undefined) {
+      product.price = patch.price;
+    }
+    if (patch.stockQuantity !== undefined) {
+      product.stockQuantity = patch.stockQuantity;
+    }
+    if (patch.inStock !== undefined) {
+      product.inStock = patch.inStock;
+    }
+
+    return this.productsRepository.save(product);
+  }
+
   async findActiveDraftForArtist(userId: number): Promise<Product | null> {
     const { artist } = await this.resolveSellerArtist(userId);
 

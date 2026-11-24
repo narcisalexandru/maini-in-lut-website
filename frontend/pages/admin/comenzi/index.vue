@@ -1,7 +1,8 @@
 <template>
-  <div>
-    <h1 class="text-2xl font-bold h-color-lunar-green mb-6">{{ t("title") }}</h1>
+  <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <h1 class="mb-2 shrink-0 text-xl font-bold h-color-lunar-green">{{ t("title") }}</h1>
     <AdminOrdersPanel
+      contained
       :show-artist-filter="isSuperAdmin"
       :show-customer-links="isSuperAdmin"
     />

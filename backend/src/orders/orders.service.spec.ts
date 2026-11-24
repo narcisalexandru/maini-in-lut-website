@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -91,22 +90,25 @@ describe('OrdersService', () => {
     expect(ordersRepository.save).not.toHaveBeenCalled();
   });
 
-  it('blocks item updates before payment is confirmed', async () => {
+  it('updates item status before payment is confirmed', async () => {
     const orderItemsRepository = service['orderItemsRepository'] as jest.Mocked<
       Repository<OrderItem>
     >;
-    orderItemsRepository.findOne.mockResolvedValue({
+    const item = {
       id: 5,
       artistId: 2,
+      status: 'PENDING',
       order: { paymentStatus: OrderPaymentStatus.PENDING },
-    } as OrderItem);
+    } as OrderItem;
+    orderItemsRepository.findOne.mockResolvedValue(item);
+    orderItemsRepository.save.mockImplementation(async (value) => value as OrderItem);
 
-    await expect(
-      service.updateItemStatus(
-        { id: 1, role: UserRole.SUPER_ADMIN } as never,
-        5,
-        'PROCESSING' as never,
-      ),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    const result = await service.updateItemStatus(
+      { id: 1, role: UserRole.SUPER_ADMIN } as never,
+      5,
+      'PROCESSING' as never,
+    );
+
+    expect(result.status).toBe('PROCESSING');
   });
 });

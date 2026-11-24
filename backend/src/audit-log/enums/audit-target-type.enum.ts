@@ -3,4 +3,5 @@ export enum AuditTargetType {
   PRODUCT = 'PRODUCT',
   ORDER = 'ORDER',
   ORDER_ITEM = 'ORDER_ITEM',
+  CUSTOMER = 'CUSTOMER',
 }

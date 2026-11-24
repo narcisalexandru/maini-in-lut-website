@@ -122,6 +122,37 @@ export class UsersService {
     return this.findOne(id) as Promise<User>;
   }
 
+  async updateClientContact(
+    id: number,
+    patch: { first_name?: string; last_name?: string; phone?: string | null },
+  ): Promise<User> {
+    const user = await this.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    const update: Partial<User> = {};
+    if (patch.first_name !== undefined) {
+      update.first_name = patch.first_name;
+    }
+    if (patch.last_name !== undefined) {
+      update.last_name = patch.last_name;
+    }
+    if (patch.phone !== undefined) {
+      if (patch.phone === null) {
+        update.phone = null;
+      } else {
+        const phone = normalizeRomanianPhone(patch.phone);
+        if (!phone) {
+          throw new BadRequestException('Invalid phone number');
+        }
+        update.phone = phone;
+      }
+    }
+
+    await this.usersRepository.update(id, update);
+    return this.findOne(id) as Promise<User>;
+  }
+
   async updateAddress(
     id: number,
     updateData: Partial<User>,

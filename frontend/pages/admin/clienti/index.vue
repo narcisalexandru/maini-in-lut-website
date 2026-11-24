@@ -2,48 +2,29 @@
   <div>
     <h1 class="text-2xl font-bold h-color-lunar-green mb-6">{{ t("title") }}</h1>
 
-    <AdminFiltersBar
-      :search="searchFilter"
-      :status="null"
-      :status-options="[]"
-      :show-status-filter="false"
-      :show-search="true"
+    <AdminDataTable
+      table-key="admin-customers"
+      :rows="customerRows"
+      :columns="columns"
+      :loading="loading"
+      track-changes
+      :search-fields="['first_name', 'last_name', 'email', 'phone', 'city']"
       :search-placeholder="t('searchPlaceholder')"
-      @update:search="searchFilter = $event"
-      @clear="searchFilter = ''"
-    />
-
-    <div v-if="loading" class="flex justify-center py-12">
-      <i class="ph ph-spinner text-3xl animate-spin h-color-primary"></i>
-    </div>
-
-    <DataTable v-else :value="filteredUsers" striped-rows class="text-sm">
-      <Column :header="t('name')">
-        <template #body="{ data }">
-          {{ data.first_name }} {{ data.last_name }}
-        </template>
-      </Column>
-      <Column field="email" :header="t('email')" />
-      <Column field="phone" :header="t('phone')">
-        <template #body="{ data }">{{ data.phone || "—" }}</template>
-      </Column>
-      <Column field="role" :header="t('role')" />
-      <Column :header="t('actions')">
-        <template #body="{ data }">
-          <NuxtLink :to="localePath(`/admin/clienti/${data.id}`)">
-            <Button size="small" severity="secondary" :label="t('view')" />
-          </NuxtLink>
-        </template>
-      </Column>
-    </DataTable>
+      :empty-label="t('empty')"
+      @changed="loadCustomers(true)"
+    >
+      <template #actions="{ row }">
+        <NuxtLink :to="localePath(`/admin/clienti/${row.id}`)">
+          <Button size="small" severity="secondary" :label="t('view')" />
+        </NuxtLink>
+      </template>
+    </AdminDataTable>
   </div>
 </template>
 
 <script setup>
-import DataTable from "primevue/datatable";
-import Column from "primevue/column";
 import Button from "primevue/button";
-import AdminFiltersBar from "~/components/admin/AdminFiltersBar.vue";
+import AdminDataTable from "~/components/admin/AdminDataTable.vue";
 import { useToast } from "primevue/usetoast";
 
 definePageMeta({
@@ -55,33 +36,63 @@ const { t } = useI18n({ useScope: "local" });
 const toast = useToast();
 const localePath = useLocalePath();
 const { listUsers } = useUsers();
+const { getAllOrders } = useOrders();
 
 const users = ref([]);
+const buyerIds = ref(new Set());
 const loading = ref(true);
-const searchFilter = ref("");
 
-const filteredUsers = computed(() => {
-  const clients = users.value.filter((user) => user.role === "CLIENT");
-  const query = searchFilter.value.trim().toLowerCase();
-  if (!query) return clients;
+const customerRows = computed(() =>
+  users.value
+    .filter((user) => user.role === "CLIENT" || buyerIds.value.has(user.id))
+    .map((user) => ({
+      ...user,
+      city: user.city || "",
+      phone: user.phone || "",
+      rowLabel: `${user.first_name} ${user.last_name}`.trim(),
+    })),
+);
 
-  return clients.filter((user) => {
-    const haystack = [
-      user.first_name,
-      user.last_name,
-      user.email,
-      user.phone,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    return haystack.includes(query);
-  });
-});
+const columns = computed(() => [
+  {
+    field: "first_name",
+    header: t("firstName"),
+    editable: "text",
+    editKind: "customer-fields",
+    minWidth: "10rem",
+  },
+  {
+    field: "last_name",
+    header: t("lastName"),
+    editable: "text",
+    editKind: "customer-fields",
+    minWidth: "10rem",
+  },
+  { field: "email", header: t("email"), minWidth: "14rem" },
+  {
+    field: "phone",
+    header: t("phone"),
+    editable: "text",
+    editKind: "customer-fields",
+    minWidth: "10rem",
+  },
+  { field: "city", header: t("city"), minWidth: "9rem" },
+]);
 
-onMounted(async () => {
+const loadCustomers = async (silent = false) => {
+  if (!silent) loading.value = true;
   try {
-    users.value = await listUsers();
+    const [listed, activeOrders, archivedOrders] = await Promise.all([
+      listUsers(),
+      getAllOrders({ archived: false }),
+      getAllOrders({ archived: true }),
+    ]);
+    users.value = listed;
+    buyerIds.value = new Set(
+      [...activeOrders, ...archivedOrders]
+        .map((order) => order.userId)
+        .filter((id) => typeof id === "number"),
+    );
   } catch (error) {
     toast.add({
       severity: "error",
@@ -90,9 +101,11 @@ onMounted(async () => {
       life: 4000,
     });
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
-});
+};
+
+onMounted(loadCustomers);
 </script>
 
 <i18n lang="json">
@@ -100,10 +113,12 @@ onMounted(async () => {
   "ro": {
     "title": "Clienți",
     "searchPlaceholder": "Caută după nume sau email...",
-    "name": "Nume",
+    "firstName": "Prenume",
+    "lastName": "Nume",
     "email": "Email",
     "phone": "Telefon",
-    "role": "Rol",
+    "city": "Oraș",
+    "empty": "Niciun client nu corespunde filtrelor.",
     "actions": "Acțiuni",
     "view": "Vezi",
     "error": "Eroare"
@@ -111,10 +126,12 @@ onMounted(async () => {
   "en": {
     "title": "Customers",
     "searchPlaceholder": "Search by name or email...",
-    "name": "Name",
+    "firstName": "First name",
+    "lastName": "Last name",
     "email": "Email",
     "phone": "Phone",
-    "role": "Role",
+    "city": "City",
+    "empty": "No customers match the current filters.",
     "actions": "Actions",
     "view": "View",
     "error": "Error"

@@ -293,13 +293,6 @@ export class OrdersService {
       throw new ForbiddenException('Insufficient permissions');
     }
 
-    const orderAccepted = item.order.paymentStatus === OrderPaymentStatus.PAID;
-    if (!orderAccepted) {
-      throw new BadRequestException(
-        'Order items can only be updated after the order is accepted',
-      );
-    }
-
     const previousStatus = item.status;
     item.status = status;
     item.statusUpdatedAt = new Date();

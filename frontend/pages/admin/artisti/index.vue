@@ -2,97 +2,71 @@
   <div>
     <h1 class="text-2xl font-bold h-color-lunar-green mb-6">{{ t("title") }}</h1>
 
-    <AdminFiltersBar
-      :search="searchFilter"
-      :status="statusFilter"
-      :status-options="artistStatusOptions"
+    <AdminDataTable
+      table-key="admin-artists"
+      :rows="artistRows"
+      :columns="columns"
+      :loading="loading"
+      :search-fields="['displayName', 'email', 'contactPhone', 'status']"
       :search-placeholder="t('searchPlaceholder')"
-      @update:search="searchFilter = $event"
-      @update:status="statusFilter = $event"
-      @clear="clearFilters"
-    />
-
-    <div v-if="loading" class="flex justify-center py-12">
-      <i class="ph ph-spinner text-3xl animate-spin h-color-primary"></i>
-    </div>
-
-    <DataTable v-else :value="filteredArtists" striped-rows class="text-sm">
-      <Column field="displayName" :header="t('name')" />
-      <Column :header="t('email')">
-        <template #body="{ data }">
-          {{ data.user?.email || "—" }}
-        </template>
-      </Column>
-      <Column :header="t('status')">
-        <template #body="{ data }">
-          {{ statusLabel(data.status) }}
-        </template>
-      </Column>
-      <Column :header="t('actions')">
-        <template #body="{ data }">
+      :empty-label="t('empty')"
+    >
+      <template #actions="{ row }">
           <div class="flex flex-wrap gap-2">
-            <NuxtLink :to="localePath(`/admin/artisti/${data.id}`)">
+            <NuxtLink :to="localePath(`/admin/artisti/${row.id}`)">
               <Button size="small" severity="secondary" :label="t('view')" />
             </NuxtLink>
-            <template v-if="data.status === 'PENDING'">
+            <template v-if="row.status === 'PENDING'">
               <Button
                 size="small"
                 :label="t('approve')"
-                @click="handleApprove(data.id)"
+                @click="handleApprove(row.id)"
               />
               <Button
                 size="small"
                 severity="danger"
                 :label="t('reject')"
-                @click="openReject(data)"
+                @click="openReject(row)"
               />
             </template>
-            <template v-else-if="data.status === 'APPROVED'">
+            <template v-else-if="row.status === 'APPROVED'">
               <Button
                 size="small"
                 severity="warn"
                 :label="t('suspend')"
-                @click="openSuspend(data)"
+                @click="openSuspend(row)"
               />
               <Button
                 size="small"
                 severity="danger"
                 :label="t('deleteAccount')"
-                @click="openDelete(data)"
+                @click="openDelete(row)"
               />
             </template>
-            <template v-else-if="data.status === 'SUSPENDED'">
+            <template v-else-if="row.status === 'SUSPENDED'">
               <Button
                 size="small"
                 :label="t('reactivate')"
-                @click="handleReactivate(data.id)"
+                @click="handleReactivate(row.id)"
               />
               <Button
                 size="small"
                 severity="danger"
                 :label="t('deleteAccount')"
-                @click="openDelete(data)"
+                @click="openDelete(row)"
               />
             </template>
-            <template v-else-if="data.status === 'REJECTED'">
+            <template v-else-if="row.status === 'REJECTED'">
               <Button
                 size="small"
                 severity="danger"
                 :label="t('deleteAccount')"
-                @click="openDelete(data)"
+                @click="openDelete(row)"
               />
             </template>
           </div>
-        </template>
-      </Column>
-    </DataTable>
-
-    <p
-      v-if="!loading && !filteredArtists.length"
-      class="text-center h-color-lunar-green py-8"
-    >
-      {{ t("empty") }}
-    </p>
+      </template>
+    </AdminDataTable>
 
     <Dialog
       v-model:visible="rejectDialogVisible"
@@ -143,12 +117,10 @@
 </template>
 
 <script setup>
-import DataTable from "primevue/datatable";
-import Column from "primevue/column";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import Textarea from "primevue/textarea";
-import AdminFiltersBar from "~/components/admin/AdminFiltersBar.vue";
+import AdminDataTable from "~/components/admin/AdminDataTable.vue";
 import { useToast } from "primevue/usetoast";
 
 definePageMeta({
@@ -163,8 +135,6 @@ const { listArtists, approveArtist, rejectArtist, suspendArtist, reactivateArtis
 
 const artists = ref([]);
 const loading = ref(true);
-const searchFilter = ref("");
-const statusFilter = ref(null);
 const rejectDialogVisible = ref(false);
 const suspendDialogVisible = ref(false);
 const deleteDialogVisible = ref(false);
@@ -183,35 +153,32 @@ const statusLabel = (status) =>
   artistStatusOptions.value.find((option) => option.value === status)?.label ||
   status;
 
-const filteredArtists = computed(() => {
-  const query = searchFilter.value.trim().toLowerCase();
-  if (!query) return artists.value;
+const artistRows = computed(() =>
+  artists.value.map((artist) => ({
+    ...artist,
+    email: artist.user?.email || artist.contactEmail || "",
+    contactPhone: artist.contactPhone || artist.user?.phone || "",
+  })),
+);
 
-  return artists.value.filter((artist) => {
-    const haystack = [
-      artist.displayName,
-      artist.user?.email,
-      artist.user?.first_name,
-      artist.user?.last_name,
-      artist.contactEmail,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return haystack.includes(query);
-  });
-});
-
-const clearFilters = () => {
-  searchFilter.value = "";
-  statusFilter.value = null;
-};
+const columns = computed(() => [
+  { field: "displayName", header: t("name"), minWidth: "12rem" },
+  { field: "email", header: t("email"), minWidth: "14rem" },
+  { field: "contactPhone", header: t("phone"), minWidth: "9rem" },
+  {
+    field: "status",
+    header: t("status"),
+    filter: "select",
+    filterOptions: artistStatusOptions.value,
+    format: (value) => statusLabel(value),
+    minWidth: "10rem",
+  },
+]);
 
 const loadArtists = async () => {
   loading.value = true;
   try {
-    artists.value = await listArtists(statusFilter.value || undefined);
+    artists.value = await listArtists();
   } catch (error) {
     toast.add({
       severity: "error",
@@ -223,10 +190,6 @@ const loadArtists = async () => {
     loading.value = false;
   }
 };
-
-watch(statusFilter, () => {
-  loadArtists();
-});
 
 const handleApprove = async (id) => {
   try {
@@ -310,6 +273,7 @@ onMounted(loadArtists);
     "searchPlaceholder": "Caută după nume sau email...",
     "name": "Atelier",
     "email": "Email",
+    "phone": "Telefon",
     "status": "Status",
     "actions": "Acțiuni",
     "view": "Detalii",
@@ -343,6 +307,7 @@ onMounted(loadArtists);
     "searchPlaceholder": "Search by name or email...",
     "name": "Studio",
     "email": "Email",
+    "phone": "Phone",
     "status": "Status",
     "actions": "Actions",
     "view": "Details",
