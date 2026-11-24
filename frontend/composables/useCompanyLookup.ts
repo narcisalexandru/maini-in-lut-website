@@ -1,3 +1,5 @@
+import { apiRequest } from "~/utils/api-request";
+
 export interface CompanyLookupResult {
   name: string;
   cui: string;
@@ -16,16 +18,11 @@ export function useCompanyLookup() {
       return null;
     }
 
-    const base =
-      import.meta.env.VITE_BACKEND_URL ||
-      useRuntimeConfig().public.apiBase ||
-      "";
-
     loading.value = true;
     error.value = "";
 
     try {
-      const response = await fetch(`${base}/checkout/company/${cleaned}`);
+      const response = await apiRequest(`/checkout/company/${cleaned}`);
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {

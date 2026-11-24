@@ -1,6 +1,12 @@
 <template>
   <div class="maini-ui__section md:px-4">
-    <div class="maini-ui__container-products py-12 text-center max-w-lg mx-auto">
+    <div v-if="verifying" class="maini-ui__container-products py-16 text-center max-w-lg mx-auto">
+      <i class="ph ph-circle-notch animate-spin text-5xl h-color-primary block mb-4"></i>
+      <h2 class="text-xl font-bold h-color-lunar-green mb-2">{{ t("verifyingTitle") }}</h2>
+      <p class="text-gray-600 text-sm">{{ t("verifyingMessage") }}</p>
+    </div>
+
+    <div v-else class="maini-ui__container-products py-12 text-center max-w-lg mx-auto">
       <nav
         class="flex mb-6 text-sm h-color-dusty-gray justify-center"
         aria-label="Breadcrumb"
@@ -40,6 +46,8 @@
 </template>
 
 <script setup>
+import { getApiBaseUrl } from "~/utils/api-base";
+
 defineI18nRoute({
   paths: {
     ro: "/plata/anulata",
@@ -48,6 +56,45 @@ defineI18nRoute({
 });
 
 const { t } = useI18n({ useScope: "local" });
+const route = useRoute();
+const router = useRouter();
+const localePath = useLocalePath();
+const { clearCart } = useCart();
+
+const verifying = ref(true);
+
+onMounted(async () => {
+  const queryOrderId = (route.query.orderId || route.query.orderID || route.query.order_id);
+  const storedOrderId = import.meta.client ? sessionStorage.getItem("last_checkout_order_id") : null;
+  const orderId = (typeof queryOrderId === "string" && queryOrderId.trim()) ? queryOrderId.trim() : storedOrderId;
+
+  if (orderId) {
+    try {
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        const res = await fetch(
+          `${getApiBaseUrl()}/checkout/order-status/${encodeURIComponent(orderId)}`,
+          { cache: "no-store" },
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (String(data?.paymentStatus || "").toLowerCase() === "paid") {
+            await clearCart();
+            if (import.meta.client) {
+              sessionStorage.removeItem("last_checkout_order_id");
+            }
+            await router.replace(localePath(`/plata/succes?orderId=${encodeURIComponent(orderId)}`));
+            return;
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      }
+    } catch {
+      // Continue to show cancelled UI on check failure
+    }
+  }
+
+  verifying.value = false;
+});
 </script>
 
 <i18n lang="json">
@@ -57,6 +104,8 @@ const { t } = useI18n({ useScope: "local" });
       "home": "Home",
       "cancelled": "Payment cancelled"
     },
+    "verifyingTitle": "Checking payment status...",
+    "verifyingMessage": "Please wait a moment while we verify your transaction status.",
     "title": "Payment cancelled",
     "message": "You cancelled the payment. Your cart has been preserved. You can complete the order whenever you want.",
     "backToCart": "Back to cart"
@@ -66,6 +115,8 @@ const { t } = useI18n({ useScope: "local" });
       "home": "Acasă",
       "cancelled": "Plată anulată"
     },
+    "verifyingTitle": "Verificăm starea plății...",
+    "verifyingMessage": "Te rugăm să aștepți câteva momente cât timp verificăm starea tranzacției tale.",
     "title": "Plata a fost anulată",
     "message": "Ai anulat plata. Coșul tău a rămas neschimbat. Poți finaliza comanda oricând.",
     "backToCart": "Înapoi la coș"

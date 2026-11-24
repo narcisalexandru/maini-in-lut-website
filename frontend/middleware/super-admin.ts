@@ -5,13 +5,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const localePrefix = to.path.startsWith("/en") ? "/en" : "";
 
-  const token = localStorage.getItem("token");
-  if (!token) {
-    return navigateTo(
-      `${localePrefix}/login?redirect=${encodeURIComponent(to.fullPath)}`,
-    );
-  }
-
   const user = await syncStoredUserProfile();
   if (!user) {
     return navigateTo(

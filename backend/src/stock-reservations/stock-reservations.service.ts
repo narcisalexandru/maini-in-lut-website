@@ -4,7 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, LessThan, Repository } from 'typeorm';
+import { DataSource, LessThan, Repository } from 'typeorm';
+import { Order } from '../orders/entities/order.entity';
 import { Product } from '../products/entities/product.entity';
 import { StockReservation } from './entities/stock-reservation.entity';
 import { STOCK_RESERVATION_TTL_MS } from './stock-reservation.constants';
@@ -121,7 +122,7 @@ export class StockReservationsService {
       }
 
       const maxAvailable = await this.getAvailableForHolder(product, holder);
-      const quantity = Math.min(item.quantity, maxAvailable);
+      const quantity = Math.min(item.quantity, maxAvailable, 10);
       if (quantity <= 0) {
         continue;
       }
@@ -167,14 +168,26 @@ export class StockReservationsService {
   }
 
   async fulfillOrder(
+    publicOrderNumber: string,
     items: ReservationCartItem[],
     holder?: CartHolder,
-  ): Promise<void> {
-    if (!items.length) {
-      return;
+  ): Promise<boolean> {
+    if (!publicOrderNumber || !items.length) {
+      return false;
     }
 
-    await this.dataSource.transaction(async (manager) => {
+    return this.dataSource.transaction(async (manager) => {
+      const claim = await manager
+        .createQueryBuilder()
+        .update(Order)
+        .set({ stockFulfilledAt: new Date() })
+        .where('publicOrderNumber = :publicOrderNumber', { publicOrderNumber })
+        .andWhere('stockFulfilledAt IS NULL')
+        .execute();
+      if (!claim.affected) {
+        return false;
+      }
+
       for (const item of items) {
         const product = await manager.findOne(Product, {
           where: { id: item.productId },
@@ -198,15 +211,11 @@ export class StockReservationsService {
         await manager.save(product);
       }
 
-      const productIds = [...new Set(items.map((item) => item.productId))];
-      await manager.delete(StockReservation, {
-        productId: In(productIds),
-      });
-
       if (holder) {
         const { holderType, holderId } = toHolderColumns(holder);
         await manager.delete(StockReservation, { holderType, holderId });
       }
+      return true;
     });
   }
 }

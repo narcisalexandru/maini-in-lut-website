@@ -401,6 +401,7 @@ import autoAnimate from "@formkit/auto-animate";
 import Dialog from "primevue/dialog";
 import { normalizeRomanianPhone } from "~/utils/phone";
 import { extractApiErrorMessage, formatPhoneApiError } from "~/utils/api-error";
+import { apiRequest } from "~/utils/api-request";
 
 defineI18nRoute({
   paths: {
@@ -422,6 +423,14 @@ const isEditingPhone = ref(false);
 const isLoading = ref(false);
 const toast = useToast();
 const { getBaseUrl } = useApi();
+
+function apiFetch(url, options = {}) {
+  const base = getBaseUrl();
+  const path = String(url).startsWith(base) ? String(url).slice(base.length) : String(url);
+  const headers = new Headers(options.headers || {});
+  headers.delete("Authorization");
+  return apiRequest(path, { ...options, headers });
+}
 const showAllOrders = ref(false);
 const addressContainer = ref(null);
 const phoneContainer = ref(null);
@@ -608,7 +617,7 @@ onMounted(async () => {
 
 const toggleAddressEdit = async () => {
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       `${getBaseUrl()}/users/profile/address-status`,
       {
         headers: {
@@ -696,7 +705,7 @@ const saveAddress = async () => {
 
   isLoading.value = true;
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       `${getBaseUrl()}/users/profile/address`,
       {
         method: "PUT",
@@ -784,7 +793,7 @@ const savePhone = async () => {
 
   isLoading.value = true;
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       `${getBaseUrl()}/users/profile/phone`,
       {
         method: "PUT",
@@ -856,7 +865,7 @@ const showDeleteAccountDialog = () => {
 
 const handleDeleteAccount = async () => {
   try {
-    const response = await fetch(`${getBaseUrl()}/users/profile`, {
+    const response = await apiFetch(`${getBaseUrl()}/users/profile`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",

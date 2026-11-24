@@ -1,7 +1,10 @@
 import {
+  ArrayMaxSize,
   IsArray,
   IsInt,
+  IsOptional,
   IsString,
+  Max,
   Min,
   MinLength,
   ValidateNested,
@@ -15,15 +18,18 @@ class ReservationCartItemDto {
 
   @IsInt()
   @Min(1)
+  @Max(10)
   quantity: number;
 }
 
 export class SyncGuestReservationsDto {
+  @IsOptional()
   @IsString()
   @MinLength(8)
-  guestId: string;
+  guestId?: string;
 
   @IsArray()
+  @ArrayMaxSize(15)
   @ValidateNested({ each: true })
   @Type(() => ReservationCartItemDto)
   items: ReservationCartItemDto[];

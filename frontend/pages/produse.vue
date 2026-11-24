@@ -109,6 +109,7 @@ import { ref, computed, onMounted, nextTick, watch } from "vue";
 import Slider from "primevue/slider";
 import Checkbox from "primevue/checkbox";
 import Select from "primevue/select";
+import { apiRequest } from "~/utils/api-request";
 
 const products = ref([]);
 const categories = ref([]);
@@ -142,9 +143,7 @@ defineI18nRoute({
 
 onMounted(async () => {
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/products`,
-    );
+    const response = await apiRequest("/products");
     const data = await response.json();
     products.value = data;
     categories.value = [...new Set(data.map((p) => p.category))];

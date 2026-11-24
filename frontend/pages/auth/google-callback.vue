@@ -16,31 +16,21 @@ definePageMeta({
 });
 
 const router = useRouter();
-const route = useRoute();
 const localePath = useLocalePath();
-const { loadUser } = useAuth();
+const { loadUser, isAuthenticated } = useAuth();
 
 onMounted(async () => {
   try {
-    const tokenParam = route.query.token as string;
-    if (!tokenParam) {
-      throw new Error("No token found in URL");
-    }
-
-    const data = JSON.parse(decodeURIComponent(tokenParam));
-    if (data.access_token) {
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      await loadUser();
-      const { mergeGuestFavorites } = useFavorites();
-      const { mergeGuestCart } = useCart();
-      await mergeGuestFavorites();
-      await mergeGuestCart();
-      await router.push(localePath("/"));
-    } else {
-      console.error("No access token found in response");
+    await loadUser();
+    if (!isAuthenticated.value) {
       await router.push(localePath("/login"));
+      return;
     }
+    const { mergeGuestFavorites } = useFavorites();
+    const { mergeGuestCart } = useCart();
+    await mergeGuestFavorites();
+    await mergeGuestCart();
+    await router.push(localePath("/"));
   } catch (error) {
     console.error("Failed to process Google login:", error);
     await router.push(localePath("/login"));

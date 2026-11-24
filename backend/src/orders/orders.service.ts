@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomBytes } from 'crypto';
 import { Order, OrderBillingDetails } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import {
@@ -73,8 +74,8 @@ export class OrdersService {
     private readonly artistsService: ArtistsService,
   ) {}
 
-  generatePublicOrderNumber(prefix: 'MIL' | 'COD'): string {
-    return `${prefix}-${Date.now()}`;
+  generatePublicOrderNumber(): string {
+    return `MIL-${randomBytes(16).toString('hex')}`;
   }
 
   async createCardOrder(input: CreateOrderInput): Promise<Order> {
@@ -82,16 +83,7 @@ export class OrdersService {
       ...input,
       paymentMethod: PaymentMethod.CARD,
       paymentStatus: OrderPaymentStatus.PENDING,
-      publicOrderNumber: this.generatePublicOrderNumber('MIL'),
-    });
-  }
-
-  async createCashOrder(input: CreateOrderInput): Promise<Order> {
-    return this.persistOrder({
-      ...input,
-      paymentMethod: PaymentMethod.CASH,
-      paymentStatus: OrderPaymentStatus.PAID,
-      publicOrderNumber: this.generatePublicOrderNumber('COD'),
+      publicOrderNumber: this.generatePublicOrderNumber(),
     });
   }
 
@@ -138,6 +130,20 @@ export class OrdersService {
       return order;
     }
     order.confirmationSentAt = new Date();
+    return this.ordersRepository.save(order);
+  }
+
+  async updateNetopiaNtpId(
+    publicOrderNumber: string,
+    netopiaNtpId: string,
+  ): Promise<Order | null> {
+    const order = await this.ordersRepository.findOne({
+      where: { publicOrderNumber },
+    });
+    if (!order) {
+      return null;
+    }
+    order.netopiaNtpId = netopiaNtpId;
     return this.ordersRepository.save(order);
   }
 
@@ -287,9 +293,10 @@ export class OrdersService {
       throw new ForbiddenException('Insufficient permissions');
     }
 
-    if (item.order.paymentStatus !== OrderPaymentStatus.PAID) {
+    const orderAccepted = item.order.paymentStatus === OrderPaymentStatus.PAID;
+    if (!orderAccepted) {
       throw new BadRequestException(
-        'Order items can only be updated after payment is confirmed',
+        'Order items can only be updated after the order is accepted',
       );
     }
 

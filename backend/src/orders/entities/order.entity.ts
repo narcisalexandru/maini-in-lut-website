@@ -75,6 +75,9 @@ export class Order {
   })
   paymentStatus: OrderPaymentStatus;
 
+  @Column({ type: 'text', nullable: true })
+  netopiaNtpId: string | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   stockFulfilledAt: Date | null;
 

@@ -1,58 +1,34 @@
 import {
   Controller,
   Get,
-  Headers,
   NotFoundException,
   Param,
   ParseIntPipe,
   Req,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { ProductsService } from './products.service';
 import { toPublicProductResponse } from './utils/product-response.util';
 import { StockReservationsService } from '../stock-reservations/stock-reservations.service';
+import { GuestHolderService } from '../stock-reservations/guest-holder.service';
 import { CartHolder } from '../stock-reservations/types/cart-holder.type';
-
-function resolveHolder(
-  req: Request,
-  guestCartId?: string,
-): CartHolder | undefined {
-  const authHeader = req.headers.authorization;
-  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-    try {
-      const tokenPayload = authHeader.slice(7).trim().split('.')[1];
-      const payload = JSON.parse(
-        Buffer.from(tokenPayload, 'base64url').toString(),
-      ) as { sub?: number };
-      if (payload?.sub) {
-        return { type: 'user', userId: payload.sub };
-      }
-    } catch {
-      // ignore invalid token for optional holder resolution
-    }
-  }
-
-  if (guestCartId?.trim()) {
-    return { type: 'guest', guestId: guestCartId.trim() };
-  }
-
-  return undefined;
-}
+import { ACCESS_TOKEN_COOKIE } from '../auth/auth-cookie.util';
+import { JwtPayload } from '../common/types/jwt-payload.interface';
 
 @Controller('products')
 export class ProductsController {
   constructor(
     private readonly productsService: ProductsService,
     private readonly stockReservationsService: StockReservationsService,
+    private readonly guestHolderService: GuestHolderService,
+    private readonly jwtService: JwtService,
   ) {}
 
   @Get()
-  async findAll(
-    @Req() req: Request,
-    @Headers('x-guest-cart-id') guestCartId?: string,
-  ) {
+  async findAll(@Req() req: Request) {
     const products = await this.productsService.findAllPublic();
-    const holder = resolveHolder(req, guestCartId);
+    const holder = this.resolveHolder(req);
     const availableMap = await this.stockReservationsService.getAvailableStockMap(
       products,
       holder,
@@ -63,20 +39,40 @@ export class ProductsController {
   }
 
   @Get(':id')
-  async findOne(
-    @Req() req: Request,
-    @Param('id', ParseIntPipe) id: number,
-    @Headers('x-guest-cart-id') guestCartId?: string,
-  ) {
+  async findOne(@Req() req: Request, @Param('id', ParseIntPipe) id: number) {
     const product = await this.productsService.findOnePublic(id);
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
-    const holder = resolveHolder(req, guestCartId);
+    const holder = this.resolveHolder(req);
     const available = await this.stockReservationsService.getAvailableForHolder(
       product,
       holder,
     );
     return toPublicProductResponse(product, available);
+  }
+
+  private resolveHolder(req: Request): CartHolder | undefined {
+    const bearer = req.headers.authorization;
+    const token =
+      (typeof bearer === 'string' && bearer.startsWith('Bearer ')
+        ? bearer.slice(7).trim()
+        : '') || req.cookies?.[ACCESS_TOKEN_COOKIE];
+    if (typeof token === 'string' && token) {
+      try {
+        const payload = this.jwtService.verify<JwtPayload>(token);
+        if (payload?.sub) {
+          return { type: 'user', userId: payload.sub };
+        }
+      } catch {
+        // A stale browser cookie must not hide the public catalog.
+      }
+    }
+
+    const guestId = this.guestHolderService.readIfPresent(req);
+    if (guestId) {
+      return { type: 'guest', guestId };
+    }
+    return undefined;
   }
 }

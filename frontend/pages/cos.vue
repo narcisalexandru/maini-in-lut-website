@@ -387,16 +387,7 @@
 
               <section v-else class="space-y-4">
                 <div class="rounded-lg border border-gray-200 p-4">
-                  <label class="flex items-start gap-3">
-                    <input v-model="payOnline" type="radio" :value="true" name="payment" />
-                    <span class="text-sm"><strong>{{ t('payOnline') }}</strong><br />{{ t('payOnlineHint') }}</span>
-                  </label>
-                </div>
-                <div class="rounded-lg border border-gray-200 p-4">
-                  <label class="flex items-start gap-3">
-                    <input v-model="payOnline" type="radio" :value="false" name="payment" />
-                    <span class="text-sm"><strong>{{ t('payOnDelivery') }}</strong><br />{{ t('payOnDeliveryHint') }}</span>
-                  </label>
+                  <p class="text-sm"><strong>{{ t('payOnline') }}</strong><br />{{ t('payOnlineHint') }}</p>
                 </div>
                 <label class="flex items-start gap-2 pt-2 text-sm text-gray-700">
                   <input v-model="termsAccepted" type="checkbox" class="mt-1 shrink-0" @blur="termsTouched = true" />
@@ -431,7 +422,6 @@
               <dl class="space-y-2 mb-4">
                 <div class="flex justify-between text-gray-600"><dt>{{ t('subtotal') }}</dt><dd>{{ subtotal }} RON</dd></div>
                 <div class="flex justify-between text-gray-600"><dt>{{ t('delivery') }}</dt><dd>{{ deliveryFee }} RON</dd></div>
-                <div v-if="cashOperationalFee > 0" class="flex justify-between text-gray-600"><dt>{{ t('cashOperationalFee') }}</dt><dd>{{ cashOperationalFee }} RON</dd></div>
                 <div class="flex justify-between text-xl font-bold h-color-lunar-green pt-2 border-t border-gray-200"><dt>{{ t('total') }}</dt><dd>{{ total }} RON</dd></div>
               </dl>
 
@@ -501,13 +491,22 @@
 import { normalizeRomanianPhone } from '~/utils/phone';
 import { extractApiErrorMessage, formatPhoneApiError } from '~/utils/api-error';
 import { syncStoredUserProfile } from '~/utils/sync-user-profile';
-import { getOrCreateGuestCartId, buildGuestCartHeaders } from '~/utils/guest-cart-id';
+import { apiRequest } from '~/utils/api-request';
 import { getProductStockQuantity } from '~/utils/product-stock';
 import { getProductPrimaryImageUrl } from '~/utils/product-image';
 defineI18nRoute({ paths: { ro: '/cos', en: '/cart' } });
 const { t } = useI18n({ useScope: 'local' });
 const { cartItems, setQuantity, removeFromCart, clearCart, refreshGuestReservations } = useCart();
 const { getBaseUrl } = useApi();
+const { user: authUser, isAuthenticated, setAuthData } = useAuthState();
+
+function apiFetch(url, options = {}) {
+  const base = getBaseUrl();
+  const path = String(url).startsWith(base) ? String(url).slice(base.length) : String(url);
+  const headers = new Headers(options.headers || {});
+  headers.delete('Authorization');
+  return apiRequest(path, { ...options, headers });
+}
 const localePath = useLocalePath();
 const router = useRouter();
 const route = useRoute();
@@ -517,7 +516,6 @@ const checkoutLoading = ref(false);
 const checkoutError = ref('');
 const isLoggedIn = ref(false);
 const currentStep = ref(1);
-const payOnline = ref(true);
 const termsAccepted = ref(false);
 const termsTouched = ref(false);
 const guestSubmitAttempted = ref(false);
@@ -596,9 +594,8 @@ const recommendedProducts = computed(() => {
 });
 const subtotal = computed(() => cartProducts.value.reduce((sum, { product, quantity }) => sum + Number(product.price) * quantity, 0));
 const deliveryFee = computed(() => 15);
-const cashOperationalFee = computed(() => (payOnline.value ? 0 : 5));
-const total = computed(() => subtotal.value + deliveryFee.value + cashOperationalFee.value);
-const checkoutButtonLabel = computed(() => (payOnline.value ? t('checkout') : t('checkoutCash')));
+const total = computed(() => subtotal.value + deliveryFee.value);
+const checkoutButtonLabel = computed(() => t('checkout'));
 const stepTitle = computed(() => (currentStep.value === 1 ? 'title' : currentStep.value === 2 ? 'deliveryTitle' : 'paymentTitle'));
 function getMaxCartQuantity(product) {
   return getProductStockQuantity(product);
@@ -886,7 +883,7 @@ async function lookupCompanyByCui() {
   billingLookupLoading.value = true;
   billingLookupError.value = '';
   try {
-    const res = await fetch(`${base}/checkout/company/${cleaned}`);
+    const res = await apiFetch(`${base}/checkout/company/${cleaned}`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       billingLookupError.value = data?.message || t('billingLookupFailed');
@@ -934,15 +931,7 @@ function editSavedAddress(addr) {
   }
 }
 function updateLocalUser(partial) {
-  try {
-    const raw = localStorage.getItem('user');
-    if (!raw) return;
-    const stored = JSON.parse(raw);
-    const updated = { ...stored, ...partial };
-    localStorage.setItem('user', JSON.stringify(updated));
-  } catch (error) {
-    console.error('Failed to update local user:', error);
-  }
+  setAuthData({ ...authUser.value, ...partial });
 }
 async function syncProfileFromCheckout() {
   const token = localStorage.getItem('token');
@@ -961,7 +950,7 @@ async function syncProfileFromCheckout() {
       profilePayload.last_name = contactForm.value.lastName.trim();
     }
     if (Object.keys(profilePayload).length > 0) {
-      const res = await fetch(`${base}/users/profile`, {
+      const res = await apiFetch(`${base}/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -977,7 +966,7 @@ async function syncProfileFromCheckout() {
       updateLocalUser(profilePayload);
     }
     if (normalizedPhone && normalizedPhone !== savedProfilePhone.value) {
-      const res = await fetch(`${base}/users/profile/phone`, {
+      const res = await apiFetch(`${base}/users/profile/phone`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1002,7 +991,7 @@ async function syncProfileFromCheckout() {
         street: addr.street,
         postal_code: addr.postalCode,
       };
-      const res = await fetch(`${base}/users/profile/address`, {
+      const res = await apiFetch(`${base}/users/profile/address`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1056,7 +1045,7 @@ async function saveAddressFromForm() {
         street: newSecondaryForm.value.street,
         postal_code: newSecondaryForm.value.postalCode,
       };
-      const res = await fetch(`${base}/users/profile/address`, {
+      const res = await apiFetch(`${base}/users/profile/address`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1080,7 +1069,7 @@ async function saveAddressFromForm() {
       return true;
     }
     if (editAddressTarget.value.type === 'secondary' && editAddressTarget.value.index >= 0) {
-      const res = await fetch(
+      const res = await apiFetch(
         `${base}/users/profile/secondary-address/${editAddressTarget.value.index}`,
         {
           method: 'PUT',
@@ -1106,7 +1095,7 @@ async function saveAddressFromForm() {
       return true;
     }
     if (saveAsSecondary.value && canSaveAsSecondaryAddress.value) {
-      const res = await fetch(`${base}/users/profile/secondary-address`, {
+      const res = await apiFetch(`${base}/users/profile/secondary-address`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1165,7 +1154,7 @@ async function deleteSavedAddress() {
   const base = getBaseUrl();
   checkoutError.value = '';
   try {
-    const res = await fetch(`${base}/users/profile/secondary-address/${addr.idx}`, {
+    const res = await apiFetch(`${base}/users/profile/secondary-address/${addr.idx}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -1309,7 +1298,7 @@ async function goToPaymentStep() {
   currentStep.value = 3;
 }
 async function goToCheckout() {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+  const token = isLoggedIn.value;
   checkoutError.value = '';
   guestSubmitAttempted.value = true;
   termsTouched.value = true;
@@ -1333,32 +1322,23 @@ async function goToCheckout() {
   const successPath = localePath('/plata/succes');
   const cancelPath = localePath('/plata/anulata');
   try {
-    const isCash = !payOnline.value;
-    const endpoint = isCash ? 'cash-order' : 'create-session';
-    const payload = isCash
-      ? token
-        ? { deliveryAddress: selectedDeliveryAddress.value, billingDetails: billingDetailsPayload.value }
-        : {
-            items: cartItems.value,
-            guestCartId: getOrCreateGuestCartId(),
-            guest: guestForm.value,
-            billingDetails: billingDetailsPayload.value,
-          }
-      : token
-        ? { successUrl: successPath, cancelUrl: cancelPath, deliveryAddress: selectedDeliveryAddress.value, billingDetails: billingDetailsPayload.value }
-        : {
-            successUrl: successPath,
-            cancelUrl: cancelPath,
-            items: cartItems.value,
-            guestCartId: getOrCreateGuestCartId(),
-            guest: guestForm.value,
-            billingDetails: billingDetailsPayload.value,
-          };
-    const res = await fetch(`${base}/checkout/${endpoint}`, { method: 'POST', headers: token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const payload = token
+      ? { successUrl: successPath, cancelUrl: cancelPath, deliveryAddress: selectedDeliveryAddress.value, billingDetails: billingDetailsPayload.value }
+      : {
+          successUrl: successPath,
+          cancelUrl: cancelPath,
+          items: cartItems.value,
+          guest: guestForm.value,
+          billingDetails: billingDetailsPayload.value,
+        };
+    const res = await apiFetch(`${base}/checkout/create-session`, { method: 'POST', headers: token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       checkoutError.value = data.message || t('checkoutError');
       return;
+    }
+    if (data.orderId && import.meta.client) {
+      sessionStorage.setItem('last_checkout_order_id', data.orderId);
     }
     if (data.url) { window.location.href = data.url; return; }
     if (data.success) {
@@ -1376,42 +1356,26 @@ async function goToCheckout() {
   }
 }
 onMounted(async () => {
-  isLoggedIn.value = typeof localStorage !== 'undefined' && !!localStorage.getItem('token');
-  if (isLoggedIn.value && typeof localStorage !== 'undefined') {
-    try {
-      const raw = localStorage.getItem('user');
-      if (raw) {
-        const user = JSON.parse(raw);
-        customerFullName.value = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-        savedProfilePhone.value = user.phone || '';
-        contactForm.value.firstName = user.first_name || '';
-        contactForm.value.lastName = user.last_name || '';
-        contactForm.value.phone = user.phone || '';
-        billingForm.value.firstName = user.first_name || '';
-        billingForm.value.lastName = user.last_name || '';
-        billingForm.value.email = user.email || '';
-        billingForm.value.phone = user.phone || '';
-      }
-    } catch (error) {
-      console.error('Failed to parse local user:', error);
-    }
+  isLoggedIn.value = isAuthenticated.value;
+  if (isLoggedIn.value) {
+    const user = authUser.value;
+    customerFullName.value = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    savedProfilePhone.value = user.phone || '';
+    contactForm.value.firstName = user.first_name || '';
+    contactForm.value.lastName = user.last_name || '';
+    contactForm.value.phone = user.phone || '';
+    billingForm.value.firstName = user.first_name || '';
+    billingForm.value.lastName = user.last_name || '';
+    billingForm.value.email = user.email || '';
+    billingForm.value.phone = user.phone || '';
   }
   const base = getBaseUrl();
-    const productHeaders = {
-      ...buildGuestCartHeaders(),
-      ...(localStorage.getItem('token')
-        ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        : {}),
-    };
-  try { const res = await fetch(`${base}/products`, { headers: productHeaders }); if (res.ok) allProducts.value = await res.json(); } catch (error) { console.error('Failed to fetch products for cart:', error); }
+  try { const res = await apiFetch(`${base}/products`); if (res.ok) allProducts.value = await res.json(); } catch (error) { console.error('Failed to fetch products for cart:', error); }
   await refreshGuestReservations();
   clampCartQuantitiesToStock();
   if (isLoggedIn.value) {
-    const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${base}/users/profile/checkout-addresses`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch(`${base}/users/profile/checkout-addresses`);
       if (res.ok) {
         const data = await res.json();
         primaryAddress.value = data.primaryAddress;
@@ -1481,12 +1445,10 @@ watch(cartProducts, (items) => {
     "subtotal": "Subtotal",
     "delivery": "Delivery",
     "total": "Total",
-    "cashOperationalFee": "Cash handling fee",
     "qty": "Qty",
     "goToDelivery": "Continue to delivery",
     "goToPayment": "Continue to payment",
     "checkout": "Pay and finalize",
-    "checkoutCash": "Finalize order",
     "back": "Back",
     "checkoutError": "Could not create payment session. Try again.",
     "guestFirstName": "First name",
@@ -1562,8 +1524,6 @@ watch(cartProducts, (items) => {
     "promoApply": "Apply",
     "payOnline": "Online card payment",
     "payOnlineHint": "Securely processed by payment gateway.",
-    "payOnDelivery": "Cash on delivery",
-    "payOnDeliveryHint": "Pay when your package arrives.",
     "securePayment": "Secure payment. Return options within 14 days.",
     "decreaseQty": "Decrease quantity",
     "increaseQty": "Increase quantity",
@@ -1594,12 +1554,10 @@ watch(cartProducts, (items) => {
     "subtotal": "Subtotal",
     "delivery": "Livrare",
     "total": "Total",
-    "cashOperationalFee": "Taxa operationala cash",
     "qty": "Cantitate",
     "goToDelivery": "Continua spre livrare",
     "goToPayment": "Continua spre plata",
     "checkout": "Plateste si finalizeaza",
-    "checkoutCash": "Finalizeaza comanda",
     "back": "Inapoi",
     "checkoutError": "Nu s-a putut crea sesiunea de plata. Incearca din nou.",
     "guestFirstName": "Prenume",
@@ -1675,8 +1633,6 @@ watch(cartProducts, (items) => {
     "promoApply": "Aplica",
     "payOnline": "Card online",
     "payOnlineHint": "Plata securizata prin procesator.",
-    "payOnDelivery": "Plata la livrare",
-    "payOnDeliveryHint": "Platesti cand coletul ajunge la tine.",
     "securePayment": "Plata securizata. Optiuni de retur in 14 zile.",
     "decreaseQty": "Scade cantitatea",
     "increaseQty": "Creste cantitatea",

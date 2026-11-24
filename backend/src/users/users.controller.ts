@@ -17,7 +17,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
 import { AuthenticatedRequest } from '../common/types/authenticated-request.interface';
-import { stripPassword } from '../common/utils/user-response.util';
+import { toUserResponse } from '../common/utils/user-response.util';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { UpdatePhoneDto } from './dto/update-phone.dto';
@@ -41,7 +41,7 @@ export class UsersController {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return stripPassword(user);
+    return toUserResponse(user);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -51,7 +51,7 @@ export class UsersController {
     @Body() updateProfileDto: UpdateProfileDto,
   ) {
     const user = await this.usersService.update(req.user.id, updateProfileDto);
-    return stripPassword(user);
+    return toUserResponse(user);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -131,6 +131,6 @@ export class UsersController {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return stripPassword(user);
+    return toUserResponse(user);
   }
 }

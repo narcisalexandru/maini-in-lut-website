@@ -12,11 +12,15 @@ import {
 } from '@nestjs/common';
 import { CartService, CartItemDto } from './cart.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { GuestHolderService } from '../stock-reservations/guest-holder.service';
 
 @Controller('users/cart')
 @UseGuards(JwtAuthGuard)
 export class CartController {
-  constructor(private readonly cartService: CartService) {}
+  constructor(
+    private readonly cartService: CartService,
+    private readonly guestHolderService: GuestHolderService,
+  ) {}
 
   @Get()
   async getCart(@Request() req) {
@@ -29,7 +33,8 @@ export class CartController {
     @Body() body: { items?: CartItemDto[]; guestId?: string },
   ) {
     const items = body?.items ?? [];
-    return this.cartService.merge(req.user.id, items, body?.guestId);
+    const guestId = this.guestHolderService.readIfPresent(req) ?? undefined;
+    return this.cartService.merge(req.user.id, items, guestId);
   }
 
   @Post('items')

@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "~/utils/api-base";
+import { apiRequest } from "~/utils/api-request";
 
 const GUEST_FAVORITES_KEY = "guest_favorites";
 
@@ -20,9 +20,10 @@ function getGuestFavoritesFromStorage(): number[] {
 export const useFavorites = () => {
   const favoriteIds = useState<number[]>("favorites", () => []);
 
+  const { isAuthenticated, clearAuthData } = useAuthState();
+
   if (import.meta.client && favoriteIds.value.length === 0) {
-    const token = localStorage.getItem("token");
-    if (!token) {
+    if (!isAuthenticated.value) {
       const guest = getGuestFavoritesFromStorage();
       if (guest.length > 0) {
         favoriteIds.value = guest;
@@ -30,20 +31,12 @@ export const useFavorites = () => {
     }
   }
 
-  const apiBase = () => getApiBaseUrl();
-
-  const getToken = () => {
-    if (import.meta.client) {
-      return localStorage.getItem("token");
-    }
-    return null;
-  };
+  const getToken = () =>
+    import.meta.client && isAuthenticated.value ? "cookie" : null;
 
   const useGuestFlow = () => {
-    if (!import.meta.client) {
-      return;
-    }
-    localStorage.removeItem("token");
+    void apiRequest("/auth/logout", { method: "POST" }).catch(() => undefined);
+    clearAuthData();
   };
 
   const loadGuestFavorites = (): number[] => getGuestFavoritesFromStorage();
@@ -58,9 +51,7 @@ export const useFavorites = () => {
     const token = getToken();
     if (token) {
       try {
-        const response = await fetch(`${apiBase()}/users/favorites`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await apiRequest("/users/favorites");
         if (response.ok) {
           const ids = await response.json();
           favoriteIds.value = Array.isArray(ids) ? ids : [];
@@ -82,13 +73,9 @@ export const useFavorites = () => {
     const token = getToken();
     if (token) {
       try {
-        const response = await fetch(
-          `${apiBase()}/users/favorites/${productId}`,
-          {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const response = await apiRequest(`/users/favorites/${productId}`, {
+          method: "POST",
+        });
         if (response.ok && !favoriteIds.value.includes(productId)) {
           favoriteIds.value = [...favoriteIds.value, productId];
           return;
@@ -112,13 +99,9 @@ export const useFavorites = () => {
     const token = getToken();
     if (token) {
       try {
-        const response = await fetch(
-          `${apiBase()}/users/favorites/${productId}`,
-          {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const response = await apiRequest(`/users/favorites/${productId}`, {
+          method: "DELETE",
+        });
         if (response.ok) {
           favoriteIds.value = favoriteIds.value.filter((id) => id !== productId);
           return;
@@ -159,12 +142,8 @@ export const useFavorites = () => {
     }
 
     try {
-      const response = await fetch(`${apiBase()}/users/favorites/merge`, {
+      const response = await apiRequest("/users/favorites/merge", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ productIds: guestIds }),
       });
       if (response.ok) {

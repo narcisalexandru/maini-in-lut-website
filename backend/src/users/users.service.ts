@@ -8,8 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from './dto/create-user.dto';
-import { User, UserWithoutPassword } from './entities/user.entity';
-import { stripPassword } from '../common/utils/user-response.util';
+import { User } from './entities/user.entity';
+import { toUserResponse } from '../common/utils/user-response.util';
 import { UserRole } from '../common/enums/user-role.enum';
 import { Artist } from '../artists/entities/artist.entity';
 import { EmailService } from '../email/email.service';
@@ -39,7 +39,7 @@ export class UsersService {
   ) {}
 
   create(createUserDto: CreateUserDto): Promise<User> {
-    const user = this.usersRepository.create(createUserDto);
+    const user = this.usersRepository.create(this.withNormalizedEmail(createUserDto));
     return this.usersRepository.save(user);
   }
 
@@ -50,7 +50,9 @@ export class UsersService {
     await queryRunner.startTransaction();
 
     try {
-      const user = this.usersRepository.create(createUserDto);
+      const user = this.usersRepository.create(
+        this.withNormalizedEmail(createUserDto),
+      );
       await queryRunner.manager.save(user);
       await queryRunner.commitTransaction();
       return user;
@@ -66,9 +68,9 @@ export class UsersService {
     return this.usersRepository.find();
   }
 
-  async findAllSanitized(): Promise<UserWithoutPassword[]> {
+  async findAllSanitized() {
     const users = await this.findAll();
-    return users.map(stripPassword);
+    return users.map(toUserResponse);
   }
 
   findOne(id: number): Promise<User | null> {
@@ -83,8 +85,19 @@ export class UsersService {
     return admins.map((admin) => admin.email).filter(Boolean);
   }
 
+  private withNormalizedEmail(createUserDto: CreateUserDto): CreateUserDto {
+    return {
+      ...createUserDto,
+      email: createUserDto.email.trim().toLowerCase(),
+    };
+  }
+
   findOneByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOneBy({ email });
+    const normalized = email.trim().toLowerCase();
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .where('LOWER(user.email) = :email', { email: normalized })
+      .getOne();
   }
 
   findOneByPhone(phone: string): Promise<User | null> {
@@ -102,6 +115,9 @@ export class UsersService {
     }
 
     const { role: _role, ...safeUpdateData } = updateData;
+    if (typeof safeUpdateData.email === 'string') {
+      safeUpdateData.email = safeUpdateData.email.trim().toLowerCase();
+    }
     await this.usersRepository.update(id, safeUpdateData);
     return this.findOne(id) as Promise<User>;
   }

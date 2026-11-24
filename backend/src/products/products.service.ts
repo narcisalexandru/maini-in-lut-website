@@ -23,6 +23,7 @@ import { AdminUpdateProductDto } from './dto/admin-update-product.dto';
 import { SaveProductDraftDto } from './dto/save-product-draft.dto';
 import { ReviewProductChangesAction } from './dto/review-product-changes.dto';
 import { ProductStatus } from '../common/enums/product-status.enum';
+import { sanitizeProductImages } from './utils/product-image-path.util';
 import { ProposalStatus } from '../common/enums/proposal-status.enum';
 import { ArtistStatus } from '../common/enums/artist-status.enum';
 import { UserRole } from '../common/enums/user-role.enum';
@@ -681,14 +682,16 @@ export class ProductsService {
     if (dto.description !== undefined) mapped.description = dto.description.trim();
     if (dto.price !== undefined) mapped.price = dto.price;
     if (dto.images !== undefined) {
-      const images = dto.images.map((url) => url.trim()).filter(Boolean).slice(0, 3);
+      const images = sanitizeProductImages(
+        dto.images.map((url) => url.trim()).filter(Boolean).slice(0, 3),
+      );
       if (images.length === 0) {
         throw new BadRequestException('At least one product image is required');
       }
       mapped.images = images;
       mapped.image = images[0];
     } else if ('image' in dto && typeof dto.image === 'string' && dto.image.trim()) {
-      const image = dto.image.trim();
+      const [image] = sanitizeProductImages([dto.image.trim()]);
       mapped.image = image;
       mapped.images = [image];
     }
@@ -800,10 +803,12 @@ export class ProductsService {
     }
 
     if (dto.images !== undefined) {
-      const images = dto.images
-        .map((url) => url.trim())
-        .filter(Boolean)
-        .slice(0, 3);
+      const images = sanitizeProductImages(
+        dto.images
+          .map((url) => url.trim())
+          .filter(Boolean)
+          .slice(0, 3),
+      );
       if (images.length > 0) {
         mapped.images = images;
         mapped.image = images[0];
@@ -1058,11 +1063,12 @@ export class ProductsService {
     for (const field of fields) {
       if (field === 'images') {
         if (changes.images !== undefined) {
-          picked.images = changes.images;
-          picked.image = changes.images[0];
+          picked.images = sanitizeProductImages(changes.images);
+          picked.image = picked.images[0];
         } else if (changes.image !== undefined) {
-          picked.image = changes.image;
-          picked.images = [changes.image];
+          const [image] = sanitizeProductImages([changes.image]);
+          picked.image = image;
+          picked.images = [image];
         }
         continue;
       }

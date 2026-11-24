@@ -1,29 +1,32 @@
 import type { AuthUser } from "~/types/user";
-import { getApiBaseUrl } from "~/utils/api-base";
+import { apiRequest } from "~/utils/api-request";
 
 export async function syncStoredUserProfile(): Promise<AuthUser | null> {
   if (!import.meta.client) {
     return null;
   }
 
-  const token = localStorage.getItem("token");
-  if (!token) {
-    return null;
-  }
+  const { setAuthData, clearAuthData, user, isAuthenticated } = useAuthState();
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 
   try {
-    const response = await fetch(`${getApiBaseUrl()}/users/profile`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await apiRequest("/users/profile");
 
-    if (!response.ok) {
+    if (response.status === 401) {
+      await apiRequest("/auth/logout", { method: "POST" }).catch(() => undefined);
+      clearAuthData();
       return null;
     }
 
-    const user = (await response.json()) as AuthUser;
-    localStorage.setItem("user", JSON.stringify(user));
-    return user;
+    if (!response.ok) {
+      return isAuthenticated.value ? user.value : null;
+    }
+
+    const profile = (await response.json()) as AuthUser;
+    setAuthData(profile);
+    return profile;
   } catch {
-    return null;
+    return isAuthenticated.value ? user.value : null;
   }
 }

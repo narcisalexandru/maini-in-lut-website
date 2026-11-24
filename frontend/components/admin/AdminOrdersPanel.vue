@@ -158,7 +158,8 @@ const formatDate = (value) =>
   new Date(value).toLocaleDateString(locale.value === "en" ? "en-GB" : "ro-RO");
 
 const canUpdateStatus = (order) =>
-  activeTab.value === 0 && order.paymentStatus === "PAID";
+  activeTab.value === 0 &&
+  (order.paymentStatus === "PAID");
 
 const visibleItems = (order) => {
   if (!props.filterItemsForArtistId) {

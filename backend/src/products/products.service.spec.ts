@@ -9,6 +9,7 @@ import { ArtistsService } from '../artists/artists.service';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { ConfigService } from '@nestjs/config';
+import { DataSource } from 'typeorm';
 import { ProductStatus } from '../common/enums/product-status.enum';
 
 describe('ProductsService', () => {
@@ -71,6 +72,10 @@ describe('ProductsService', () => {
         {
           provide: ConfigService,
           useValue: configService,
+        },
+        {
+          provide: DataSource,
+          useValue: { transaction: jest.fn() },
         },
       ],
     }).compile();

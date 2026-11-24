@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -19,18 +21,39 @@ import { StockReservationsModule } from './stock-reservations/stock-reservations
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000,
+        limit: 120,
+      },
+    ]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DATABASE_HOST'),
-        port: configService.get<number>('DATABASE_PORT'),
-        username: configService.get('DATABASE_USER'),
-        password: configService.get('DATABASE_PASSWORD'),
-        database: configService.get('DATABASE_NAME'),
-        autoLoadEntities: true,
-        synchronize: true,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const isProduction = configService.get<string>('NODE_ENV') === 'production';
+        const host = configService.get<string>('DATABASE_HOST');
+        const sslFlag = configService.get<string>('DATABASE_SSL')?.trim().toLowerCase();
+        const localHost = !host || host === 'localhost' || host === '127.0.0.1';
+        const ssl =
+          sslFlag === 'false'
+            ? false
+            : sslFlag === 'true' || !localHost
+              ? { rejectUnauthorized: true }
+              : false;
+        return {
+          type: 'postgres' as const,
+          host,
+          port: configService.get<number>('DATABASE_PORT'),
+          username: configService.get<string>('DATABASE_USER'),
+          password: configService.get<string>('DATABASE_PASSWORD'),
+          database: configService.get<string>('DATABASE_NAME'),
+          ssl,
+          autoLoadEntities: true,
+          synchronize: !isProduction,
+          migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+          migrationsRun: isProduction,
+        };
+      },
       inject: [ConfigService],
     }),
     AuthModule,
@@ -47,6 +70,6 @@ import { StockReservationsModule } from './stock-reservations/stock-reservations
     StockReservationsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

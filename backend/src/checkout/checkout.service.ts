@@ -1,19 +1,23 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Ipn } from 'netopia-payment2';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import * as path from 'path';
-import Mail from 'nodemailer/lib/mailer';
 import { CartService } from '../cart/cart.service';
 import { ProductsService } from '../products/products.service';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { OrdersService } from '../orders/orders.service';
 import { OrderBillingDetails } from '../orders/entities/order.entity';
-import { OrderPaymentStatus } from '../common/enums/order-status.enum';
+import { OrderPaymentStatus, PaymentMethod } from '../common/enums/order-status.enum';
 import { ArtistsService } from '../artists/artists.service';
 import { StockReservationsService } from '../stock-reservations/stock-reservations.service';
 import { CartHolder } from '../stock-reservations/types/cart-holder.type';
+import {
+  NETOPIA_STATUS_CONFIRMED,
+  NETOPIA_STATUS_PAID,
+  cardPaymentMatchesOrder,
+} from './card-payment-match.util';
 
 type OrderContact = {
   firstName: string;
@@ -23,11 +27,19 @@ type OrderContact = {
 };
 
 const DELIVERY_FEE_RON = 15;
-const CASH_OPERATIONAL_FEE_RON = 5;
+const MAX_ORDER_LINES = 15;
+const MAX_LINE_QUANTITY = 10;
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 const ROMANIA_COUNTRY_CODE = 642;
 const ROMANIA_COUNTRY_NAME = 'Romania';
-const NETOPIA_STATUS_PAID = 3;
-const NETOPIA_STATUS_CONFIRMED = 5;
 
 export type BillingDetailsDto = {
   type?: 'individual' | 'company';
@@ -205,6 +217,9 @@ export class CheckoutService {
       const posSignature = this.getNetopiaPosSignature();
       const publicKeyStr = this.loadNetopiaPublicKey();
       if (!posSignature || !publicKeyStr) {
+        this.logger.error(
+          'IPN Netopia respins: lipseste certificatul public. Pune fisierul .cer in NETOPIA_PUBLIC_KEY_PATH.',
+        );
         throw new BadRequestException(
           'NETOPIA_POS_SIGNATURE si certificatul public Netopia trebuie configurate in .env.',
         );
@@ -222,16 +237,43 @@ export class CheckoutService {
 
   private loadNetopiaPublicKey(): string {
     const inline = this.configService.get<string>('NETOPIA_PUBLIC_KEY');
-    if (inline?.includes('BEGIN CERTIFICATE')) {
+    if (inline?.includes('BEGIN CERTIFICATE') || inline?.includes('BEGIN PUBLIC KEY')) {
       return inline.replace(/\\n/g, '\n');
+    }
+    if (inline?.trim()) {
+      this.logger.warn(
+        'NETOPIA_PUBLIC_KEY nu este un certificat PEM si este ignorat.',
+      );
     }
     const keyPath = this.configService.get<string>('NETOPIA_PUBLIC_KEY_PATH');
     if (keyPath) {
       const resolvedPath = this.resolveConfigPath(keyPath);
       if (existsSync(resolvedPath)) {
+        this.logger.log(`Certificat Netopia: ${resolvedPath}`);
         return readFileSync(resolvedPath, 'utf8');
       }
+      this.logger.error(`Certificat Netopia inexistent: ${resolvedPath}`);
     }
+
+    const certsDirectories = [
+      path.join(process.cwd(), 'certs'),
+      path.join(process.cwd(), 'backend', 'certs'),
+    ];
+    for (const directory of certsDirectories) {
+      if (!existsSync(directory)) {
+        continue;
+      }
+      const certificateName = readdirSync(directory).find((fileName) =>
+        fileName.toLowerCase().endsWith('.cer'),
+      );
+      if (!certificateName) {
+        continue;
+      }
+      const certificatePath = path.join(directory, certificateName);
+      this.logger.log(`Certificat Netopia: ${certificatePath}`);
+      return readFileSync(certificatePath, 'utf8');
+    }
+
     return '';
   }
 
@@ -362,12 +404,10 @@ export class CheckoutService {
     successUrl: string;
     cancelUrl: string;
     metadata: Record<string, string>;
-  }): Promise<{ url: string }> {
+  }): Promise<{ url: string; orderId: string }> {
     const subtotal = payload.items.reduce((sum, i) => sum + i.lineTotalRon, 0);
     const totalRon = Number((subtotal + DELIVERY_FEE_RON).toFixed(2));
-    const backendUrl = (
-      this.configService.get<string>('BACKEND_URL') || 'http://localhost:4000'
-    ).trim().replace(/\/$/, '');
+    const backendUrl = this.getBackendUrl();
 
     const configData = {
       emailTemplate: '',
@@ -439,7 +479,25 @@ export class CheckoutService {
       orderData,
     });
 
-    return { url: paymentURL };
+    try {
+      const startedNtpId = new URL(paymentURL).searchParams.get('p')?.trim();
+      if (startedNtpId) {
+        const canonicalNtpId = await this.resolveNetopiaNtpId(
+          payload.orderId,
+          startedNtpId,
+        );
+        await this.ordersService.updateNetopiaNtpId(
+          payload.orderId,
+          canonicalNtpId || startedNtpId,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Nu am putut salva ntpID pentru ${payload.orderId}: ${error}`,
+      );
+    }
+
+    return { url: paymentURL, orderId: payload.orderId };
   }
 
   private billingToMetadata(
@@ -543,9 +601,9 @@ export class CheckoutService {
     return `
       <h3>Comandat de (cont)</h3>
       <p>
-        ${orderPlacer.firstName} ${orderPlacer.lastName}<br/>
-        Email: ${orderPlacer.email || '-'}<br/>
-        Telefon: ${orderPlacer.phone || '-'}
+        ${escapeHtml(orderPlacer.firstName)} ${escapeHtml(orderPlacer.lastName)}<br/>
+        Email: ${escapeHtml(orderPlacer.email || '-')}<br/>
+        Telefon: ${escapeHtml(orderPlacer.phone || '-')}
       </p>
     `;
   }
@@ -564,10 +622,10 @@ export class CheckoutService {
     return `
       <h3>${title}</h3>
       <p>
-        ${customer.firstName} ${customer.lastName}<br/>
-        Email: ${customer.email}<br/>
-        Telefon: ${customer.phone}<br/>
-        Adresa: ${customer.street}, ${customer.city}, ${customer.county}, ${customer.postalCode}
+        ${escapeHtml(customer.firstName)} ${escapeHtml(customer.lastName)}<br/>
+        Email: ${escapeHtml(customer.email)}<br/>
+        Telefon: ${escapeHtml(customer.phone)}<br/>
+        Adresa: ${escapeHtml(customer.street)}, ${escapeHtml(customer.city)}, ${escapeHtml(customer.county)}, ${escapeHtml(customer.postalCode)}
       </p>
     `;
   }
@@ -578,20 +636,20 @@ export class CheckoutService {
       return `
       <h3>Date facturare (persoana juridica)</h3>
       <p>
-        Firma: ${billing.companyName || '-'}<br/>
-        CUI: ${billing.cui || '-'}<br/>
-        Reg. Comert: ${billing.tradeRegister || '-'}<br/>
-        Adresa: ${billing.street || '-'}
+        Firma: ${escapeHtml(billing.companyName || '-')}<br/>
+        CUI: ${escapeHtml(billing.cui || '-')}<br/>
+        Reg. Comert: ${escapeHtml(billing.tradeRegister || '-')}<br/>
+        Adresa: ${escapeHtml(billing.street || '-')}
       </p>
     `;
     }
     return `
       <h3>Date facturare (persoana fizica)</h3>
       <p>
-        ${billing.firstName || ''} ${billing.lastName || ''}<br/>
-        Email: ${billing.email || '-'}<br/>
-        Telefon: ${billing.phone || '-'}<br/>
-        Adresa: ${billing.street || ''}, ${billing.city || ''}, ${billing.county || ''}, ${billing.postalCode || ''}
+        ${escapeHtml(billing.firstName || '')} ${escapeHtml(billing.lastName || '')}<br/>
+        Email: ${escapeHtml(billing.email || '-')}<br/>
+        Telefon: ${escapeHtml(billing.phone || '-')}<br/>
+        Adresa: ${escapeHtml(billing.street || '')}, ${escapeHtml(billing.city || '')}, ${escapeHtml(billing.county || '')}, ${escapeHtml(billing.postalCode || '')}
       </p>
     `;
   }
@@ -654,7 +712,7 @@ export class CheckoutService {
       recipientPhone?: string;
     },
     billingDetails?: BillingDetailsDto,
-  ): Promise<{ url: string }> {
+  ): Promise<{ url: string; orderId: string }> {
     const user = await this.usersService.findOne(userId);
     if (!user) {
       throw new BadRequestException('User not found');
@@ -767,136 +825,6 @@ export class CheckoutService {
     });
   }
 
-  async createCashOrderForUser(
-    userId: number,
-    deliveryAddress?: {
-      label?: string;
-      county: string;
-      city: string;
-      street: string;
-      postalCode: string;
-      recipientName?: string;
-      recipientPhone?: string;
-    },
-    billingDetails?: BillingDetailsDto,
-  ): Promise<{ success: true; message: string; orderId: string }> {
-    const user = await this.usersService.findOne(userId);
-    if (!user) throw new BadRequestException('User not found');
-
-    const phone = this.resolveCheckoutPhone(user, deliveryAddress, billingDetails);
-    if (!phone) {
-      throw new BadRequestException(
-        'Completeaza numarul de telefon inainte de finalizarea comenzii.',
-      );
-    }
-
-    const effectiveAddress = this.resolveCheckoutDeliveryAddress(
-      user,
-      phone,
-      deliveryAddress,
-    );
-    if (!effectiveAddress) {
-      throw new BadRequestException(
-        'Completeaza adresa de livrare inainte de finalizarea comenzii.',
-      );
-    }
-
-    const cartItems = await this.cartService.findAll(userId);
-    if (!cartItems.length) throw new BadRequestException('Cart is empty');
-
-    const items = await this.buildOrderItems(cartItems, {
-      type: 'user',
-      userId,
-    });
-    if (!items.length) throw new BadRequestException('No valid products in cart');
-
-    const subtotal = items.reduce((sum, i) => sum + i.lineTotalRon, 0);
-    const total = subtotal + DELIVERY_FEE_RON + CASH_OPERATIONAL_FEE_RON;
-    const orderPlacer: OrderContact = {
-      firstName: user.first_name,
-      lastName: user.last_name,
-      email: user.email,
-      phone,
-    };
-    const isGift = this.isGiftOrder(
-      orderPlacer,
-      effectiveAddress.recipientName,
-    );
-
-    const persistedOrder = await this.ordersService.createCashOrder({
-      userId,
-      customer: {
-        firstName:
-          effectiveAddress.recipientName?.split(' ').slice(0, 1).join(' ') ||
-          user.first_name,
-        lastName:
-          effectiveAddress.recipientName?.split(' ').slice(1).join(' ') ||
-          user.last_name,
-        email: user.email,
-        phone: effectiveAddress.recipientPhone || user.phone,
-        county: effectiveAddress.county,
-        city: effectiveAddress.city,
-        street: effectiveAddress.street,
-        postalCode: effectiveAddress.postalCode,
-        recipientName: effectiveAddress.recipientName,
-        recipientPhone: effectiveAddress.recipientPhone,
-      },
-      billingDetails: this.toOrderBillingDetails(billingDetails),
-      items,
-      subtotalRon: subtotal,
-      deliveryFeeRon: DELIVERY_FEE_RON,
-      cashOperationalFeeRon: CASH_OPERATIONAL_FEE_RON,
-      totalRon: total,
-    });
-
-    await this.sendOrderNotification({
-      orderId: persistedOrder.publicOrderNumber,
-      paymentMethod: 'cash',
-      customer: {
-        firstName:
-          effectiveAddress.recipientName?.split(' ').slice(0, 1).join(' ') ||
-          user.first_name,
-        lastName:
-          effectiveAddress.recipientName?.split(' ').slice(1).join(' ') ||
-          user.last_name,
-        email: user.email,
-        phone: effectiveAddress.recipientPhone || user.phone,
-        county: effectiveAddress.county,
-        city: effectiveAddress.city,
-        street: effectiveAddress.street,
-        postalCode: effectiveAddress.postalCode,
-      },
-      orderPlacer: isGift ? orderPlacer : undefined,
-      isGift,
-      billingDetails,
-      items,
-      subtotalRon: subtotal,
-      deliveryFeeRon: DELIVERY_FEE_RON,
-      cashOperationalFeeRon: CASH_OPERATIONAL_FEE_RON,
-      totalRon: total,
-    });
-    await this.ordersService.markConfirmationSent(
-      persistedOrder.publicOrderNumber,
-    );
-
-    await this.stockReservationsService.fulfillOrder(
-      items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-      })),
-      { type: 'user', userId },
-    );
-    await this.ordersService.markStockFulfilled(
-      persistedOrder.publicOrderNumber,
-    );
-    await this.cartService.clearCart(userId);
-    return {
-      success: true,
-      message: 'Comanda plasata cu succes.',
-      orderId: persistedOrder.publicOrderNumber,
-    };
-  }
-
   async createCheckoutSessionForGuest(
     payload: {
       successUrl: string;
@@ -915,12 +843,8 @@ export class CheckoutService {
       };
       billingDetails?: BillingDetailsDto;
     },
-  ): Promise<{ url: string }> {
-    for (const field of this.REQUIRED_GUEST_FIELDS) {
-      if (!payload.guest[field]?.trim()) {
-        throw new BadRequestException(`Camp obligatoriu lipsa: ${field}`);
-      }
-    }
+  ): Promise<{ url: string; orderId: string }> {
+    this.validateGuestContact(payload.guest);
 
     if (!Array.isArray(payload.items) || payload.items.length === 0) {
       throw new BadRequestException('Cart is empty');
@@ -999,84 +923,6 @@ export class CheckoutService {
     });
   }
 
-  async createCashOrderForGuest(payload: {
-    guestCartId?: string;
-    items: { productId: number; quantity: number }[];
-    guest: {
-      firstName: string;
-      lastName: string;
-      email: string;
-      phone: string;
-      county: string;
-      city: string;
-      street: string;
-      postalCode: string;
-    };
-    billingDetails?: BillingDetailsDto;
-  }): Promise<{ success: true; message: string; orderId: string }> {
-    for (const field of this.REQUIRED_GUEST_FIELDS) {
-      if (!payload.guest[field]?.trim()) {
-        throw new BadRequestException(`Camp obligatoriu lipsa: ${field}`);
-      }
-    }
-    if (!Array.isArray(payload.items) || payload.items.length === 0) {
-      throw new BadRequestException('Cart is empty');
-    }
-
-    const guestHolder = payload.guestCartId?.trim()
-      ? { type: 'guest' as const, guestId: payload.guestCartId.trim() }
-      : undefined;
-
-    const items = await this.buildOrderItems(payload.items, guestHolder);
-    if (!items.length) throw new BadRequestException('No valid products in cart');
-
-    const subtotal = items.reduce((sum, i) => sum + i.lineTotalRon, 0);
-    const total = subtotal + DELIVERY_FEE_RON + CASH_OPERATIONAL_FEE_RON;
-
-    const persistedOrder = await this.ordersService.createCashOrder({
-      userId: null,
-      customer: payload.guest,
-      billingDetails: this.toOrderBillingDetails(payload.billingDetails),
-      items,
-      subtotalRon: subtotal,
-      deliveryFeeRon: DELIVERY_FEE_RON,
-      cashOperationalFeeRon: CASH_OPERATIONAL_FEE_RON,
-      totalRon: total,
-    });
-
-    await this.sendOrderNotification({
-      orderId: persistedOrder.publicOrderNumber,
-      paymentMethod: 'cash',
-      customer: payload.guest,
-      billingDetails: payload.billingDetails,
-      items,
-      subtotalRon: subtotal,
-      deliveryFeeRon: DELIVERY_FEE_RON,
-      cashOperationalFeeRon: CASH_OPERATIONAL_FEE_RON,
-      totalRon: total,
-    });
-    await this.ordersService.markConfirmationSent(
-      persistedOrder.publicOrderNumber,
-    );
-
-    await this.stockReservationsService.fulfillOrder(
-      items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-      })),
-      guestHolder,
-    );
-    await this.ordersService.markStockFulfilled(
-      persistedOrder.publicOrderNumber,
-    );
-
-    return {
-      success: true,
-      message: 'Comanda plasata cu succes.',
-      orderId: persistedOrder.publicOrderNumber,
-    };
-  }
-
   private toOrderBillingDetails(
     billing?: BillingDetailsDto,
   ): OrderBillingDetails | null {
@@ -1086,14 +932,48 @@ export class CheckoutService {
     return billing as OrderBillingDetails;
   }
 
+  private validateGuestContact(guest: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    county: string;
+    city: string;
+    street: string;
+    postalCode: string;
+  }): void {
+    for (const field of this.REQUIRED_GUEST_FIELDS) {
+      const value = guest[field]?.trim() || '';
+      if (!value) {
+        throw new BadRequestException(`Camp obligatoriu lipsa: ${field}`);
+      }
+      if (value.length > 300) {
+        throw new BadRequestException(`Camp prea lung: ${field}`);
+      }
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest.email.trim())) {
+      throw new BadRequestException('Email invalid');
+    }
+  }
+
   private async buildOrderItems(
     items: { productId: number; quantity: number }[],
     holder?: CartHolder,
   ): Promise<OrderItemSnapshot[]> {
+    if (items.length > MAX_ORDER_LINES) {
+      throw new BadRequestException('Cosul depaseste numarul maxim de produse.');
+    }
     await this.stockReservationsService.releaseExpired();
     const result: OrderItemSnapshot[] = [];
     for (const item of items) {
-      if (!Number.isInteger(item.productId) || item.quantity < 1) continue;
+      if (!Number.isInteger(item.productId) || item.productId < 1) continue;
+      if (
+        !Number.isInteger(item.quantity) ||
+        item.quantity < 1 ||
+        item.quantity > MAX_LINE_QUANTITY
+      ) {
+        throw new BadRequestException('Cantitatea comandata nu este permisa.');
+      }
       const product = await this.productsService.findOnePublic(item.productId);
       if (!product) continue;
       const availableStock =
@@ -1130,7 +1010,6 @@ export class CheckoutService {
 
   private async sendOrderNotification(payload: {
     orderId: string;
-    paymentMethod: 'cash' | 'card';
     customer: {
       firstName: string;
       lastName: string;
@@ -1155,7 +1034,6 @@ export class CheckoutService {
     }[];
     subtotalRon: number;
     deliveryFeeRon: number;
-    cashOperationalFeeRon: number;
     totalRon: number;
   }): Promise<void> {
     const adminEmail =
@@ -1168,22 +1046,19 @@ export class CheckoutService {
       orderItems
         .map(
           (i) =>
-            `<tr><td style="padding:6px 8px;border:1px solid #ddd;">${i.title}</td><td style="padding:6px 8px;border:1px solid #ddd;">${i.quantity}</td><td style="padding:6px 8px;border:1px solid #ddd;">${i.unitPriceRon} RON</td><td style="padding:6px 8px;border:1px solid #ddd;">${i.lineTotalRon} RON</td></tr>`,
+            `<tr><td style="padding:6px 8px;border:1px solid #ddd;">${escapeHtml(i.title)}</td><td style="padding:6px 8px;border:1px solid #ddd;">${escapeHtml(i.quantity)}</td><td style="padding:6px 8px;border:1px solid #ddd;">${escapeHtml(i.unitPriceRon)} RON</td><td style="padding:6px 8px;border:1px solid #ddd;">${escapeHtml(i.lineTotalRon)} RON</td></tr>`,
         )
         .join('');
     const itemRows = buildItemRows(payload.items);
-    const cashFeeRow =
-      payload.cashOperationalFeeRon > 0
-        ? `Taxa operationala cash: ${payload.cashOperationalFeeRon} RON<br/>`
-        : '';
     const billingHtml = this.formatBillingHtml(payload.billingDetails);
     const orderPlacerHtml = this.formatOrderPlacerHtml(
       isGift ? payload.orderPlacer : undefined,
     );
     const deliveryHtml = this.formatDeliveryHtml(payload.customer, isGift);
+    const paymentLabel = 'Card';
     const adminHtml = `
-      <h2>Comanda noua (${payload.orderId})</h2>
-      <p><strong>Metoda plata:</strong> ${payload.paymentMethod}</p>
+      <h2>Comanda noua (${escapeHtml(payload.orderId)})</h2>
+      <p><strong>Metoda plata:</strong> ${escapeHtml(paymentLabel)}</p>
       ${isGift ? '<p><strong>Tip comanda:</strong> Cadou</p>' : ''}
       ${orderPlacerHtml}
       ${deliveryHtml}
@@ -1196,7 +1071,6 @@ export class CheckoutService {
       <p style="margin-top:12px;">
         Subtotal: ${payload.subtotalRon} RON<br/>
         Livrare: ${payload.deliveryFeeRon} RON<br/>
-        ${cashFeeRow}
         <strong>Total: ${payload.totalRon} RON</strong>
       </p>
     `;
@@ -1207,12 +1081,12 @@ export class CheckoutService {
             i.productId > 0 ? this.getProductUrl(i.productId) : '';
           const imageHtml = i.imageUrl
             ? productLink
-              ? `<a href="${productLink}" target="_blank" rel="noopener noreferrer"><img src="${i.imageUrl}" alt="${i.title}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;" /></a>`
-              : `<img src="${i.imageUrl}" alt="${i.title}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;" />`
+              ? `<a href="${escapeHtml(productLink)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(i.imageUrl)}" alt="${escapeHtml(i.title)}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;" /></a>`
+              : `<img src="${escapeHtml(i.imageUrl)}" alt="${escapeHtml(i.title)}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;" />`
             : '';
           const titleHtml = productLink
-            ? `<a href="${productLink}" target="_blank" rel="noopener noreferrer" style="font-weight:600;color:#1f2937;text-decoration:none;">${i.title}</a>`
-            : `<div style="font-weight:600;color:#1f2937;">${i.title}</div>`;
+            ? `<a href="${escapeHtml(productLink)}" target="_blank" rel="noopener noreferrer" style="font-weight:600;color:#1f2937;text-decoration:none;">${escapeHtml(i.title)}</a>`
+            : `<div style="font-weight:600;color:#1f2937;">${escapeHtml(i.title)}</div>`;
           return `
         <tr>
           <td style="padding:8px;border-bottom:1px solid #eee;vertical-align:top;width:84px;">
@@ -1231,12 +1105,12 @@ export class CheckoutService {
       .join('');
     const customerHtml = `
       <div style="font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.45;">
-        <h2 style="margin:0 0 8px;">Iti multumim pentru comanda, ${isGift && payload.orderPlacer ? payload.orderPlacer.firstName : payload.customer.firstName}!</h2>
+        <h2 style="margin:0 0 8px;">Iti multumim pentru comanda, ${escapeHtml(isGift && payload.orderPlacer ? payload.orderPlacer.firstName : payload.customer.firstName)}!</h2>
         <p style="margin:0 0 14px;color:#4b5563;">
           Iti multumim ca ai ales Maini in lut. Inseamna foarte mult pentru noi fiecare comanda si fiecare client care sustine munca noastra.
         </p>
         <p style="margin:0 0 14px;color:#4b5563;">
-          Comanda ta <strong>${payload.orderId}</strong> a fost inregistrata cu succes.
+          Comanda ta <strong>${escapeHtml(payload.orderId)}</strong> a fost inregistrata cu succes.
         </p>
 
         <h3 style="margin:16px 0 8px;">Produse comandate</h3>
@@ -1246,16 +1120,15 @@ export class CheckoutService {
 
         <h3 style="margin:16px 0 8px;">${isGift ? 'Detalii livrare (destinatar cadou)' : 'Detalii livrare'}</h3>
         <p style="margin:0 0 14px;color:#4b5563;">
-          ${payload.customer.firstName} ${payload.customer.lastName}<br/>
-          Telefon: ${payload.customer.phone}<br/>
-          Adresa: ${payload.customer.street}, ${payload.customer.city}, ${payload.customer.county}, ${payload.customer.postalCode}
+          ${escapeHtml(payload.customer.firstName)} ${escapeHtml(payload.customer.lastName)}<br/>
+          Telefon: ${escapeHtml(payload.customer.phone)}<br/>
+          Adresa: ${escapeHtml(payload.customer.street)}, ${escapeHtml(payload.customer.city)}, ${escapeHtml(payload.customer.county)}, ${escapeHtml(payload.customer.postalCode)}
         </p>
 
         <h3 style="margin:16px 0 8px;">Total de plata</h3>
         <p style="margin:0;color:#111827;">
           Subtotal: ${payload.subtotalRon} RON<br/>
           Livrare: ${payload.deliveryFeeRon} RON<br/>
-          ${cashFeeRow}
           <strong style="font-size:18px;">Total: ${payload.totalRon} RON</strong>
         </p>
 
@@ -1265,36 +1138,6 @@ export class CheckoutService {
         </p>
       </div>
     `;
-    const attachments: Mail.Attachment[] = [];
-    let customerHtmlWithInlineImages = customerHtml;
-    payload.items.forEach((item, index) => {
-      if (!item.imageUrl) return;
-      try {
-        const parsed = new URL(item.imageUrl);
-        if (!parsed.hostname.includes('localhost')) return;
-        const relativeImagePath = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
-        const localImagePath = path.join(
-          process.cwd(),
-          '..',
-          'frontend',
-          'public',
-          relativeImagePath,
-        );
-        if (!existsSync(localImagePath)) return;
-        const cid = `product-image-${index}@mainiinlut`;
-        attachments.push({
-          filename: path.basename(localImagePath),
-          path: localImagePath,
-          cid,
-        });
-        customerHtmlWithInlineImages = customerHtmlWithInlineImages.replace(
-          item.imageUrl,
-          `cid:${cid}`,
-        );
-      } catch {
-        // Keep the original URL when parsing fails.
-      }
-    });
     if (adminEmail) {
       await this.emailService.sendOrderNotificationEmail(
         adminEmail,
@@ -1324,7 +1167,7 @@ export class CheckoutService {
       );
       const artistHtml = `
         <h2>Comanda noua pentru produsele tale (${payload.orderId})</h2>
-        <p><strong>Metoda plata:</strong> ${payload.paymentMethod}</p>
+        <p><strong>Metoda plata:</strong> ${escapeHtml(paymentLabel)}</p>
         ${isGift ? '<p><strong>Tip comanda:</strong> Cadou</p>' : ''}
         ${orderPlacerHtml}
         ${deliveryHtml}
@@ -1356,15 +1199,21 @@ export class CheckoutService {
       await this.emailService.sendOrderNotificationEmail(
         confirmationEmail,
         `Confirmare comanda ${payload.orderId}`,
-        customerHtmlWithInlineImages,
-        attachments,
+        customerHtml,
       );
     }
   }
 
+  private getBackendUrl(): string {
+    const backendUrl = this.configService.get<string>('BACKEND_URL')?.trim();
+    if (!backendUrl) {
+      throw new Error('BACKEND_URL lipseste din backend/.env');
+    }
+    return backendUrl.replace(/\/$/, '');
+  }
+
   private toAbsoluteImageUrl(path: string): string {
-    const backendBase =
-      this.configService.get('BACKEND_URL') || 'http://localhost:4000';
+    const backendBase = this.getBackendUrl();
     const frontendBase =
       this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
     if (path.startsWith('http')) return path;
@@ -1381,32 +1230,202 @@ export class CheckoutService {
     return `${frontendBase}/produs/${productId}`;
   }
 
+  async getCardOrderStatus(publicOrderNumber: string): Promise<{
+    orderId: string;
+    paymentStatus: string;
+  }> {
+    const order = await this.ordersService.findByPublicOrderNumber(
+      publicOrderNumber,
+    );
+    if (!order) {
+      throw new NotFoundException('Comanda nu a fost gasita.');
+    }
+    return {
+      orderId: order.publicOrderNumber,
+      paymentStatus: order.paymentStatus.toLowerCase(),
+    };
+  }
+
   async handleIpn(
     verificationToken: string,
+    rawData: string,
     payload: Record<string, unknown>,
   ): Promise<void> {
-    const rawData = JSON.stringify(payload);
     this.logger.log('Netopia IPN received');
-    const status = await this.getIpn().verify(verificationToken, rawData);
-    if (status.errorType !== 0) {
-      throw new BadRequestException(
-        status.errorMessage || 'Verificarea IPN Netopia a esuat.',
-      );
+    const verified = await this.getIpn().verify(verificationToken, rawData);
+    const signatureOk = verified.errorType === 0;
+    this.logger.log(
+      `Netopia IPN result errorType=${verified.errorType} status=${verified.status} message=${verified.errorMessage || ''}`,
+    );
+
+    const reportedOrder = payload.order as { orderID?: string } | undefined;
+    const reportedPayment = payload.payment as { ntpID?: string } | undefined;
+    const orderId = reportedOrder?.orderID?.trim();
+    if (!orderId) {
+      throw new BadRequestException('IPN Netopia fara numar de comanda.');
     }
 
-    const paymentStatus = status.status;
-    if (
-      paymentStatus !== NETOPIA_STATUS_PAID &&
-      paymentStatus !== NETOPIA_STATUS_CONFIRMED
-    ) {
+    const localOrder = await this.ordersService.findByPublicOrderNumber(orderId);
+    if (!localOrder || localOrder.paymentMethod !== PaymentMethod.CARD) {
+      throw new BadRequestException('Comanda din IPN nu exista.');
+    }
+
+    const confirmedByNetopia = await this.netopiaPaymentIsPaid(
+      localOrder,
+      reportedPayment?.ntpID,
+    );
+    if (confirmedByNetopia) {
+      await this.processCardPaymentNotification(payload, signatureOk);
       return;
     }
 
-    await this.processCardPaymentNotification(payload);
+    if (!signatureOk) {
+      throw new BadRequestException(
+        verified.errorMessage || 'Verificarea IPN Netopia a esuat.',
+      );
+    }
+
+    if (
+      verified.status !== NETOPIA_STATUS_PAID &&
+      verified.status !== NETOPIA_STATUS_CONFIRMED
+    ) {
+      this.logger.warn(
+        `Netopia IPN ignored because payment is not confirmed (status=${verified.status}).`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `IPN semnat pentru ${orderId}, dar statusul autentificat Netopia nu confirma plata.`,
+    );
+  }
+
+  private async resolveNetopiaNtpId(
+    orderId: string,
+    startedNtpId: string,
+  ): Promise<string> {
+    const apiKey = this.getNetopiaApiKey();
+    const posSignature = this.getNetopiaPosSignature();
+    if (!apiKey || !posSignature) {
+      return startedNtpId;
+    }
+
+    const response = await fetch(
+      `${this.getNetopiaBaseUrl()}/operation/status`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          posID: posSignature,
+          orderID: orderId,
+          ntpID: startedNtpId,
+        }),
+      },
+    );
+    const data = (await response.json().catch(() => null)) as {
+      order?: { orderID?: string };
+      payment?: { ntpID?: string | number };
+    } | null;
+    const responseOrderId = data?.order?.orderID?.trim();
+    const responseNtpId = String(data?.payment?.ntpID ?? '').trim();
+    if (responseOrderId === orderId && responseNtpId) {
+      return responseNtpId;
+    }
+    return startedNtpId;
+  }
+
+  private async netopiaPaymentIsPaid(
+    order: {
+      publicOrderNumber: string;
+      totalRon: number | string;
+      netopiaNtpId: string | null;
+    },
+    hintedNtpId?: string,
+  ): Promise<boolean> {
+    const storedNtpId = order.netopiaNtpId?.trim();
+    const reportedNtpId = String(hintedNtpId ?? '').trim();
+    const ntpId = reportedNtpId || storedNtpId;
+    if (!ntpId) {
+      this.logger.warn(
+        `Lipseste ntpID pentru confirmarea comenzii ${order.publicOrderNumber}.`,
+      );
+      return false;
+    }
+    if (storedNtpId && reportedNtpId && storedNtpId !== reportedNtpId) {
+      this.logger.warn(
+        `ntpID salvat difera de cel din IPN pentru ${order.publicOrderNumber}. Confirm prin statusul Netopia.`,
+      );
+    }
+
+    const apiKey = this.getNetopiaApiKey();
+    const posSignature = this.getNetopiaPosSignature();
+    if (!apiKey || !posSignature) {
+      return false;
+    }
+
+    const response = await fetch(
+      `${this.getNetopiaBaseUrl()}/operation/status`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          posID: posSignature,
+          orderID: order.publicOrderNumber,
+          ntpID: ntpId,
+        }),
+      },
+    );
+    const data = (await response.json().catch(() => null)) as {
+      error?: { code?: string; message?: string };
+      order?: { orderID?: string; amount?: number; currency?: string };
+      payment?: { status?: number; amount?: number; ntpID?: string };
+    } | null;
+
+    const paymentStatus = Number(data?.payment?.status);
+    const responseOrderId = data?.order?.orderID?.trim();
+    const responseNtpId = data?.payment?.ntpID?.trim();
+    const amount = Number(data?.payment?.amount ?? data?.order?.amount);
+    const currency = data?.order?.currency;
+    this.logger.log(
+      `Netopia status API http=${response.status} order=${order.publicOrderNumber} paymentStatus=${paymentStatus} orderMatch=${responseOrderId === order.publicOrderNumber} error=${data?.error?.code || ''}`,
+    );
+
+    if (!response.ok || !data) {
+      return false;
+    }
+    if (
+      !cardPaymentMatchesOrder({
+        responseOrderId,
+        expectedOrderId: order.publicOrderNumber,
+        responseNtpId,
+        expectedNtpId: ntpId,
+        currency,
+        amount,
+        expectedTotal: Number(order.totalRon),
+        paymentStatus,
+      })
+    ) {
+      return false;
+    }
+
+    if (!storedNtpId) {
+      await this.ordersService.updateNetopiaNtpId(
+        order.publicOrderNumber,
+        responseNtpId || ntpId,
+      );
+    }
+    return true;
   }
 
   private async processCardPaymentNotification(
     payload: Record<string, unknown>,
+    trustMetadata = true,
   ): Promise<void> {
     const order = payload.order as
       | {
@@ -1442,7 +1461,7 @@ export class CheckoutService {
       return;
     }
 
-    const metadata = order.data || {};
+    const metadata = trustMetadata ? order.data || {} : {};
     let items: OrderItemSnapshot[] = [];
     if (metadata.itemsJson) {
       try {
@@ -1467,7 +1486,11 @@ export class CheckoutService {
     }
 
     if (items.length && !paidOrder?.stockFulfilledAt) {
-      const userId = metadata.userId ? Number(metadata.userId) : null;
+      const userId = paidOrder?.userId
+      ? Number(paidOrder.userId)
+      : metadata.userId
+        ? Number(metadata.userId)
+        : null;
       const guestCartId = metadata.guestCartId?.trim();
       const holder: CartHolder | undefined =
         userId && Number.isFinite(userId)
@@ -1476,13 +1499,13 @@ export class CheckoutService {
             ? { type: 'guest', guestId: guestCartId }
             : undefined;
       await this.stockReservationsService.fulfillOrder(
+        order.orderID,
         items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
         })),
         holder,
       );
-      await this.ordersService.markStockFulfilled(order.orderID);
     }
 
     const billing = order.billing;
@@ -1497,7 +1520,6 @@ export class CheckoutService {
     if (!paidOrder?.confirmationSentAt) {
       await this.sendOrderNotification({
         orderId: order.orderID,
-        paymentMethod: 'card',
         customer: {
           firstName:
             paidOrder?.customerFirstName ||
@@ -1557,13 +1579,16 @@ export class CheckoutService {
         items,
         subtotalRon: subtotal,
         deliveryFeeRon: deliveryFeeRon > 0 ? deliveryFeeRon : DELIVERY_FEE_RON,
-        cashOperationalFeeRon: 0,
         totalRon,
       });
       await this.ordersService.markConfirmationSent(order.orderID);
     }
 
-    const userId = metadata.userId ? Number(metadata.userId) : null;
+    const userId = paidOrder?.userId
+      ? Number(paidOrder.userId)
+      : metadata.userId
+        ? Number(metadata.userId)
+        : null;
     if (userId && Number.isFinite(userId)) {
       await this.cartService.clearCart(userId);
     }

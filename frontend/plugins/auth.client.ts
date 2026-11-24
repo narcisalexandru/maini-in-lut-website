@@ -1,4 +1,3 @@
-export default defineNuxtPlugin(() => {
-  const { syncFromStorage } = useAuthState();
-  syncFromStorage();
+export default defineNuxtPlugin(async () => {
+  await syncStoredUserProfile();
 });

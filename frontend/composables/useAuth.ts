@@ -1,6 +1,7 @@
 import { computed } from "vue";
 import type { AuthUser } from "~/types/user";
 import { useAuthState } from "./useAuthState";
+import { apiRequest } from "~/utils/api-request";
 import { getApiBaseUrl } from "~/utils/api-base";
 
 interface AuthError {
@@ -43,26 +44,25 @@ export const useAuth = () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await fetch(
-        `${getApiBaseUrl()}/auth/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        },
-      );
+      const response = await apiRequest("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.message === "EMAIL_NOT_VERIFIED") {
+          throw new Error("EMAIL_NOT_VERIFIED");
+        }
         throw new Error(data.message || "Login failed");
       }
 
-      if (!data.access_token) {
-        throw new Error("No access token received");
+      if (!data.user?.id) {
+        throw new Error("No user received");
       }
 
-      setAuthData(data);
+      setAuthData(data.user);
       return { success: true as const, data };
     } catch (err) {
       const authError = handleAuthError(err);
@@ -87,14 +87,10 @@ export const useAuth = () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await fetch(
-        `${getApiBaseUrl()}/auth/register`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(userData),
-        },
-      );
+      const response = await apiRequest("/auth/register", {
+        method: "POST",
+        body: JSON.stringify(userData),
+      });
 
       const data = await response.json();
 
@@ -116,9 +112,6 @@ export const useAuth = () => {
         throw new Error(data.message || "Registration failed");
       }
 
-      setAuthData(data);
-      const { mergeGuestCart } = useCart();
-      await mergeGuestCart();
       router.push(
         locale.value === "en"
           ? "/en/auth/email-verification"
@@ -133,6 +126,14 @@ export const useAuth = () => {
     } finally {
       isLoading.value = false;
     }
+  };
+
+  const resendVerification = async (email: string) => {
+    const response = await apiRequest("/auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+    return response.ok;
   };
 
   const googleAuth = () => {
@@ -152,40 +153,29 @@ export const useAuth = () => {
 
   const loadUser = async () => {
     try {
-      syncFromStorage();
-
-      const token = localStorage.getItem("token");
-      if (!token) {
-        isAuthenticated.value = false;
-        return;
-      }
-
-      const response = await fetch(
-        `${getApiBaseUrl()}/users/profile`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const response = await apiRequest("/users/profile");
 
       if (!response.ok) {
         if (response.status === 401) {
+          await apiRequest("/auth/logout", { method: "POST" }).catch(() => undefined);
           clearAuthData();
         }
         return;
       }
 
       const userData = await response.json();
-      user.value = userData;
-      isAuthenticated.value = true;
-      localStorage.setItem("user", JSON.stringify(userData));
+      setAuthData(userData);
     } catch (loadError) {
       console.error("Error loading user data:", loadError);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await apiRequest("/auth/logout", { method: "POST" });
+    } catch {
+      // The local session is cleared even if the API is unreachable.
+    }
     clearAuthData();
     const { loadFavorites } = useFavorites();
     const { clearCart } = useCart();
@@ -200,22 +190,14 @@ export const useAuth = () => {
       isLoading.value = true;
       error.value = null;
 
-      const token = localStorage.getItem("token");
-      if (!token) {
+      if (!isAuthenticated.value) {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(
-        `${getApiBaseUrl()}/users/profile`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updateData),
-        },
-      );
+      const response = await apiRequest("/users/profile", {
+        method: "PUT",
+        body: JSON.stringify(updateData),
+      });
 
       const data = await response.json();
 
@@ -224,8 +206,7 @@ export const useAuth = () => {
       }
 
       const updatedUser = { ...user.value, ...data };
-      user.value = updatedUser;
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setAuthData(updatedUser);
 
       return { success: true as const, data: updatedUser };
     } catch (err) {
@@ -250,6 +231,7 @@ export const useAuth = () => {
     login,
     register,
     googleAuth,
+    resendVerification,
     isLoading,
     error,
     updateProfile,

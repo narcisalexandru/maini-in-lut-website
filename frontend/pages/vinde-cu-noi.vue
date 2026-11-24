@@ -243,9 +243,7 @@ const hasAuth = computed(() => {
   if (!import.meta.client) {
     return false;
   }
-  return Boolean(
-    localStorage.getItem("token") && localStorage.getItem("user"),
-  );
+  return false;
 });
 
 const activeView = computed(() => {
@@ -384,10 +382,8 @@ const handleSubmit = async () => {
 
 onMounted(async () => {
   try {
-    syncFromStorage();
-
-    if (localStorage.getItem("token")) {
-      await loadUser();
+    await loadUser();
+    if (isAuthenticated.value) {
       await loadApplication();
       if (!application.value) {
         prefillFromUser();

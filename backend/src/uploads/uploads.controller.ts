@@ -1,10 +1,12 @@
 import {
   Controller,
   Post,
+  Request,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -12,6 +14,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
 import { UploadsService } from './uploads.service';
+import { AuthenticatedRequest } from '../common/types/authenticated-request.interface';
 
 @Controller('admin/uploads')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -19,6 +22,7 @@ export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
   @Roles(UserRole.ARTIST)
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @Post('product-images')
   @UseInterceptors(
     FilesInterceptor('images', 3, {
@@ -27,8 +31,9 @@ export class UploadsController {
     }),
   )
   async uploadProductImages(
+    @Request() req: AuthenticatedRequest,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    return this.uploadsService.saveProductImages(files);
+    return this.uploadsService.saveProductImages(req.user.id, files);
   }
 }

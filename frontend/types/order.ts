@@ -5,7 +5,7 @@ export type OrderItemStatus =
   | "DELIVERED"
   | "CANCELLED";
 
-export type OrderPaymentStatus = "PENDING" | "PAID" | "FAILED";
+export type OrderPaymentStatus = "PENDING" | "AWAITING_CASH" | "PAID" | "FAILED";
 export type PaymentMethod = "CARD" | "CASH";
 
 export interface ArtistOrderStatus {

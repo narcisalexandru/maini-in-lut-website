@@ -57,13 +57,6 @@
             <span>{{ t("delivery") }}</span>
             <span>{{ order.deliveryFeeRon }} RON</span>
           </div>
-          <div
-            v-if="order.cashOperationalFeeRon > 0"
-            class="flex justify-between"
-          >
-            <span>{{ t("cashFee") }}</span>
-            <span>{{ order.cashOperationalFeeRon }} RON</span>
-          </div>
           <div class="flex justify-between font-semibold text-base h-color-lunar-green pt-2">
             <span>{{ t("total") }}</span>
             <span>{{ order.totalRon }} RON</span>
@@ -118,7 +111,6 @@ onMounted(async () => {
     "items": "Produse",
     "subtotal": "Subtotal",
     "delivery": "Livrare",
-    "cashFee": "Taxă operațională ramburs",
     "total": "Total",
     "payment": {
       "PENDING": "Plată în așteptare",
@@ -138,7 +130,6 @@ onMounted(async () => {
     "items": "Items",
     "subtotal": "Subtotal",
     "delivery": "Delivery",
-    "cashFee": "Cash on delivery fee",
     "total": "Total",
     "payment": {
       "PENDING": "Awaiting payment",

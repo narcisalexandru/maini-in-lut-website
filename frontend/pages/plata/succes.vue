@@ -49,6 +49,8 @@
 </template>
 
 <script setup>
+import { getApiBaseUrl } from "~/utils/api-base";
+
 defineI18nRoute({
   paths: {
     ro: "/plata/succes",
@@ -57,10 +59,26 @@ defineI18nRoute({
 });
 
 const { t } = useI18n({ useScope: "local" });
-const { loadCart } = useCart();
+const route = useRoute();
+const { clearCart } = useCart();
 
-onMounted(() => {
-  loadCart();
+onMounted(async () => {
+  await clearCart();
+
+  const queryOrderId = (route.query.orderId || route.query.orderID || route.query.order_id);
+  const storedOrderId = import.meta.client ? sessionStorage.getItem("last_checkout_order_id") : null;
+  const orderId = (typeof queryOrderId === "string" && queryOrderId.trim()) ? queryOrderId.trim() : storedOrderId;
+
+  if (orderId) {
+    try {
+      await fetch(`${getApiBaseUrl()}/checkout/order-status/${encodeURIComponent(orderId)}`);
+    } catch {
+      // background verification best-effort
+    }
+    if (import.meta.client) {
+      sessionStorage.removeItem("last_checkout_order_id");
+    }
+  }
 });
 </script>
 

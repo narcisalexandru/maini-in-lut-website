@@ -12,7 +12,7 @@
 
 <script setup>
 import ProductPageView from "~/components/ProductPageView.vue";
-import { buildGuestCartHeaders } from "~/utils/guest-cart-id";
+import { apiRequest } from "~/utils/api-request";
 
 const route = useRoute();
 const id = computed(() => route.params.id);
@@ -31,16 +31,7 @@ defineI18nRoute({
 async function fetchProduct() {
   loading.value = true;
   try {
-    const token =
-      import.meta.client ? localStorage.getItem("token") : null;
-    const headers = {
-      ...buildGuestCartHeaders(),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-    const res = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/products/${id.value}`,
-      { headers },
-    );
+    const res = await apiRequest(`/products/${id.value}`);
     if (!res.ok) {
       product.value = null;
       return;
@@ -62,15 +53,7 @@ async function fetchProduct() {
 
 async function fetchRelated() {
   try {
-    const token =
-      import.meta.client ? localStorage.getItem("token") : null;
-    const headers = {
-      ...buildGuestCartHeaders(),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/products`, {
-      headers,
-    });
+    const res = await apiRequest("/products");
     const all = await res.json();
     const others = all.filter((p) => p.id !== product.value?.id);
     relatedProducts.value = others.slice(0, 4);

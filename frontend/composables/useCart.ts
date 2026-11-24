@@ -1,10 +1,5 @@
 import { clampTotalCartQuantity } from "~/utils/product-stock";
-import {
-  buildGuestCartHeaders,
-  getGuestCartId,
-  getOrCreateGuestCartId,
-} from "~/utils/guest-cart-id";
-import { getApiBaseUrl } from "~/utils/api-base";
+import { apiRequest } from "~/utils/api-request";
 
 export type CartItem = { productId: number; quantity: number };
 
@@ -33,20 +28,14 @@ export const useCart = () => {
     () => null,
   );
 
-  const apiBase = () => getApiBaseUrl();
+  const { isAuthenticated, clearAuthData } = useAuthState();
 
-  const getToken = () => {
-    if (import.meta.client) {
-      return localStorage.getItem("token");
-    }
-    return null;
-  };
+  const getToken = () =>
+    import.meta.client && isAuthenticated.value ? "cookie" : null;
 
   const useGuestFlow = () => {
-    if (!import.meta.client) {
-      return;
-    }
-    localStorage.removeItem("token");
+    void apiRequest("/auth/logout", { method: "POST" }).catch(() => undefined);
+    clearAuthData();
   };
 
   const loadGuestCart = (): CartItem[] => getGuestCartFromStorage();
@@ -64,12 +53,10 @@ export const useCart = () => {
       return items;
     }
 
-    const guestId = getOrCreateGuestCartId();
     try {
-      const response = await fetch(`${apiBase()}/cart/guest/reservations`, {
+      const response = await apiRequest("/cart/guest/reservations", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guestId, items }),
+        body: JSON.stringify({ items }),
       });
       if (!response.ok) {
         cartItems.value = items;
@@ -100,9 +87,7 @@ export const useCart = () => {
     const token = getToken();
     if (token) {
       try {
-        const response = await fetch(`${apiBase()}/users/cart`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await apiRequest("/users/cart");
         if (response.ok) {
           const data = await response.json();
           cartItems.value = Array.isArray(data) ? data : [];
@@ -137,12 +122,8 @@ export const useCart = () => {
     const token = getToken();
     if (token) {
       try {
-        const response = await fetch(`${apiBase()}/users/cart/items`, {
+        const response = await apiRequest("/users/cart/items", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify({ productId, quantity }),
         });
         if (response.ok) {
@@ -191,13 +172,9 @@ export const useCart = () => {
     const token = getToken();
     if (token) {
       try {
-        const response = await fetch(
-          `${apiBase()}/users/cart/items/${productId}`,
-          {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        const response = await apiRequest(`/users/cart/items/${productId}`, {
+          method: "DELETE",
+        });
         if (response.ok) {
           const data = await response.json();
           cartItems.value = Array.isArray(data) ? data : cartItems.value;
@@ -232,17 +209,10 @@ export const useCart = () => {
     const token = getToken();
     if (token) {
       try {
-        const response = await fetch(
-          `${apiBase()}/users/cart/items/${productId}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ quantity: nextQuantity }),
-          },
-        );
+        const response = await apiRequest(`/users/cart/items/${productId}`, {
+          method: "PUT",
+          body: JSON.stringify({ quantity: nextQuantity }),
+        });
         if (response.ok) {
           const data = await response.json();
           cartItems.value = Array.isArray(data) ? data : cartItems.value;
@@ -277,20 +247,15 @@ export const useCart = () => {
     if (!token) return;
 
     const guestItems = loadGuestCart();
-    const guestId = getGuestCartId();
     if (guestItems.length === 0) {
       await loadCart();
       return;
     }
 
     try {
-      const response = await fetch(`${apiBase()}/users/cart/merge`, {
+      const response = await apiRequest("/users/cart/merge", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ items: guestItems, guestId }),
+        body: JSON.stringify({ items: guestItems }),
       });
       if (response.ok) {
         if (import.meta.client) {
@@ -338,7 +303,5 @@ export const useCart = () => {
     mergeGuestCart,
     clearCart,
     refreshGuestReservations,
-    getGuestCartId: getOrCreateGuestCartId,
-    buildGuestCartHeaders,
   };
 };

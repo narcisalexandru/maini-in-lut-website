@@ -18,6 +18,8 @@
 </template>
 
 <script setup>
+import { getApiBaseUrl } from "~/utils/api-base";
+
 defineI18nRoute({
   paths: {
     ro: "/favorite",
@@ -41,7 +43,7 @@ onMounted(async () => {
   await loadFavorites();
   try {
     const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/products`
+      `${getApiBaseUrl()}/products`
     );
     const data = await response.json();
     products.value = data;

@@ -5,20 +5,22 @@ import {
   Param,
   Body,
   Req,
+  Res,
   BadRequestException,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
+import { Request, Response } from 'express';
 import { CheckoutService, BillingDetailsDto } from './checkout.service';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { User } from '../users/entities/user.entity';
+import { GuestHolderService } from '../stock-reservations/guest-holder.service';
 
 type CheckoutRequest = Request & { user?: User };
 
 type CheckoutBody = {
   successUrl?: string;
   cancelUrl?: string;
-  paymentMethod?: 'card' | 'cash';
   deliveryAddress?: {
     label?: string;
     county: string;
@@ -43,53 +45,38 @@ type CheckoutBody = {
   };
 };
 
-type CashOrderBody = {
-  deliveryAddress?: CheckoutBody['deliveryAddress'];
-  billingDetails?: BillingDetailsDto;
-  items?: { productId: number; quantity: number }[];
-  guestCartId?: string;
-  guest?: CheckoutBody['guest'];
-};
-
 @Controller('checkout')
 export class CheckoutController {
-  constructor(private readonly checkoutService: CheckoutService) {}
+  constructor(
+    private readonly checkoutService: CheckoutService,
+    private readonly guestHolderService: GuestHolderService,
+  ) {}
 
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Get('company/:cui')
   async getCompanyByCui(@Param('cui') cui: string) {
     return this.checkoutService.lookupCompanyByCui(cui);
   }
 
+  @Get('order-status/:orderId')
+  async getOrderStatus(@Param('orderId') orderId: string, @Req() req: Request) {
+    req.res?.setHeader('Cache-Control', 'no-store');
+    return this.checkoutService.getCardOrderStatus(orderId);
+  }
+
+  @Throttle({ default: { limit: 8, ttl: 60_000 } })
   @Post('create-session')
   @UseGuards(OptionalJwtAuthGuard)
   async createSession(
     @Req() req: CheckoutRequest,
+    @Res({ passthrough: true }) res: Response,
     @Body() body: CheckoutBody,
   ) {
-    const frontendUrl =
-      process.env.FRONTEND_URL || 'http://localhost:3000';
-    const successUrl =
-      body.successUrl?.startsWith('http') || body.successUrl?.startsWith('/')
-        ? body.successUrl.startsWith('http')
-          ? body.successUrl
-          : `${frontendUrl}${body.successUrl}`
-        : `${frontendUrl}/plata/succes`;
-    const cancelUrl =
-      body.cancelUrl?.startsWith('http') || body.cancelUrl?.startsWith('/')
-        ? body.cancelUrl.startsWith('http')
-          ? body.cancelUrl
-          : `${frontendUrl}${body.cancelUrl}`
-        : `${frontendUrl}/cos`;
+    const successUrl = this.storefrontUrl(body.successUrl, '/plata/succes');
+    const cancelUrl = this.storefrontUrl(body.cancelUrl, '/cos');
 
     const userId = req.user?.id;
     if (userId) {
-      if (body.paymentMethod === 'cash') {
-        return this.checkoutService.createCashOrderForUser(
-          userId,
-          body.deliveryAddress,
-          body.billingDetails,
-        );
-      }
       return this.checkoutService.createCheckoutSessionForUser(
         userId,
         successUrl,
@@ -102,28 +89,12 @@ export class CheckoutController {
     if (!body.guest) {
       throw new BadRequestException('Datele pentru comanda guest lipsesc.');
     }
-    if (body.paymentMethod === 'cash') {
-      return this.checkoutService.createCashOrderForGuest({
-        guestCartId: body.guestCartId,
-        items: body.items || [],
-        guest: {
-          firstName: body.guest.firstName || '',
-          lastName: body.guest.lastName || '',
-          email: body.guest.email || '',
-          phone: body.guest.phone || '',
-          county: body.guest.county || '',
-          city: body.guest.city || '',
-          street: body.guest.street || '',
-          postalCode: body.guest.postalCode || '',
-        },
-        billingDetails: body.billingDetails,
-      });
-    }
+    const guestCartId = this.guestHolderService.resolve(req, res);
 
     return this.checkoutService.createCheckoutSessionForGuest({
       successUrl,
       cancelUrl,
-      guestCartId: body.guestCartId,
+      guestCartId,
       items: body.items || [],
       guest: {
         firstName: body.guest.firstName || '',
@@ -139,41 +110,7 @@ export class CheckoutController {
     });
   }
 
-  @Post('cash-order')
-  @UseGuards(OptionalJwtAuthGuard)
-  async createCashOrder(
-    @Req() req: CheckoutRequest,
-    @Body() body: CashOrderBody,
-  ) {
-    const userId = req.user?.id;
-    if (userId) {
-      return this.checkoutService.createCashOrderForUser(
-        userId,
-        body.deliveryAddress,
-        body.billingDetails,
-      );
-    }
-
-    if (!body.guest) {
-      throw new BadRequestException('Datele pentru comanda guest lipsesc.');
-    }
-    return this.checkoutService.createCashOrderForGuest({
-      guestCartId: body.guestCartId,
-      items: body.items || [],
-      guest: {
-        firstName: body.guest.firstName || '',
-        lastName: body.guest.lastName || '',
-        email: body.guest.email || '',
-        phone: body.guest.phone || '',
-        county: body.guest.county || '',
-        city: body.guest.city || '',
-        street: body.guest.street || '',
-        postalCode: body.guest.postalCode || '',
-      },
-      billingDetails: body.billingDetails,
-    });
-  }
-
+  @SkipThrottle()
   @Post('ipn')
   async ipn(
     @Req() req: Request,
@@ -185,7 +122,35 @@ export class CheckoutController {
     if (!verificationToken) {
       throw new BadRequestException('Lipseste header-ul verification-token.');
     }
-    await this.checkoutService.handleIpn(verificationToken, body);
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+    const rawData = rawBody?.length
+      ? rawBody.toString('utf8')
+      : JSON.stringify(body);
+    await this.checkoutService.handleIpn(verificationToken, rawData, body);
     return { errorCode: 0 };
+  }
+
+  private storefrontUrl(pathOrUrl: string | undefined, fallbackPath: string): string {
+    const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+    let frontendOrigin = 'http://localhost:3000';
+    try {
+      frontendOrigin = new URL(frontend).origin;
+    } catch {
+      frontendOrigin = 'http://localhost:3000';
+    }
+    if (pathOrUrl?.startsWith('/') && !pathOrUrl.startsWith('//')) {
+      return `${frontend}${pathOrUrl}`;
+    }
+    if (pathOrUrl) {
+      try {
+        const parsed = new URL(pathOrUrl);
+        if (parsed.origin === frontendOrigin) {
+          return parsed.toString();
+        }
+      } catch {
+        return `${frontend}${fallbackPath}`;
+      }
+    }
+    return `${frontend}${fallbackPath}`;
   }
 }
