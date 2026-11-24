@@ -75,6 +75,12 @@ export class Order {
   })
   paymentStatus: OrderPaymentStatus;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  stockFulfilledAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  confirmationSentAt: Date | null;
+
   @Column('decimal', { precision: 10, scale: 2 })
   subtotalRon: number;
 

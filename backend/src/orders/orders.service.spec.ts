@@ -64,6 +64,33 @@ describe('OrdersService', () => {
     expect(ordersRepository.save).not.toHaveBeenCalled();
   });
 
+  it('marks stock fulfillment only once', async () => {
+    const order = {
+      id: 1,
+      publicOrderNumber: 'MIL-123',
+      stockFulfilledAt: null,
+    } as Order;
+    ordersRepository.findOne.mockResolvedValue(order);
+    ordersRepository.save.mockImplementation(async (value) => value as Order);
+
+    const result = await service.markStockFulfilled('MIL-123');
+    expect(result?.stockFulfilledAt).toBeInstanceOf(Date);
+    expect(ordersRepository.save).toHaveBeenCalled();
+  });
+
+  it('skips stock fulfillment when already recorded', async () => {
+    const fulfilledAt = new Date('2026-08-26T10:00:00.000Z');
+    ordersRepository.findOne.mockResolvedValue({
+      id: 1,
+      publicOrderNumber: 'MIL-123',
+      stockFulfilledAt: fulfilledAt,
+    } as Order);
+
+    const result = await service.markStockFulfilled('MIL-123');
+    expect(result?.stockFulfilledAt).toBe(fulfilledAt);
+    expect(ordersRepository.save).not.toHaveBeenCalled();
+  });
+
   it('blocks item updates before payment is confirmed', async () => {
     const orderItemsRepository = service['orderItemsRepository'] as jest.Mocked<
       Repository<OrderItem>

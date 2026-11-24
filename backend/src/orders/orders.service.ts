@@ -113,6 +113,34 @@ export class OrdersService {
     return this.ordersRepository.save(order);
   }
 
+  async markStockFulfilled(publicOrderNumber: string): Promise<Order | null> {
+    const order = await this.ordersRepository.findOne({
+      where: { publicOrderNumber },
+    });
+    if (!order) {
+      return null;
+    }
+    if (order.stockFulfilledAt) {
+      return order;
+    }
+    order.stockFulfilledAt = new Date();
+    return this.ordersRepository.save(order);
+  }
+
+  async markConfirmationSent(publicOrderNumber: string): Promise<Order | null> {
+    const order = await this.ordersRepository.findOne({
+      where: { publicOrderNumber },
+    });
+    if (!order) {
+      return null;
+    }
+    if (order.confirmationSentAt) {
+      return order;
+    }
+    order.confirmationSentAt = new Date();
+    return this.ordersRepository.save(order);
+  }
+
   async findByPublicOrderNumber(
     publicOrderNumber: string,
   ): Promise<Order | null> {

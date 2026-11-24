@@ -365,8 +365,9 @@ export class CheckoutService {
   }): Promise<{ url: string }> {
     const subtotal = payload.items.reduce((sum, i) => sum + i.lineTotalRon, 0);
     const totalRon = Number((subtotal + DELIVERY_FEE_RON).toFixed(2));
-    const backendUrl =
-      this.configService.get('BACKEND_URL') || 'http://localhost:4000';
+    const backendUrl = (
+      this.configService.get<string>('BACKEND_URL') || 'http://localhost:4000'
+    ).trim().replace(/\/$/, '');
 
     const configData = {
       emailTemplate: '',
@@ -376,6 +377,9 @@ export class CheckoutService {
       redirectUrl: payload.successUrl,
       language: 'ro',
     };
+    this.logger.log(
+      `Netopia notifyUrl=${configData.notifyUrl} redirectUrl=${configData.redirectUrl}`,
+    );
     const paymentData = {
       options: {
         installments: 0,
@@ -871,6 +875,9 @@ export class CheckoutService {
       cashOperationalFeeRon: CASH_OPERATIONAL_FEE_RON,
       totalRon: total,
     });
+    await this.ordersService.markConfirmationSent(
+      persistedOrder.publicOrderNumber,
+    );
 
     await this.stockReservationsService.fulfillOrder(
       items.map((item) => ({
@@ -878,6 +885,9 @@ export class CheckoutService {
         quantity: item.quantity,
       })),
       { type: 'user', userId },
+    );
+    await this.ordersService.markStockFulfilled(
+      persistedOrder.publicOrderNumber,
     );
     await this.cartService.clearCart(userId);
     return {
@@ -978,6 +988,7 @@ export class CheckoutService {
         guestCartId: payload.guestCartId?.trim() || '',
         guestFirstName: payload.guest.firstName,
         guestLastName: payload.guest.lastName,
+        guestEmail: payload.guest.email,
         guestPhone: payload.guest.phone,
         guestCounty: payload.guest.county,
         guestCity: payload.guest.city,
@@ -1044,6 +1055,9 @@ export class CheckoutService {
       cashOperationalFeeRon: CASH_OPERATIONAL_FEE_RON,
       totalRon: total,
     });
+    await this.ordersService.markConfirmationSent(
+      persistedOrder.publicOrderNumber,
+    );
 
     await this.stockReservationsService.fulfillOrder(
       items.map((item) => ({
@@ -1051,6 +1065,9 @@ export class CheckoutService {
         quantity: item.quantity,
       })),
       guestHolder,
+    );
+    await this.ordersService.markStockFulfilled(
+      persistedOrder.publicOrderNumber,
     );
 
     return {
@@ -1369,6 +1386,7 @@ export class CheckoutService {
     payload: Record<string, unknown>,
   ): Promise<void> {
     const rawData = JSON.stringify(payload);
+    this.logger.log('Netopia IPN received');
     const status = await this.getIpn().verify(verificationToken, rawData);
     if (status.errorType !== 0) {
       throw new BadRequestException(
@@ -1416,7 +1434,11 @@ export class CheckoutService {
     const existingOrder = await this.ordersService.findByPublicOrderNumber(
       order.orderID,
     );
-    if (existingOrder?.paymentStatus === OrderPaymentStatus.PAID) {
+    if (
+      existingOrder?.paymentStatus === OrderPaymentStatus.PAID &&
+      existingOrder.stockFulfilledAt &&
+      existingOrder.confirmationSentAt
+    ) {
       return;
     }
 
@@ -1444,7 +1466,7 @@ export class CheckoutService {
       }));
     }
 
-    if (items.length) {
+    if (items.length && !paidOrder?.stockFulfilledAt) {
       const userId = metadata.userId ? Number(metadata.userId) : null;
       const guestCartId = metadata.guestCartId?.trim();
       const holder: CartHolder | undefined =
@@ -1460,6 +1482,7 @@ export class CheckoutService {
         })),
         holder,
       );
+      await this.ordersService.markStockFulfilled(order.orderID);
     }
 
     const billing = order.billing;
@@ -1471,58 +1494,74 @@ export class CheckoutService {
     );
     const deliveryFeeRon = Number((totalRon - subtotal).toFixed(2));
 
-    await this.sendOrderNotification({
-      orderId: order.orderID,
-      paymentMethod: 'card',
-      customer: {
-        firstName:
-          metadata.deliveryRecipientName?.split(' ')[0] ||
-          metadata.guestFirstName ||
-          billing?.firstName ||
-          'Client',
-        lastName:
-          metadata.deliveryRecipientName?.split(' ').slice(1).join(' ') ||
-          metadata.guestLastName ||
-          billing?.lastName ||
-          '',
-        email:
-          metadata.deliveryRecipientEmail ||
-          metadata.guestEmail ||
-          billing?.email ||
-          orderPlacer?.email ||
-          '',
-        phone:
-          metadata.deliveryRecipientPhone ||
-          metadata.guestPhone ||
-          billing?.phone ||
-          '',
-        county:
-          metadata.deliveryCounty ||
-          metadata.guestCounty ||
-          billing?.state ||
-          '',
-        city:
-          metadata.deliveryCity || metadata.guestCity || billing?.city || '',
-        street:
-          metadata.deliveryStreet ||
-          metadata.guestStreet ||
-          billing?.details ||
-          '',
-        postalCode:
-          metadata.deliveryPostalCode ||
-          metadata.guestPostalCode ||
-          billing?.postalCode ||
-          '',
-      },
-      orderPlacer,
-      isGift,
-      billingDetails: this.billingFromMetadata(metadata),
-      items,
-      subtotalRon: subtotal,
-      deliveryFeeRon: deliveryFeeRon > 0 ? deliveryFeeRon : DELIVERY_FEE_RON,
-      cashOperationalFeeRon: 0,
-      totalRon,
-    });
+    if (!paidOrder?.confirmationSentAt) {
+      await this.sendOrderNotification({
+        orderId: order.orderID,
+        paymentMethod: 'card',
+        customer: {
+          firstName:
+            paidOrder?.customerFirstName ||
+            metadata.deliveryRecipientName?.split(' ')[0] ||
+            metadata.guestFirstName ||
+            billing?.firstName ||
+            'Client',
+          lastName:
+            paidOrder?.customerLastName ||
+            metadata.deliveryRecipientName?.split(' ').slice(1).join(' ') ||
+            metadata.guestLastName ||
+            billing?.lastName ||
+            '',
+          email:
+            paidOrder?.customerEmail ||
+            metadata.guestEmail ||
+            metadata.deliveryRecipientEmail ||
+            billing?.email ||
+            orderPlacer?.email ||
+            '',
+          phone:
+            paidOrder?.customerPhone ||
+            metadata.deliveryRecipientPhone ||
+            metadata.guestPhone ||
+            billing?.phone ||
+            '',
+          county:
+            paidOrder?.deliveryCounty ||
+            metadata.deliveryCounty ||
+            metadata.guestCounty ||
+            billing?.state ||
+            '',
+          city:
+            paidOrder?.deliveryCity ||
+            metadata.deliveryCity ||
+            metadata.guestCity ||
+            billing?.city ||
+            '',
+          street:
+            paidOrder?.deliveryStreet ||
+            metadata.deliveryStreet ||
+            metadata.guestStreet ||
+            billing?.details ||
+            '',
+          postalCode:
+            paidOrder?.deliveryPostalCode ||
+            metadata.deliveryPostalCode ||
+            metadata.guestPostalCode ||
+            billing?.postalCode ||
+            '',
+        },
+        orderPlacer,
+        isGift,
+        billingDetails:
+          this.billingFromMetadata(metadata) ||
+          (paidOrder?.billingDetails as BillingDetailsDto | undefined),
+        items,
+        subtotalRon: subtotal,
+        deliveryFeeRon: deliveryFeeRon > 0 ? deliveryFeeRon : DELIVERY_FEE_RON,
+        cashOperationalFeeRon: 0,
+        totalRon,
+      });
+      await this.ordersService.markConfirmationSent(order.orderID);
+    }
 
     const userId = metadata.userId ? Number(metadata.userId) : null;
     if (userId && Number.isFinite(userId)) {

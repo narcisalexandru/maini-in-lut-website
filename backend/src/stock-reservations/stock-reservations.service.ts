@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThan, Repository } from 'typeorm';
+import { DataSource, In, LessThan, Repository } from 'typeorm';
 import { Product } from '../products/entities/product.entity';
 import { StockReservation } from './entities/stock-reservation.entity';
 import { STOCK_RESERVATION_TTL_MS } from './stock-reservation.constants';
@@ -27,6 +27,7 @@ export class StockReservationsService {
     private readonly reservationRepository: Repository<StockReservation>,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async releaseExpired(): Promise<void> {
@@ -173,33 +174,39 @@ export class StockReservationsService {
       return;
     }
 
-    for (const item of items) {
-      const product = await this.productRepository.findOne({
-        where: { id: item.productId },
+    await this.dataSource.transaction(async (manager) => {
+      for (const item of items) {
+        const product = await manager.findOne(Product, {
+          where: { id: item.productId },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!product) {
+          throw new NotFoundException(
+            `Product with ID ${item.productId} not found`,
+          );
+        }
+        if (product.stockQuantity < item.quantity) {
+          throw new BadRequestException(
+            `Stoc insuficient pentru "${product.title}".`,
+          );
+        }
+        product.stockQuantity -= item.quantity;
+        if (product.stockQuantity <= 0) {
+          product.stockQuantity = 0;
+          product.inStock = false;
+        }
+        await manager.save(product);
+      }
+
+      const productIds = [...new Set(items.map((item) => item.productId))];
+      await manager.delete(StockReservation, {
+        productId: In(productIds),
       });
-      if (!product) {
-        throw new NotFoundException(`Product with ID ${item.productId} not found`);
-      }
-      if (product.stockQuantity < item.quantity) {
-        throw new BadRequestException(
-          `Stoc insuficient pentru "${product.title}".`,
-        );
-      }
-      product.stockQuantity -= item.quantity;
-      if (product.stockQuantity <= 0) {
-        product.stockQuantity = 0;
-        product.inStock = false;
-      }
-      await this.productRepository.save(product);
-    }
 
-    const productIds = [...new Set(items.map((item) => item.productId))];
-    await this.reservationRepository.delete({
-      productId: In(productIds),
+      if (holder) {
+        const { holderType, holderId } = toHolderColumns(holder);
+        await manager.delete(StockReservation, { holderType, holderId });
+      }
     });
-
-    if (holder) {
-      await this.releaseHolder(holder);
-    }
   }
 }

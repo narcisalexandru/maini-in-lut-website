@@ -6,9 +6,14 @@ import {
   Body,
   Req,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { CheckoutService, BillingDetailsDto } from './checkout.service';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { User } from '../users/entities/user.entity';
+
+type CheckoutRequest = Request & { user?: User };
 
 type CheckoutBody = {
   successUrl?: string;
@@ -56,8 +61,9 @@ export class CheckoutController {
   }
 
   @Post('create-session')
+  @UseGuards(OptionalJwtAuthGuard)
   async createSession(
-    @Req() req: Request,
+    @Req() req: CheckoutRequest,
     @Body() body: CheckoutBody,
   ) {
     const frontendUrl =
@@ -75,35 +81,17 @@ export class CheckoutController {
           : `${frontendUrl}${body.cancelUrl}`
         : `${frontendUrl}/cos`;
 
-    const authHeader = req.headers.authorization;
-    const token =
-      typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
-        ? authHeader.slice(7).trim()
-        : null;
-
-    if (token) {
-      let payload: { sub?: number } | null = null;
-      try {
-        const tokenPayload = token.split('.')[1];
-        payload = JSON.parse(
-          Buffer.from(tokenPayload, 'base64url').toString(),
-        ) as { sub?: number };
-      } catch {
-        throw new BadRequestException('Token invalid');
-      }
-
-      if (!payload?.sub) {
-        throw new BadRequestException('Token invalid');
-      }
+    const userId = req.user?.id;
+    if (userId) {
       if (body.paymentMethod === 'cash') {
         return this.checkoutService.createCashOrderForUser(
-          payload.sub,
+          userId,
           body.deliveryAddress,
           body.billingDetails,
         );
       }
       return this.checkoutService.createCheckoutSessionForUser(
-        payload.sub,
+        userId,
         successUrl,
         cancelUrl,
         body.deliveryAddress,
@@ -116,6 +104,7 @@ export class CheckoutController {
     }
     if (body.paymentMethod === 'cash') {
       return this.checkoutService.createCashOrderForGuest({
+        guestCartId: body.guestCartId,
         items: body.items || [],
         guest: {
           firstName: body.guest.firstName || '',
@@ -134,6 +123,7 @@ export class CheckoutController {
     return this.checkoutService.createCheckoutSessionForGuest({
       successUrl,
       cancelUrl,
+      guestCartId: body.guestCartId,
       items: body.items || [],
       guest: {
         firstName: body.guest.firstName || '',
@@ -150,31 +140,15 @@ export class CheckoutController {
   }
 
   @Post('cash-order')
+  @UseGuards(OptionalJwtAuthGuard)
   async createCashOrder(
-    @Req() req: Request,
+    @Req() req: CheckoutRequest,
     @Body() body: CashOrderBody,
   ) {
-    const authHeader = req.headers.authorization;
-    const token =
-      typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
-        ? authHeader.slice(7).trim()
-        : null;
-
-    if (token) {
-      let payload: { sub?: number } | null = null;
-      try {
-        const tokenPayload = token.split('.')[1];
-        payload = JSON.parse(
-          Buffer.from(tokenPayload, 'base64url').toString(),
-        ) as { sub?: number };
-      } catch {
-        throw new BadRequestException('Token invalid');
-      }
-      if (!payload?.sub) {
-        throw new BadRequestException('Token invalid');
-      }
+    const userId = req.user?.id;
+    if (userId) {
       return this.checkoutService.createCashOrderForUser(
-        payload.sub,
+        userId,
         body.deliveryAddress,
         body.billingDetails,
       );
@@ -184,6 +158,7 @@ export class CheckoutController {
       throw new BadRequestException('Datele pentru comanda guest lipsesc.');
     }
     return this.checkoutService.createCashOrderForGuest({
+      guestCartId: body.guestCartId,
       items: body.items || [],
       guest: {
         firstName: body.guest.firstName || '',
