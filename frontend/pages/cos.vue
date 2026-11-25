@@ -417,6 +417,129 @@
                     <p v-if="showGuestFieldError(field.name)" class="text-xs text-red-600 mt-1">{{ guestFieldError(field.name) }}</p>
                   </div>
                 </div>
+
+                <div v-if="deliveryMethod" class="rounded-xl border border-gray-200 p-4 md:p-5 space-y-4">
+                  <div>
+                    <h3 class="text-base font-semibold h-color-lunar-green">{{ t('billingDataTitle') }}</h3>
+                    <p v-if="deliveryMethod === 'EASYBOX'" class="text-xs text-gray-600 mt-1">{{ t('billingEasyboxHint') }}</p>
+                  </div>
+
+                  <div class="inline-flex rounded-lg border border-gray-300 p-1">
+                    <button
+                      type="button"
+                      class="px-3 py-1.5 text-sm rounded-md"
+                      :class="billingType === 'individual' ? 'bg-[#6f825d] text-white' : 'text-gray-700'"
+                      @click="billingType = 'individual'"
+                    >
+                      {{ t('billingIndividual') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="px-3 py-1.5 text-sm rounded-md"
+                      :class="billingType === 'company' ? 'bg-[#6f825d] text-white' : 'text-gray-700'"
+                      @click="billingType = 'company'"
+                    >
+                      {{ t('billingCompany') }}
+                    </button>
+                  </div>
+
+                  <label v-if="deliveryMethod === 'ADDRESS'" class="flex items-start gap-3 cursor-pointer">
+                    <input v-model="guestBillingSameAsDelivery" type="checkbox" class="mt-1 shrink-0" />
+                    <span class="text-sm text-gray-700">{{ t('billingSameAddressAsDelivery') }}</span>
+                  </label>
+                  <p
+                    v-if="guestUsesDeliveryAddressForBilling && billingType === 'individual'"
+                    class="text-sm text-gray-600 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2"
+                  >
+                    {{ t('billingSameAsDelivery') }}
+                  </p>
+
+                  <div v-if="billingType === 'company'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="md:col-span-2 flex gap-2">
+                      <input
+                        v-model="billingForm.cui"
+                        type="text"
+                        :placeholder="t('billingCui')"
+                        class="w-full rounded-lg border px-3 py-2"
+                        :class="guestBillingInputClass('cui')"
+                        @blur="touchGuestBillingField('cui')"
+                        @keydown.enter.prevent="lookupCompanyByCui"
+                      />
+                      <button type="button" class="px-3 py-2 rounded-lg border border-gray-300 text-sm" :disabled="billingLookupLoading" @click="lookupCompanyByCui">
+                        {{ billingLookupLoading ? t('loadingCompanyData') : t('loadCompanyData') }}
+                      </button>
+                    </div>
+                    <p v-if="showGuestBillingError('cui')" class="md:col-span-2 text-xs text-red-600">{{ guestBillingFieldError('cui') }}</p>
+                    <p v-else-if="billingLookupError" class="md:col-span-2 text-xs text-red-600">{{ billingLookupError }}</p>
+                    <div class="md:col-span-2">
+                      <input
+                        v-model="billingForm.companyName"
+                        type="text"
+                        :placeholder="t('billingCompanyName')"
+                        class="w-full rounded-lg border px-3 py-2"
+                        :class="guestBillingInputClass('companyName')"
+                        @blur="touchGuestBillingField('companyName')"
+                      />
+                      <p v-if="showGuestBillingError('companyName')" class="text-xs text-red-600 mt-1">{{ guestBillingFieldError('companyName') }}</p>
+                    </div>
+                    <input v-model="billingForm.tradeRegister" type="text" :placeholder="t('billingTradeRegister')" class="w-full rounded-lg border border-gray-300 px-3 py-2 md:col-span-2" />
+                  </div>
+
+                  <div v-if="showGuestBillingAddressFields" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                      <label class="block text-sm text-gray-700 mb-1">{{ t('billingStreet') }} *</label>
+                      <input
+                        v-model="billingForm.street"
+                        type="text"
+                        :placeholder="t('guestStreetExample')"
+                        autocomplete="street-address"
+                        class="w-full rounded-lg border px-3 py-2"
+                        :class="guestBillingInputClass('street')"
+                        @blur="touchGuestBillingField('street')"
+                      />
+                      <p v-if="showGuestBillingError('street')" class="text-xs text-red-600 mt-1">{{ guestBillingFieldError('street') }}</p>
+                    </div>
+                    <div>
+                      <label class="block text-sm text-gray-700 mb-1">{{ t('guestCity') }} *</label>
+                      <input
+                        v-model="billingForm.city"
+                        type="text"
+                        :placeholder="t('guestCityExample')"
+                        autocomplete="address-level2"
+                        class="w-full rounded-lg border px-3 py-2"
+                        :class="guestBillingInputClass('city')"
+                        @blur="touchGuestBillingField('city')"
+                      />
+                      <p v-if="showGuestBillingError('city')" class="text-xs text-red-600 mt-1">{{ guestBillingFieldError('city') }}</p>
+                    </div>
+                    <div>
+                      <label class="block text-sm text-gray-700 mb-1">{{ t('guestCounty') }} *</label>
+                      <input
+                        v-model="billingForm.county"
+                        type="text"
+                        :placeholder="t('guestCountyExample')"
+                        autocomplete="address-level1"
+                        class="w-full rounded-lg border px-3 py-2"
+                        :class="guestBillingInputClass('county')"
+                        @blur="touchGuestBillingField('county')"
+                      />
+                      <p v-if="showGuestBillingError('county')" class="text-xs text-red-600 mt-1">{{ guestBillingFieldError('county') }}</p>
+                    </div>
+                    <div>
+                      <label class="block text-sm text-gray-700 mb-1">{{ t('guestPostalCode') }} *</label>
+                      <input
+                        v-model="billingForm.postalCode"
+                        type="text"
+                        :placeholder="t('guestPostalCodeExample')"
+                        autocomplete="postal-code"
+                        class="w-full rounded-lg border px-3 py-2"
+                        :class="guestBillingInputClass('postalCode')"
+                        @blur="touchGuestBillingField('postalCode')"
+                      />
+                      <p v-if="showGuestBillingError('postalCode')" class="text-xs text-red-600 mt-1">{{ guestBillingFieldError('postalCode') }}</p>
+                    </div>
+                  </div>
+                </div>
                 </template>
               </section>
 
@@ -566,6 +689,7 @@ const addressSaved = ref(false);
 const isGiftDelivery = ref(false);
 const billingType = ref('individual');
 const useDifferentBilling = ref(false);
+const guestBillingSameAsDelivery = ref(true);
 const billingLookupLoading = ref(false);
 const billingLookupError = ref('');
 const editAddressTarget = ref({ type: '', index: -1 });
@@ -640,6 +764,14 @@ const deliveryFields = computed(() => {
 });
 const guestForm = ref({ firstName: '', lastName: '', email: '', phone: '', county: '', city: '', street: '', postalCode: '' });
 const guestTouched = ref({ firstName: false, lastName: false, email: false, phone: false, county: false, city: false, street: false, postalCode: false });
+const guestBillingTouched = ref({
+  companyName: false,
+  cui: false,
+  county: false,
+  city: false,
+  street: false,
+  postalCode: false,
+});
 const cartProducts = computed(() => {
   const products = allProducts.value;
   return cartItems.value.map((item) => {
@@ -723,6 +855,50 @@ function isLoggedContactValid() {
   return ['firstName', 'lastName', 'phone'].every((field) => !validateGuestField(field, contactForm.value[field]));
 }
 const loggedContactValid = computed(() => isLoggedContactValid());
+const guestUsesDeliveryAddressForBilling = computed(() =>
+  deliveryMethod.value === 'ADDRESS' && guestBillingSameAsDelivery.value,
+);
+const showGuestBillingAddressFields = computed(() =>
+  !!deliveryMethod.value && !guestUsesDeliveryAddressForBilling.value,
+);
+function touchGuestBillingField(field) {
+  if (guestBillingTouched.value[field] !== undefined) guestBillingTouched.value[field] = true;
+}
+function guestBillingFieldError(field) {
+  if (field === 'companyName') {
+    return String(billingForm.value.companyName || '').trim().length >= 2
+      ? ''
+      : t('guestValidationRequired');
+  }
+  if (field === 'cui') {
+    return /^\d{2,10}$/.test(String(billingForm.value.cui || '').replace(/\D/g, ''))
+      ? ''
+      : t('billingCuiInvalid');
+  }
+  const code = validateGuestField(field, billingForm.value[field]);
+  if (!code) return '';
+  const keyMap = {
+    required: 'guestValidationRequired',
+    invalidPostalCode: 'guestValidationInvalidPostalCode',
+    invalidLocation: 'guestValidationInvalidLocation',
+    invalidStreet: 'guestValidationInvalidStreet',
+  };
+  return t(keyMap[code] || 'guestValidationRequired');
+}
+function showGuestBillingError(field) {
+  return (guestBillingTouched.value[field] || guestSubmitAttempted.value) && !!guestBillingFieldError(field);
+}
+function guestBillingInputClass(field) {
+  return showGuestBillingError(field) ? 'border-red-500 focus:border-red-500' : 'border-gray-300';
+}
+function hasGuestBillingErrors() {
+  if (!deliveryMethod.value) return true;
+  if (billingType.value === 'company') {
+    if (guestBillingFieldError('companyName') || guestBillingFieldError('cui')) return true;
+  }
+  if (!showGuestBillingAddressFields.value) return false;
+  return ['street', 'city', 'county', 'postalCode'].some((field) => !!guestBillingFieldError(field));
+}
 const hasGuestFormErrors = computed(() => {
   if (!deliveryMethod.value) return true;
   const fields = deliveryMethod.value === 'EASYBOX'
@@ -731,6 +907,7 @@ const hasGuestFormErrors = computed(() => {
   if (fields.some((field) => !!validateGuestField(field, guestForm.value[field]))) {
     return true;
   }
+  if (hasGuestBillingErrors()) return true;
   return deliveryMethod.value === 'EASYBOX' && !selectedLocker.value;
 });
 const showTermsError = computed(() => (termsTouched.value || guestSubmitAttempted.value) && !termsAccepted.value);
@@ -756,8 +933,52 @@ function buildBillingFromDelivery() {
     tradeRegister: '',
   };
 }
+function buildGuestBillingDetails() {
+  const guest = guestForm.value;
+  const phone = normalizeRomanianPhone(guest.phone) || guest.phone;
+  const address = guestUsesDeliveryAddressForBilling.value
+    ? {
+        street: guest.street,
+        city: guest.city,
+        county: guest.county,
+        postalCode: guest.postalCode,
+      }
+    : {
+        street: billingForm.value.street,
+        city: billingForm.value.city,
+        county: billingForm.value.county,
+        postalCode: billingForm.value.postalCode,
+      };
+  if (billingType.value === 'company') {
+    return {
+      type: 'company',
+      firstName: guest.firstName,
+      lastName: guest.lastName,
+      email: guest.email,
+      phone,
+      companyName: String(billingForm.value.companyName || '').trim(),
+      cui: String(billingForm.value.cui || '').replace(/\D/g, ''),
+      tradeRegister: String(billingForm.value.tradeRegister || '').trim(),
+      ...address,
+    };
+  }
+  return {
+    type: 'individual',
+    firstName: guest.firstName,
+    lastName: guest.lastName,
+    email: guest.email,
+    phone,
+    companyName: '',
+    cui: '',
+    tradeRegister: '',
+    ...address,
+  };
+}
 const billingDetailsPayload = computed(() => {
-  if (isLoggedIn.value && !useDifferentBilling.value) {
+  if (!isLoggedIn.value) {
+    return buildGuestBillingDetails();
+  }
+  if (!useDifferentBilling.value) {
     return buildBillingFromDelivery();
   }
   return {
@@ -1336,10 +1557,34 @@ watch(billingType, (type) => {
   billingForm.value.companyName = '';
   billingForm.value.cui = '';
   billingForm.value.tradeRegister = '';
-  billingForm.value.street = '';
-  billingForm.value.city = '';
-  billingForm.value.county = '';
-  billingForm.value.postalCode = '';
+  if (isLoggedIn.value) {
+    billingForm.value.street = '';
+    billingForm.value.city = '';
+    billingForm.value.county = '';
+    billingForm.value.postalCode = '';
+  }
+});
+watch(deliveryMethod, (method) => {
+  if (isLoggedIn.value) return;
+  if (method === 'ADDRESS') {
+    guestBillingSameAsDelivery.value = true;
+    return;
+  }
+  if (method !== 'EASYBOX') return;
+  guestBillingSameAsDelivery.value = false;
+  const guest = guestForm.value;
+  if (!billingForm.value.street && guest.street) billingForm.value.street = guest.street;
+  if (!billingForm.value.city && guest.city) billingForm.value.city = guest.city;
+  if (!billingForm.value.county && guest.county) billingForm.value.county = guest.county;
+  if (!billingForm.value.postalCode && guest.postalCode) billingForm.value.postalCode = guest.postalCode;
+});
+watch(guestBillingSameAsDelivery, (same) => {
+  if (same || isLoggedIn.value || deliveryMethod.value !== 'ADDRESS') return;
+  const guest = guestForm.value;
+  if (!billingForm.value.street) billingForm.value.street = guest.street;
+  if (!billingForm.value.city) billingForm.value.city = guest.city;
+  if (!billingForm.value.county) billingForm.value.county = guest.county;
+  if (!billingForm.value.postalCode) billingForm.value.postalCode = guest.postalCode;
 });
 const loggedAddressValid = computed(() =>
   isLoggedIn.value ? !!selectedDeliveryAddress.value : true,
@@ -1708,7 +1953,11 @@ watch(cartProducts, (items) => {
     "phoneInvalidFormat": "Phone number must be exactly 10 digits (ex: 07XXXXXXXX).",
     "phoneAlreadyInUse": "This phone number is already used by another account.",
     "useDifferentBilling": "Use different billing details than delivery",
-    "billingSameAsDelivery": "Billing details will match your contact and delivery information."
+    "billingSameAsDelivery": "Billing details will match your contact and delivery information.",
+    "billingSameAddressAsDelivery": "Billing address is the same as the delivery address",
+    "billingEasyboxHint": "Easybox delivery still needs a billing address.",
+    "billingStreet": "Billing address",
+    "billingCuiInvalid": "Enter a valid CUI (2–10 digits)."
   },
   "ro": {
     "steps": { "cart": "Cos", "delivery": "Livrare", "payment": "Plata" },
@@ -1826,7 +2075,11 @@ watch(cartProducts, (items) => {
     "phoneInvalidFormat": "Numarul de telefon trebuie sa aiba exact 10 cifre (ex: 07XXXXXXXX).",
     "phoneAlreadyInUse": "Acest numar de telefon este deja folosit de alt cont.",
     "useDifferentBilling": "Doresc alte date de facturare decat cele de livrare",
-    "billingSameAsDelivery": "Datele de facturare vor fi aceleasi cu datele de contact si livrare."
+    "billingSameAsDelivery": "Datele de facturare vor fi aceleasi cu datele de contact si livrare.",
+    "billingSameAddressAsDelivery": "Adresa de facturare este aceeasi cu adresa de livrare",
+    "billingEasyboxHint": "Pentru livrarea la Easybox este necesara o adresa de facturare.",
+    "billingStreet": "Adresa de facturare",
+    "billingCuiInvalid": "Introdu un CUI valid (2–10 cifre)."
   }
 }
 </i18n>

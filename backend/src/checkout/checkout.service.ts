@@ -555,6 +555,9 @@ export class CheckoutService {
       metadata.billingCui = billing.cui || '';
       metadata.billingTradeRegister = (billing.tradeRegister || '').slice(0, 500);
       metadata.billingStreet = (billing.street || '').slice(0, 500);
+      metadata.billingCity = billing.city || '';
+      metadata.billingCounty = billing.county || '';
+      metadata.billingPostalCode = billing.postalCode || '';
     } else {
       metadata.billingFirstName = billing.firstName || '';
       metadata.billingLastName = billing.lastName || '';
@@ -579,6 +582,9 @@ export class CheckoutService {
         cui: metadata.billingCui || '',
         tradeRegister: metadata.billingTradeRegister || '',
         street: metadata.billingStreet || '',
+        city: metadata.billingCity || '',
+        county: metadata.billingCounty || '',
+        postalCode: metadata.billingPostalCode || '',
       };
     }
     return {
@@ -682,7 +688,7 @@ export class CheckoutService {
         Firma: ${escapeHtml(billing.companyName || '-')}<br/>
         CUI: ${escapeHtml(billing.cui || '-')}<br/>
         Reg. Comert: ${escapeHtml(billing.tradeRegister || '-')}<br/>
-        Adresa: ${escapeHtml(billing.street || '-')}
+        Adresa: ${escapeHtml([billing.street, billing.city, billing.county, billing.postalCode].filter(Boolean).join(', ') || '-')}
       </p>
     `;
     }
@@ -904,6 +910,7 @@ export class CheckoutService {
     },
   ): Promise<{ url: string; orderId: string }> {
     this.validateGuestContact(payload.guest);
+    this.validateGuestBilling(payload.billingDetails);
 
     if (!Array.isArray(payload.items) || payload.items.length === 0) {
       throw new BadRequestException('Cart is empty');
@@ -953,16 +960,7 @@ export class CheckoutService {
     return this.createNetopiaPayment({
       orderId: persistedOrder.publicOrderNumber,
       items,
-      customer: this.toNetopiaContact({
-        email: payload.guest.email,
-        phone: payload.guest.phone,
-        firstName: payload.guest.firstName,
-        lastName: payload.guest.lastName,
-        city: payload.guest.city,
-        county: payload.guest.county,
-        street: deliveryStreet,
-        postalCode: payload.guest.postalCode,
-      }),
+      customer: this.guestBillingNetopiaContact(payload.guest, payload.billingDetails),
       shipping: this.toNetopiaContact({
         email: payload.guest.email,
         phone: payload.guest.phone,
@@ -1001,6 +999,85 @@ export class CheckoutService {
       return null;
     }
     return billing as OrderBillingDetails;
+  }
+
+  private guestBillingNetopiaContact(
+    guest: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      county: string;
+      city: string;
+      street: string;
+      postalCode: string;
+    },
+    billing?: BillingDetailsDto,
+  ): NetopiaContact {
+    if (billing?.type === 'company') {
+      const companyName = billing.companyName?.trim() || guest.firstName;
+      const cui = (billing.cui || '').replace(/\D/g, '');
+      return this.toNetopiaContact({
+        email: billing.email?.trim() || guest.email,
+        phone: billing.phone?.trim() || guest.phone,
+        firstName: companyName.slice(0, 100),
+        lastName: cui ? `CUI ${cui}` : guest.lastName,
+        city: billing.city?.trim() || guest.city,
+        county: billing.county?.trim() || guest.county,
+        street: billing.street?.trim() || guest.street,
+        postalCode: billing.postalCode?.trim() || guest.postalCode,
+      });
+    }
+    return this.toNetopiaContact({
+      email: billing?.email?.trim() || guest.email,
+      phone: billing?.phone?.trim() || guest.phone,
+      firstName: billing?.firstName?.trim() || guest.firstName,
+      lastName: billing?.lastName?.trim() || guest.lastName,
+      city: billing?.city?.trim() || guest.city,
+      county: billing?.county?.trim() || guest.county,
+      street: billing?.street?.trim() || guest.street,
+      postalCode: billing?.postalCode?.trim() || guest.postalCode,
+    });
+  }
+
+  private validateGuestBilling(billing?: BillingDetailsDto): void {
+    if (!billing?.type) {
+      throw new BadRequestException('Datele de facturare lipsesc.');
+    }
+    const street = billing.street?.trim() || '';
+    const city = billing.city?.trim() || '';
+    const county = billing.county?.trim() || '';
+    const postalCode = billing.postalCode?.trim() || '';
+    if (!street || !city || !county || !postalCode) {
+      throw new BadRequestException('Adresa de facturare este incompleta.');
+    }
+    if (street.length < 5 || street.length > 300) {
+      throw new BadRequestException('Adresa de facturare este invalida.');
+    }
+    if (city.length > 300 || county.length > 300) {
+      throw new BadRequestException('Adresa de facturare este invalida.');
+    }
+    if (!/^[0-9]{6}$/.test(postalCode)) {
+      throw new BadRequestException(
+        'Codul postal de facturare trebuie sa aiba 6 cifre.',
+      );
+    }
+    if (billing.type === 'company') {
+      const companyName = billing.companyName?.trim() || '';
+      const cui = (billing.cui || '').replace(/\D/g, '');
+      if (companyName.length < 2 || companyName.length > 300) {
+        throw new BadRequestException('Numele firmei este obligatoriu.');
+      }
+      if (!/^\d{2,10}$/.test(cui)) {
+        throw new BadRequestException('CUI invalid.');
+      }
+      return;
+    }
+    const firstName = billing.firstName?.trim() || '';
+    const lastName = billing.lastName?.trim() || '';
+    if (firstName.length < 2 || lastName.length < 2) {
+      throw new BadRequestException('Numele de facturare este obligatoriu.');
+    }
   }
 
   private validateGuestContact(guest: {
