@@ -22,6 +22,7 @@ import {
   DeliveryMethod,
   SiteSettingsService,
 } from '../site-settings/site-settings.service';
+import { InvoicesService } from '../invoices/invoices.service';
 
 type OrderContact = {
   firstName: string;
@@ -96,6 +97,7 @@ export class CheckoutService {
     private artistsService: ArtistsService,
     private stockReservationsService: StockReservationsService,
     private siteSettingsService: SiteSettingsService,
+    private invoicesService: InvoicesService,
   ) {}
 
   private readonly REQUIRED_GUEST_FIELDS = [
@@ -1623,6 +1625,7 @@ export class CheckoutService {
       existingOrder.stockFulfilledAt &&
       existingOrder.confirmationSentAt
     ) {
+      await this.invoicesService.issuePaidOrderSafely(existingOrder.id);
       return;
     }
 
@@ -1760,6 +1763,10 @@ export class CheckoutService {
         : null;
     if (userId && Number.isFinite(userId)) {
       await this.cartService.clearCart(userId);
+    }
+
+    if (paidOrder) {
+      await this.invoicesService.issuePaidOrderSafely(paidOrder.id);
     }
   }
 }

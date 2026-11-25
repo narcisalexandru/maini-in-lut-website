@@ -14,6 +14,17 @@ export interface ArtistOrderStatus {
   status: OrderItemStatus;
 }
 
+export interface OrderInvoice {
+  status: "ISSUING" | "ISSUED" | "FAILED";
+  series: string | null;
+  number: string | null;
+  viewUrl: string | null;
+  documentUrl: string | null;
+  isDraft: boolean;
+  errorMessage: string | null;
+  issuedAt: string | null;
+}
+
 export interface OrderSummary {
   id: number;
   publicOrderNumber: string;
@@ -62,5 +73,6 @@ export interface OrderDetail extends OrderSummary {
   deliveryFeeRon: number;
   cashOperationalFeeRon: number;
   items: OrderItem[];
+  invoice: OrderInvoice | null;
   updatedAt: string;
 }

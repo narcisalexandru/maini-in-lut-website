@@ -1,6 +1,10 @@
 import { Order } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
 
+type OrderDetailOptions = {
+  includeInvoiceAdmin?: boolean;
+};
+
 function toNumber(value: number | string | null | undefined): number {
   if (value === null || value === undefined) {
     return 0;
@@ -42,7 +46,7 @@ export function toOrderSummaryResponse(order: Order) {
   };
 }
 
-export function toOrderDetailResponse(order: Order) {
+export function toOrderDetailResponse(order: Order, options?: OrderDetailOptions) {
   const items = (order.items ?? []).map(toOrderItemResponse);
   const artistStatuses = summarizeArtistStatuses(order.items ?? []);
 
@@ -72,10 +76,27 @@ export function toOrderDetailResponse(order: Order) {
     deliveryFeeRon: toNumber(order.deliveryFeeRon),
     cashOperationalFeeRon: toNumber(order.cashOperationalFeeRon),
     totalRon: toNumber(order.totalRon),
+    invoice: toInvoiceResponse(order, options?.includeInvoiceAdmin === true),
     artistStatuses,
     items,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
+  };
+}
+
+function toInvoiceResponse(order: Order, includeAdmin: boolean) {
+  if (!order.invoiceStatus || (order.invoiceIsDraft && !includeAdmin)) {
+    return null;
+  }
+  return {
+    status: order.invoiceStatus,
+    series: order.invoiceSeries,
+    number: order.invoiceNumber,
+    viewUrl: order.invoiceViewUrl,
+    documentUrl: includeAdmin ? order.invoiceDocumentUrl : null,
+    isDraft: order.invoiceIsDraft,
+    errorMessage: includeAdmin ? order.invoiceError : null,
+    issuedAt: order.invoiceIssuedAt,
   };
 }
 

@@ -8,6 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { InvoiceStatus } from '../../common/enums/invoice-status.enum';
 import {
   OrderPaymentStatus,
   PaymentMethod,
@@ -86,6 +87,36 @@ export class Order {
 
   @Column({ type: 'timestamptz', nullable: true })
   confirmationSentAt: Date | null;
+
+  @Column({ type: 'enum', enum: InvoiceStatus, nullable: true })
+  invoiceStatus: InvoiceStatus | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  invoiceSeries: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  invoiceNumber: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  invoiceDocumentId: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  invoiceDocumentUrl: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  invoiceViewUrl: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  invoiceError: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  invoiceIssuedAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  invoiceAttemptAt: Date | null;
+
+  @Column({ type: 'boolean', default: false })
+  invoiceIsDraft: boolean;
 
   @Column('decimal', { precision: 10, scale: 2 })
   subtotalRon: number;

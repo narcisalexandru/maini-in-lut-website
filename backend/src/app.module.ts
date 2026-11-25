@@ -19,6 +19,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { StockReservationsModule } from './stock-reservations/stock-reservations.module';
 import { SiteSettingsModule } from './site-settings/site-settings.module';
 import { AdminWorkspaceModule } from './admin-workspace/admin-workspace.module';
+import { InvoicesModule } from './invoices/invoices.module';
 
 const PUBLIC_RATE_LIMIT = 120;
 const ADMIN_RATE_LIMIT = 3000;
@@ -90,6 +91,7 @@ function isAdminRequest(context: ExecutionContext): boolean {
     StockReservationsModule,
     SiteSettingsModule,
     AdminWorkspaceModule,
+    InvoicesModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

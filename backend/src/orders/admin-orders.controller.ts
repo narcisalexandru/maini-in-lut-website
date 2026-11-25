@@ -82,14 +82,16 @@ export class AdminOrdersController {
         publicOrderNumber: order.publicOrderNumber,
       },
     });
-    return toOrderDetailResponse(order);
+    return toOrderDetailResponse(order, {
+      includeInvoiceAdmin: req.user.role === UserRole.SUPER_ADMIN,
+    });
   }
 
   @Roles(UserRole.SUPER_ADMIN)
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     const order = await this.ordersService.findOneForAdmin(id);
-    return toOrderDetailResponse(order);
+    return toOrderDetailResponse(order, { includeInvoiceAdmin: true });
   }
 
   @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)

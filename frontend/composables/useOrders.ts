@@ -1,4 +1,4 @@
-import type { OrderDetail, OrderItem, OrderSummary } from "~/types/order";
+import type { OrderDetail, OrderInvoice, OrderItem, OrderSummary } from "~/types/order";
 
 type OrderListFilters = {
   paymentStatus?: string;
@@ -59,6 +59,11 @@ export function useOrders() {
       method: "PATCH",
     });
 
+  const issueInvoice = (orderId: number) =>
+    apiFetch<OrderInvoice>(`/admin/orders/${orderId}/invoice`, {
+      method: "POST",
+    });
+
   return {
     getMyOrders,
     getMyOrder,
@@ -67,5 +72,6 @@ export function useOrders() {
     getArtistOrders,
     updateOrderItemStatus,
     unarchiveOrder,
+    issueInvoice,
   };
 }

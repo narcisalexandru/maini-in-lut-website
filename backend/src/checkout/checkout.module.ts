@@ -9,6 +9,7 @@ import { OrdersModule } from '../orders/orders.module';
 import { ArtistsModule } from '../artists/artists.module';
 import { StockReservationsModule } from '../stock-reservations/stock-reservations.module';
 import { SiteSettingsModule } from '../site-settings/site-settings.module';
+import { InvoicesModule } from '../invoices/invoices.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SiteSettingsModule } from '../site-settings/site-settings.module';
     ArtistsModule,
     StockReservationsModule,
     SiteSettingsModule,
+    InvoicesModule,
   ],
   controllers: [CheckoutController],
   providers: [CheckoutService],

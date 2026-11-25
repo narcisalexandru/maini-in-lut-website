@@ -15,6 +15,7 @@
           :show-customer-links="showCustomerLinks"
           :show-artist-column="showArtistFilter || !fixedArtistId"
           :can-edit-delivery="isSuperAdmin"
+          :can-issue-invoice="isSuperAdmin"
           :initial-query="initialQuery"
           @changed="loadOrders({ silent: true })"
         />
@@ -34,6 +35,7 @@
           :show-customer-links="showCustomerLinks"
           :show-artist-column="showArtistFilter || !fixedArtistId"
           :can-edit-delivery="isSuperAdmin"
+          :can-issue-invoice="isSuperAdmin"
           :initial-query="initialQuery"
           :unarchiving-order-id="unarchivingOrderId"
           @changed="loadOrders({ silent: true })"

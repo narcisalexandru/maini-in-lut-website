@@ -63,6 +63,22 @@
           </div>
         </div>
 
+        <div v-if="order.invoice && order.invoice.status === 'ISSUED'" class="mt-6">
+          <h2 class="font-semibold h-color-palm-leaf mb-2">{{ t("invoice") }}</h2>
+          <a
+            v-if="order.invoice.viewUrl"
+            :href="order.invoice.viewUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-sm h-color-lunar-green hover:underline"
+          >
+            {{ t("downloadInvoice") }} {{ order.invoice.series }} {{ order.invoice.number }}
+          </a>
+          <p v-else class="text-sm h-color-lunar-green">
+            {{ order.invoice.series }} {{ order.invoice.number }}
+          </p>
+        </div>
+
         <div v-if="order.customerNote" class="mt-6">
           <h2 class="font-semibold h-color-palm-leaf mb-2">{{ t("customerNote") }}</h2>
           <p class="text-sm h-color-lunar-green whitespace-pre-wrap">{{ order.customerNote }}</p>
@@ -118,6 +134,8 @@ onMounted(async () => {
     "delivery": "Livrare",
     "total": "Total",
     "customerNote": "Mențiuni",
+    "invoice": "Factură",
+    "downloadInvoice": "Descarcă factura",
     "payment": {
       "PENDING": "Plată în așteptare",
       "PAID": "Plătit",
@@ -138,6 +156,8 @@ onMounted(async () => {
     "delivery": "Delivery",
     "total": "Total",
     "customerNote": "Notes",
+    "invoice": "Invoice",
+    "downloadInvoice": "Download invoice",
     "payment": {
       "PENDING": "Awaiting payment",
       "PAID": "Paid",

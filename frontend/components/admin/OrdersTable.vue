@@ -39,6 +39,33 @@
     <template #cell-paymentStatus="{ row }">
       <Tag :value="paymentStatusLabel(row.paymentStatus)" severity="info" />
     </template>
+    <template #cell-invoice="{ row }">
+      <a
+        v-if="row.invoiceStatus === 'ISSUED' && row.invoiceViewUrl"
+        :href="row.invoiceViewUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-blue-600 hover:underline"
+        :title="row.invoiceIsDraft ? t('invoiceDraftHint') : t('efacturaHint')"
+      >
+        {{ row.invoiceIsDraft ? t('invoiceDraft') : `${row.invoiceSeries} ${row.invoiceNumber}` }}
+      </a>
+      <span v-else-if="row.invoiceStatus === 'ISSUED'" :title="t('efacturaHint')">
+        {{ row.invoiceIsDraft ? t('invoiceDraft') : `${row.invoiceSeries} ${row.invoiceNumber}` }}
+      </span>
+      <span v-else-if="row.invoiceStatus === 'ISSUING'">{{ t("invoiceIssuing") }}</span>
+      <Button
+        v-else-if="canIssueInvoice && row.paymentStatus === 'PAID'"
+        :label="row.invoiceStatus === 'FAILED' ? t('invoiceRetry') : t('invoiceIssue')"
+        severity="secondary"
+        size="small"
+        outlined
+        :title="row.invoiceError || t('efacturaHint')"
+        :loading="issuingOrderId === row.orderId"
+        @click="issue(row.orderId)"
+      />
+      <span v-else>—</span>
+    </template>
     <template v-if="archived" #actions="{ row }">
       <Button
         v-if="archived"
@@ -56,6 +83,7 @@
 <script setup lang="ts">
 import Tag from "primevue/tag";
 import Button from "primevue/button";
+import { useToast } from "primevue/usetoast";
 import AdminDataTable from "~/components/admin/AdminDataTable.vue";
 import type { AdminTableColumn, AdminTableRow } from "~/types/admin-table";
 
@@ -74,6 +102,12 @@ type OrderLine = {
   quantity: number;
   lineTotal: number;
   paymentStatus: string;
+  invoiceStatus: string;
+  invoiceSeries: string;
+  invoiceNumber: string;
+  invoiceViewUrl: string;
+  invoiceIsDraft: boolean;
+  invoiceError: string;
   status: string;
   customerNote: string;
   rowLabel: string;
@@ -89,6 +123,7 @@ const props = defineProps({
   unarchivingOrderId: { type: Number, default: null },
   contained: { type: Boolean, default: false },
   canEditDelivery: { type: Boolean, default: false },
+  canIssueInvoice: { type: Boolean, default: false },
   statusOptions: { type: Array, default: () => [] },
   paymentStatusOptions: { type: Array, default: () => [] },
   itemStatusLabel: { type: Function, required: true },
@@ -99,6 +134,9 @@ const props = defineProps({
 const emit = defineEmits(["changed", "unarchive"]);
 const { t } = useI18n({ useScope: "local" });
 const localePath = useLocalePath();
+const toast = useToast();
+const { issueInvoice } = useOrders();
+const issuingOrderId = ref<number | null>(null);
 
 type IncomingItem = {
   id: number;
@@ -115,6 +153,14 @@ type IncomingOrder = {
   createdAt: string;
   userId?: number | null;
   paymentStatus: string;
+  invoice?: {
+    status?: string;
+    series?: string | null;
+    number?: string | null;
+    viewUrl?: string | null;
+    isDraft?: boolean;
+    errorMessage?: string | null;
+  } | null;
   customerNote?: string | null;
   customer?: { firstName?: string; lastName?: string; email?: string };
   delivery?: { street?: string; city?: string; county?: string; postalCode?: string };
@@ -160,6 +206,12 @@ const rows = computed<AdminTableRow[]>(() =>
         quantity: item.quantity,
         lineTotal: Number(item.lineTotalRon),
         paymentStatus: order.paymentStatus,
+        invoiceStatus: order.invoice?.status || "",
+        invoiceSeries: order.invoice?.series || "",
+        invoiceNumber: order.invoice?.number || "",
+        invoiceViewUrl: order.invoice?.viewUrl || "",
+        invoiceIsDraft: order.invoice?.isDraft === true,
+        invoiceError: order.invoice?.errorMessage || "",
         status: item.status,
         customerNote: order.customerNote?.trim() || "",
         rowLabel: `${order.publicOrderNumber} · ${item.title}`,
@@ -221,6 +273,15 @@ const columns = computed<AdminTableColumn[]>(() => {
       filterOptions: paymentOptions,
       minWidth: "9rem",
     },
+  );
+  if (props.canIssueInvoice) {
+    cols.push({
+      field: "invoice",
+      header: t("invoice"),
+      minWidth: "10rem",
+    });
+  }
+  cols.push(
     {
       field: "status",
       header: t("status"),
@@ -236,6 +297,25 @@ const columns = computed<AdminTableColumn[]>(() => {
   );
   return cols;
 });
+
+const issue = async (orderId: number) => {
+  issuingOrderId.value = orderId;
+  try {
+    const invoice = await issueInvoice(orderId);
+    toast.add({
+      severity: "success",
+      summary: invoice.isDraft ? t("invoiceDraftSaved") : t("invoiceIssued"),
+      life: 3000,
+    });
+    emit("changed");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : t("invoiceFailed");
+    toast.add({ severity: "error", summary: t("invoiceFailed"), detail, life: 5000 });
+    emit("changed");
+  } finally {
+    issuingOrderId.value = null;
+  }
+};
 </script>
 
 <i18n lang="json">
@@ -258,6 +338,16 @@ const columns = computed<AdminTableColumn[]>(() => {
     "quantity": "Cant.",
     "total": "Total linie",
     "payment": "Plată",
+    "invoice": "Factură",
+    "invoiceIssue": "Emite factură",
+    "invoiceRetry": "Reîncearcă",
+    "invoiceIssuing": "Se emite",
+    "invoiceIssued": "Factura a fost emisă",
+    "invoiceDraft": "Ciornă",
+    "invoiceDraftSaved": "Ciorna a fost salvată în SmartBill",
+    "invoiceDraftHint": "Ciornă SmartBill. Nu are număr fiscal și nu pleacă în e-Factura.",
+    "invoiceFailed": "Factura nu a putut fi emisă",
+    "efacturaHint": "e-Factura pleacă din SmartBill, din trimiterea automată în SPV.",
     "status": "Status",
     "unarchive": "Scoate din arhivă"
   },
@@ -279,6 +369,16 @@ const columns = computed<AdminTableColumn[]>(() => {
     "quantity": "Qty",
     "total": "Line total",
     "payment": "Payment",
+    "invoice": "Invoice",
+    "invoiceIssue": "Issue invoice",
+    "invoiceRetry": "Retry",
+    "invoiceIssuing": "Issuing",
+    "invoiceIssued": "Invoice issued",
+    "invoiceDraft": "Draft",
+    "invoiceDraftSaved": "The draft was saved in SmartBill",
+    "invoiceDraftHint": "SmartBill draft. It has no fiscal number and is not sent to e-Factura.",
+    "invoiceFailed": "The invoice could not be issued",
+    "efacturaHint": "e-Factura is sent by SmartBill when automatic SPV delivery is enabled.",
     "status": "Status",
     "unarchive": "Remove from archive"
   }
