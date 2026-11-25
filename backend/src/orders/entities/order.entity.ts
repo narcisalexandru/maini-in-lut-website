@@ -62,6 +62,9 @@ export class Order {
   @Column({ type: 'text', nullable: true })
   deliveryRecipientPhone: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  customerNote: string | null;
+
   @Column({ type: 'jsonb', nullable: true })
   billingDetails: OrderBillingDetails | null;
 

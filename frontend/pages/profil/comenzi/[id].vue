@@ -62,6 +62,11 @@
             <span>{{ order.totalRon }} RON</span>
           </div>
         </div>
+
+        <div v-if="order.customerNote" class="mt-6">
+          <h2 class="font-semibold h-color-palm-leaf mb-2">{{ t("customerNote") }}</h2>
+          <p class="text-sm h-color-lunar-green whitespace-pre-wrap">{{ order.customerNote }}</p>
+        </div>
       </div>
     </div>
   </section>
@@ -112,6 +117,7 @@ onMounted(async () => {
     "subtotal": "Subtotal",
     "delivery": "Livrare",
     "total": "Total",
+    "customerNote": "Mențiuni",
     "payment": {
       "PENDING": "Plată în așteptare",
       "PAID": "Plătit",
@@ -131,6 +137,7 @@ onMounted(async () => {
     "subtotal": "Subtotal",
     "delivery": "Delivery",
     "total": "Total",
+    "customerNote": "Notes",
     "payment": {
       "PENDING": "Awaiting payment",
       "PAID": "Paid",

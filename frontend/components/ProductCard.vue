@@ -5,12 +5,12 @@
     <component
       :is="preview ? 'div' : NuxtLink"
       v-bind="preview ? {} : { to: $localePath(`/produs/${product.id}`) }"
-      class="group/photo block relative h-48 bg-[#f4f1ee]"
+      class="group/photo block relative aspect-square md:aspect-auto md:h-48 bg-[#f4f1ee]"
     >
       <img
         :src="getProductPrimaryImageUrl(product)"
         :alt="product.title"
-        class="w-full h-full object-cover transition-[object-fit,filter] duration-300 group-hover/photo:object-contain"
+        class="w-full h-full object-cover transition-[filter] duration-300"
         :class="{
           'brightness-[0.62] group-hover/photo:brightness-100': !available,
         }"
@@ -67,9 +67,9 @@
     <component
       :is="preview ? 'div' : NuxtLink"
       v-bind="preview ? {} : { to: $localePath(`/produs/${product.id}`) }"
-      class="flex flex-col h-36 p-2 md:p-3 flex-1 hover:opacity-90 transition-opacity no-underline text-inherit"
+      class="flex flex-col p-2 md:p-3 md:h-36 flex-1 hover:opacity-90 transition-opacity no-underline text-inherit"
     >
-      <h3 class="flex flex-1 text-sm font-semibold text-gray-800 mb-1">
+      <h3 class="text-sm font-semibold text-gray-800 mb-1 line-clamp-2 min-h-10">
         {{ product.title }}
       </h3>
       <div class="flex items-center space-x-2 mb-1">
@@ -82,7 +82,7 @@
           >{{ product.price }} RON</span
         >
       </div>
-      <div class="flex w-full">
+      <div class="flex w-full mt-auto">
         <button
           type="button"
           class="maini-ui-button__buy w-full flex justify-center items-center border-none"

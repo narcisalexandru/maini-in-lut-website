@@ -57,6 +57,7 @@ export interface OrderDetail extends OrderSummary {
     recipientPhone: string | null;
   };
   billingDetails: Record<string, unknown> | null;
+  customerNote: string | null;
   subtotalRon: number;
   deliveryFeeRon: number;
   cashOperationalFeeRon: number;

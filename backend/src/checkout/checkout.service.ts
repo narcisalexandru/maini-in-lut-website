@@ -679,6 +679,14 @@ export class CheckoutService {
     `;
   }
 
+  private formatCustomerNoteHtml(note?: string | null): string {
+    const value = note?.trim();
+    if (!value) {
+      return '';
+    }
+    return `<p><strong>Mentiuni:</strong><br/>${escapeHtml(value).replace(/\n/g, '<br/>')}</p>`;
+  }
+
   private formatBillingHtml(billing?: BillingDetailsDto): string {
     if (!billing?.type) return '';
     if (billing.type === 'company') {
@@ -763,6 +771,7 @@ export class CheckoutService {
     },
     billingDetails?: BillingDetailsDto,
     deliveryMethod?: string,
+    customerNote?: string,
   ): Promise<{ url: string; orderId: string }> {
     const user = await this.usersService.findOne(userId);
     if (!user) {
@@ -838,6 +847,7 @@ export class CheckoutService {
         recipientPhone: effectiveAddress.recipientPhone,
       },
       billingDetails: this.toOrderBillingDetails(billingDetails),
+      customerNote,
       items,
       subtotalRon: subtotal,
       deliveryFeeRon,
@@ -907,6 +917,7 @@ export class CheckoutService {
       };
       billingDetails?: BillingDetailsDto;
       deliveryMethod?: string;
+      customerNote?: string;
     },
   ): Promise<{ url: string; orderId: string }> {
     this.validateGuestContact(payload.guest);
@@ -950,6 +961,7 @@ export class CheckoutService {
         postalCode: payload.guest.postalCode,
       },
       billingDetails: this.toOrderBillingDetails(payload.billingDetails),
+      customerNote: payload.customerNote,
       items,
       subtotalRon: subtotal,
       deliveryFeeRon,
@@ -1171,6 +1183,7 @@ export class CheckoutService {
     orderPlacer?: OrderContact;
     isGift?: boolean;
     billingDetails?: BillingDetailsDto;
+    customerNote?: string | null;
     items: {
       productId: number;
       artistId: number;
@@ -1199,6 +1212,7 @@ export class CheckoutService {
         .join('');
     const itemRows = buildItemRows(payload.items);
     const billingHtml = this.formatBillingHtml(payload.billingDetails);
+    const customerNoteHtml = this.formatCustomerNoteHtml(payload.customerNote);
     const orderPlacerHtml = this.formatOrderPlacerHtml(
       isGift ? payload.orderPlacer : undefined,
     );
@@ -1211,6 +1225,7 @@ export class CheckoutService {
       ${orderPlacerHtml}
       ${deliveryHtml}
       ${billingHtml}
+      ${customerNoteHtml}
       <h3>Produse</h3>
       <table style="border-collapse:collapse;">
         <thead><tr><th style="padding:6px 8px;border:1px solid #ddd;">Produs</th><th style="padding:6px 8px;border:1px solid #ddd;">Cantitate</th><th style="padding:6px 8px;border:1px solid #ddd;">Pret</th><th style="padding:6px 8px;border:1px solid #ddd;">Total</th></tr></thead>
@@ -1272,6 +1287,7 @@ export class CheckoutService {
           Telefon: ${escapeHtml(payload.customer.phone)}<br/>
           Adresa: ${escapeHtml(payload.customer.street)}, ${escapeHtml(payload.customer.city)}, ${escapeHtml(payload.customer.county)}, ${escapeHtml(payload.customer.postalCode)}
         </p>
+        ${customerNoteHtml}
 
         <h3 style="margin:16px 0 8px;">Total de plata</h3>
         <p style="margin:0;color:#111827;">
@@ -1319,6 +1335,7 @@ export class CheckoutService {
         ${isGift ? '<p><strong>Tip comanda:</strong> Cadou</p>' : ''}
         ${orderPlacerHtml}
         ${deliveryHtml}
+        ${customerNoteHtml}
         <h3>Produsele tale</h3>
         <table style="border-collapse:collapse;">
           <thead><tr><th style="padding:6px 8px;border:1px solid #ddd;">Produs</th><th style="padding:6px 8px;border:1px solid #ddd;">Cantitate</th><th style="padding:6px 8px;border:1px solid #ddd;">Pret</th><th style="padding:6px 8px;border:1px solid #ddd;">Total</th></tr></thead>
@@ -1727,6 +1744,7 @@ export class CheckoutService {
         billingDetails:
           this.billingFromMetadata(metadata) ||
           (paidOrder?.billingDetails as BillingDetailsDto | undefined),
+        customerNote: paidOrder?.customerNote,
         items,
         subtotalRon: subtotal,
         deliveryFeeRon: deliveryFeeRon > 0 ? deliveryFeeRon : fallbackFee,

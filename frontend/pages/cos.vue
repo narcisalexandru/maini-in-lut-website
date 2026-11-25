@@ -583,6 +583,22 @@
                 <div class="flex justify-between text-xl font-bold h-color-lunar-green pt-2 border-t border-gray-200"><dt>{{ t('total') }}</dt><dd>{{ total }} RON</dd></div>
               </dl>
 
+              <label class="block mb-4">
+                <span class="block text-sm font-medium text-gray-700 mb-1">{{ t('orderNote') }}</span>
+                <textarea
+                  v-model="orderNote"
+                  name="customerNote"
+                  rows="3"
+                  maxlength="1000"
+                  :placeholder="t('orderNotePlaceholder')"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm resize-y"
+                />
+                <span class="mt-1 flex justify-between gap-3 text-xs text-gray-500">
+                  <span>{{ t('orderNoteHint') }}</span>
+                  <span class="shrink-0">{{ orderNote.length }}/1000</span>
+                </span>
+              </label>
+
               <div class="flex gap-2 mb-4">
                 <input v-model="promoCode" type="text" :placeholder="t('promoPlaceholder')" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
                 <button type="button" class="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium">{{ t('promoApply') }}</button>
@@ -670,6 +686,7 @@ const router = useRouter();
 const route = useRoute();
 const allProducts = ref([]);
 const promoCode = ref('');
+const orderNote = ref('');
 const checkoutLoading = ref(false);
 const checkoutError = ref('');
 const isLoggedIn = ref(false);
@@ -1711,7 +1728,7 @@ async function goToCheckout() {
   const cancelPath = localePath('/plata/anulata');
   try {
     const payload = token
-      ? { successUrl: successPath, cancelUrl: cancelPath, deliveryMethod: deliveryMethod.value, deliveryAddress: selectedDeliveryAddress.value, billingDetails: billingDetailsPayload.value }
+      ? { successUrl: successPath, cancelUrl: cancelPath, deliveryMethod: deliveryMethod.value, deliveryAddress: selectedDeliveryAddress.value, billingDetails: billingDetailsPayload.value, customerNote: orderNote.value.trim() }
       : {
           successUrl: successPath,
           cancelUrl: cancelPath,
@@ -1722,6 +1739,7 @@ async function goToCheckout() {
             lockerId: selectedLocker.value ? String(selectedLocker.value.lockerId) : '',
           },
           billingDetails: billingDetailsPayload.value,
+          customerNote: orderNote.value.trim(),
         };
     const res = await apiFetch(`${base}/checkout/create-session`, { method: 'POST', headers: token ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json().catch(() => ({}));
@@ -1861,6 +1879,9 @@ watch(cartProducts, (items) => {
     "subtotal": "Subtotal",
     "delivery": "Delivery",
     "total": "Total",
+    "orderNote": "Notes",
+    "orderNotePlaceholder": "Message for this order (optional)",
+    "orderNoteHint": "Instructions about the order, delivery, or personalization.",
     "qty": "Qty",
     "goToDelivery": "Continue to delivery",
     "goToPayment": "Continue to payment",
@@ -1983,6 +2004,9 @@ watch(cartProducts, (items) => {
     "subtotal": "Subtotal",
     "delivery": "Livrare",
     "total": "Total",
+    "orderNote": "Mențiuni",
+    "orderNotePlaceholder": "Mesaj pentru comandă (opțional)",
+    "orderNoteHint": "Indicații despre comandă, livrare sau personalizare.",
     "qty": "Cantitate",
     "goToDelivery": "Continua spre livrare",
     "goToPayment": "Continua spre plata",

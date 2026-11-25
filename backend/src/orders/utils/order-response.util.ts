@@ -67,6 +67,7 @@ export function toOrderDetailResponse(order: Order) {
       recipientPhone: order.deliveryRecipientPhone,
     },
     billingDetails: order.billingDetails,
+    customerNote: order.customerNote,
     subtotalRon: toNumber(order.subtotalRon),
     deliveryFeeRon: toNumber(order.deliveryFeeRon),
     cashOperationalFeeRon: toNumber(order.cashOperationalFeeRon),

@@ -31,6 +31,11 @@
     <template #cell-deliveryMethod="{ row }">
       {{ row.deliveryMethod === "EASYBOX" ? t("easybox") : t("address") }}
     </template>
+    <template #cell-customerNote="{ row }">
+      <span class="block truncate" :title="String(row.customerNote || '')">
+        {{ row.customerNote || "—" }}
+      </span>
+    </template>
     <template #cell-paymentStatus="{ row }">
       <Tag :value="paymentStatusLabel(row.paymentStatus)" severity="info" />
     </template>
@@ -70,6 +75,7 @@ type OrderLine = {
   lineTotal: number;
   paymentStatus: string;
   status: string;
+  customerNote: string;
   rowLabel: string;
 };
 
@@ -109,6 +115,7 @@ type IncomingOrder = {
   createdAt: string;
   userId?: number | null;
   paymentStatus: string;
+  customerNote?: string | null;
   customer?: { firstName?: string; lastName?: string; email?: string };
   delivery?: { street?: string; city?: string; county?: string; postalCode?: string };
   items?: IncomingItem[];
@@ -154,6 +161,7 @@ const rows = computed<AdminTableRow[]>(() =>
         lineTotal: Number(item.lineTotalRon),
         paymentStatus: order.paymentStatus,
         status: item.status,
+        customerNote: order.customerNote?.trim() || "",
         rowLabel: `${order.publicOrderNumber} · ${item.title}`,
       };
       return line;
@@ -161,7 +169,7 @@ const rows = computed<AdminTableRow[]>(() =>
   ),
 );
 
-const searchFields = ["orderNumber", "customerName", "customerEmail", "deliveryAddress", "title", "artistName", "status", "paymentStatus"];
+const searchFields = ["orderNumber", "customerName", "customerEmail", "deliveryAddress", "customerNote", "title", "artistName", "status", "paymentStatus"];
 
 const columns = computed<AdminTableColumn[]>(() => {
   const statusOptions = props.statusOptions as Array<{ label: string; value: string }>;
@@ -191,6 +199,7 @@ const columns = computed<AdminTableColumn[]>(() => {
       cellClass: deliveryTone,
       minWidth: "16rem",
     },
+    { field: "customerNote", header: t("customerNote"), minWidth: "14rem" },
     { field: "title", header: t("product"), minWidth: "12rem" },
   ];
   if (props.showArtistColumn) {
@@ -232,7 +241,7 @@ const columns = computed<AdminTableColumn[]>(() => {
 <i18n lang="json">
 {
   "ro": {
-    "searchPlaceholder": "Caută număr, client, email sau produs...",
+    "searchPlaceholder": "Caută număr, client, email, mențiuni sau produs...",
     "emptyActive": "Nicio comandă activă nu corespunde filtrelor.",
     "emptyArchived": "Nicio comandă arhivată nu corespunde filtrelor.",
     "order": "Comandă",
@@ -243,6 +252,7 @@ const columns = computed<AdminTableColumn[]>(() => {
     "easybox": "Easybox",
     "address": "Adresă",
     "deliveryAddress": "Adresă livrare",
+    "customerNote": "Mențiuni",
     "product": "Produs",
     "artist": "Artist",
     "quantity": "Cant.",
@@ -252,7 +262,7 @@ const columns = computed<AdminTableColumn[]>(() => {
     "unarchive": "Scoate din arhivă"
   },
   "en": {
-    "searchPlaceholder": "Search order number, customer, email, or product...",
+    "searchPlaceholder": "Search order number, customer, email, notes, or product...",
     "emptyActive": "No active orders match the current filters.",
     "emptyArchived": "No archived orders match the current filters.",
     "order": "Order",
@@ -263,6 +273,7 @@ const columns = computed<AdminTableColumn[]>(() => {
     "easybox": "Easybox",
     "address": "Address",
     "deliveryAddress": "Delivery address",
+    "customerNote": "Notes",
     "product": "Product",
     "artist": "Artist",
     "quantity": "Qty",

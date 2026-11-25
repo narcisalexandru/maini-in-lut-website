@@ -57,6 +57,7 @@ export type CreateOrderInput = {
     recipientPhone?: string;
   };
   billingDetails?: OrderBillingDetails | null;
+  customerNote?: string | null;
   items: OrderLineInput[];
   subtotalRon: number;
   deliveryFeeRon: number;
@@ -340,6 +341,22 @@ export class OrdersService {
     return this.findOneForAdmin(orderId);
   }
 
+  private normalizeCustomerNote(note?: string | null): string | null {
+    if (typeof note !== 'string') {
+      return null;
+    }
+    const trimmed = note.trim();
+    if (!trimmed) {
+      return null;
+    }
+    if (trimmed.length > 1000) {
+      throw new BadRequestException(
+        'Mentiunea poate avea maxim 1000 de caractere.',
+      );
+    }
+    return trimmed;
+  }
+
   private areAllItemsTerminal(items: OrderItem[]): boolean {
     if (!items.length) {
       return false;
@@ -376,6 +393,7 @@ export class OrdersService {
       deliveryPostalCode: input.customer.postalCode.trim(),
       deliveryRecipientName: input.customer.recipientName?.trim() || null,
       deliveryRecipientPhone: input.customer.recipientPhone?.trim() || null,
+      customerNote: this.normalizeCustomerNote(input.customerNote),
       billingDetails: input.billingDetails ?? null,
       paymentMethod: input.paymentMethod,
       paymentStatus: input.paymentStatus,

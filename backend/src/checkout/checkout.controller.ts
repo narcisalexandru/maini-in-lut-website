@@ -32,6 +32,7 @@ type CheckoutBody = {
     lockerId?: string;
   };
   billingDetails?: BillingDetailsDto;
+  customerNote?: string;
   deliveryMethod?: 'EASYBOX' | 'ADDRESS';
   items?: { productId: number; quantity: number }[];
   guestCartId?: string;
@@ -93,6 +94,7 @@ export class CheckoutController {
         body.deliveryAddress,
         body.billingDetails,
         body.deliveryMethod,
+        body.customerNote,
       );
     }
 
@@ -119,6 +121,7 @@ export class CheckoutController {
       },
       billingDetails: body.billingDetails,
       deliveryMethod: body.deliveryMethod,
+      customerNote: body.customerNote,
     });
   }
 
