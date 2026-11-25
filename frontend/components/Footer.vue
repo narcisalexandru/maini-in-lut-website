@@ -274,6 +274,8 @@ watch(netopiaBadgeRef, (container) => {
   }
 
   &__secondary {
+    min-width: 0;
+
     @media screen and (max-width: 767px) {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -403,6 +405,7 @@ watch(netopiaBadgeRef, (container) => {
     color: inherit;
     text-decoration: none;
     font-size: rem(14px);
+    overflow-wrap: anywhere;
     opacity: 0.92;
     transition: opacity 0.2s ease;
 
@@ -434,9 +437,16 @@ watch(netopiaBadgeRef, (container) => {
       display: flex;
       align-items: flex-start;
       gap: rem(8px);
+      min-width: 0;
       font-size: rem(14px);
       line-height: 1.45;
       opacity: 0.92;
+
+      span,
+      a {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
 
       @media screen and (max-width: 767px) {
         font-size: rem(13px);

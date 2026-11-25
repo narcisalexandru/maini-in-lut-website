@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { ExecutionContext, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
@@ -20,13 +20,31 @@ import { StockReservationsModule } from './stock-reservations/stock-reservations
 import { SiteSettingsModule } from './site-settings/site-settings.module';
 import { AdminWorkspaceModule } from './admin-workspace/admin-workspace.module';
 
+const PUBLIC_RATE_LIMIT = 120;
+const ADMIN_RATE_LIMIT = 3000;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+function isAdminRequest(context: ExecutionContext): boolean {
+  const request = context.switchToHttp().getRequest<{ path?: string; url?: string }>();
+  const path = (request.path || request.url || '').split('?')[0];
+  return path === '/admin' || path.startsWith('/admin/');
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([
       {
-        ttl: 60_000,
-        limit: 120,
+        name: 'default',
+        ttl: RATE_LIMIT_WINDOW_MS,
+        limit: PUBLIC_RATE_LIMIT,
+        skipIf: isAdminRequest,
+      },
+      {
+        name: 'admin',
+        ttl: RATE_LIMIT_WINDOW_MS,
+        limit: ADMIN_RATE_LIMIT,
+        skipIf: (context) => !isAdminRequest(context),
       },
     ]),
     TypeOrmModule.forRootAsync({

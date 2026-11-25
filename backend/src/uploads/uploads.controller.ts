@@ -6,7 +6,6 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -22,7 +21,6 @@ export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
   @Roles(UserRole.SUPER_ADMIN, UserRole.ARTIST)
-  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   @Post('product-images')
   @UseInterceptors(
     FilesInterceptor('images', 3, {

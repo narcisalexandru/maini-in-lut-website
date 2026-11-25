@@ -4,23 +4,25 @@
       <nav class="flex mb-6 text-sm h-color-dusty-gray" aria-label="Breadcrumb">
         <ol class="flex flex-wrap items-center gap-1">
           <li>
-            <component
-              :is="preview ? 'span' : 'NuxtLink'"
-              v-bind="preview ? {} : { to: $localePath('/') }"
-              :class="preview ? '' : 'hover:h-color-primary'"
+            <NuxtLink
+              v-if="!preview"
+              :to="$localePath('/')"
+              class="hover:h-color-primary"
             >
               {{ t("breadcrumb.home") }}
-            </component>
+            </NuxtLink>
+            <span v-else>{{ t("breadcrumb.home") }}</span>
           </li>
           <li><span class="mx-1">/</span></li>
           <li>
-            <component
-              :is="preview ? 'span' : 'NuxtLink'"
-              v-bind="preview ? {} : { to: $localePath('/produse') }"
-              :class="preview ? '' : 'hover:h-color-primary'"
+            <NuxtLink
+              v-if="!preview"
+              :to="$localePath('/produse')"
+              class="hover:h-color-primary"
             >
               {{ t("breadcrumb.products") }}
-            </component>
+            </NuxtLink>
+            <span v-else>{{ t("breadcrumb.products") }}</span>
           </li>
           <li><span class="mx-1">/</span></li>
           <li>
@@ -123,18 +125,16 @@
 
           <p v-if="product.artist" class="text-sm mb-4 h-color-lunar-green">
             {{ t("soldBy") }}
-            <component
-              :is="preview ? 'span' : 'NuxtLink'"
-              v-bind="
-                preview
-                  ? {}
-                  : { to: $localePath(`/atelier/${product.artist.slug}`) }
-              "
-              class="h-color-primary font-semibold"
-              :class="{ 'hover:underline': !preview }"
+            <NuxtLink
+              v-if="!preview"
+              :to="$localePath(`/atelier/${product.artist.slug}`)"
+              class="h-color-primary font-semibold hover:underline"
             >
               {{ product.artist.displayName }}
-            </component>
+            </NuxtLink>
+            <span v-else class="h-color-primary font-semibold">
+              {{ product.artist.displayName }}
+            </span>
           </p>
 
           <p
@@ -293,14 +293,16 @@
             </h2>
             <p class="text-gray-600 text-sm">{{ t("youMightLikeSubtitle") }}</p>
           </div>
-          <component
-            :is="preview ? 'span' : 'NuxtLink'"
-            v-bind="preview ? {} : { to: $localePath('/produse') }"
-            class="text-sm font-semibold uppercase h-color-primary"
-            :class="{ 'hover:underline cursor-pointer': !preview }"
+          <NuxtLink
+            v-if="!preview"
+            :to="$localePath('/produse')"
+            class="text-sm font-semibold uppercase h-color-primary hover:underline cursor-pointer"
           >
             {{ t("viewAllCollection") }}
-          </component>
+          </NuxtLink>
+          <span v-else class="text-sm font-semibold uppercase h-color-primary">
+            {{ t("viewAllCollection") }}
+          </span>
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <ProductCard v-for="p in relatedProducts" :key="p.id" :product="p" />
