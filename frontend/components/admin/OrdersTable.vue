@@ -10,8 +10,38 @@
     :search-placeholder="t('searchPlaceholder')"
     :empty-label="archived ? t('emptyArchived') : t('emptyActive')"
     :initial-query="initialQuery"
+    selectable
+    selection-field="orderId"
+    :selected-keys="selectedOrderIds"
+    @update:selected-keys="selectedOrderIds = $event"
     @changed="emit('changed')"
   >
+    <template #bulk>
+      <Button
+        v-if="canArchive && !archived"
+        :label="t('archiveSelected', { count: selectedOrderIds.length })"
+        severity="secondary"
+        size="small"
+        :loading="bulkRunning"
+        @click="askBulk('archive')"
+      />
+      <Button
+        v-if="archived"
+        :label="t('unarchiveSelected', { count: selectedOrderIds.length })"
+        severity="secondary"
+        size="small"
+        :loading="bulkRunning"
+        @click="askBulk('unarchive')"
+      />
+      <Button
+        v-if="canDelete"
+        :label="t('deleteSelected', { count: selectedOrderIds.length })"
+        severity="danger"
+        size="small"
+        :loading="bulkRunning"
+        @click="askBulk('delete')"
+      />
+    </template>
     <template #cell-createdAt="{ row }">
       {{ formatDate(row.createdAt) }}
     </template>
@@ -66,23 +96,63 @@
       />
       <span v-else>—</span>
     </template>
-    <template v-if="archived" #actions="{ row }">
-      <Button
-        v-if="archived"
-        :label="t('unarchive')"
-        severity="secondary"
-        size="small"
-        outlined
-        :loading="unarchivingOrderId === row.orderId"
-        @click="emit('unarchive', row.orderId)"
-      />
+    <template v-if="showActions" #actions="{ row }">
+      <div class="flex flex-wrap gap-2">
+        <Button
+          v-if="canArchive && !archived"
+          :label="t('archive')"
+          severity="secondary"
+          size="small"
+          outlined
+          :loading="archivingOrderId === row.orderId"
+          @click="ask('archive', row)"
+        />
+        <Button
+          v-if="archived"
+          :label="t('unarchive')"
+          severity="secondary"
+          size="small"
+          outlined
+          :loading="unarchivingOrderId === row.orderId"
+          @click="emit('unarchive', row.orderId)"
+        />
+        <Button
+          v-if="canDelete"
+          :label="t('delete')"
+          severity="danger"
+          size="small"
+          outlined
+          :loading="deletingOrderId === row.orderId"
+          @click="ask('delete', row)"
+        />
+      </div>
     </template>
   </AdminDataTable>
+
+  <Dialog
+    v-model:visible="confirmOpen"
+    modal
+    :header="dialogTitle"
+    :style="{ width: '480px' }"
+  >
+    <p class="m-0 text-sm">
+      {{ dialogBody }}
+    </p>
+    <template #footer>
+      <Button severity="secondary" :label="t('cancel')" @click="confirmOpen = false" />
+      <Button
+        :severity="pendingAction === 'delete' ? 'danger' : 'secondary'"
+        :label="dialogAction"
+        @click="confirmPending"
+      />
+    </template>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import Tag from "primevue/tag";
 import Button from "primevue/button";
+import Dialog from "primevue/dialog";
 import { useToast } from "primevue/usetoast";
 import AdminDataTable from "~/components/admin/AdminDataTable.vue";
 import type { AdminTableColumn, AdminTableRow } from "~/types/admin-table";
@@ -121,9 +191,14 @@ const props = defineProps({
   showArtistColumn: { type: Boolean, default: false },
   initialQuery: { type: String, default: "" },
   unarchivingOrderId: { type: Number, default: null },
+  archivingOrderId: { type: Number, default: null },
+  deletingOrderId: { type: Number, default: null },
+  bulkRunning: { type: Boolean, default: false },
   contained: { type: Boolean, default: false },
   canEditDelivery: { type: Boolean, default: false },
   canIssueInvoice: { type: Boolean, default: false },
+  canArchive: { type: Boolean, default: false },
+  canDelete: { type: Boolean, default: false },
   statusOptions: { type: Array, default: () => [] },
   paymentStatusOptions: { type: Array, default: () => [] },
   itemStatusLabel: { type: Function, required: true },
@@ -131,12 +206,22 @@ const props = defineProps({
   formatDate: { type: Function, required: true },
 });
 
-const emit = defineEmits(["changed", "unarchive"]);
+const emit = defineEmits(["changed", "archive", "unarchive", "delete", "bulk"]);
 const { t } = useI18n({ useScope: "local" });
 const localePath = useLocalePath();
 const toast = useToast();
 const { issueInvoice } = useOrders();
 const issuingOrderId = ref<number | null>(null);
+const confirmOpen = ref(false);
+const pendingAction = ref<"archive" | "unarchive" | "delete" | null>(null);
+const pendingOrderId = ref<number | null>(null);
+const pendingOrderNumber = ref("");
+const bulkMode = ref(false);
+const selectedOrderIds = ref<Array<number | string>>([]);
+
+const showActions = computed(
+  () => props.archived || props.canArchive || props.canDelete,
+);
 
 type IncomingItem = {
   id: number;
@@ -220,6 +305,71 @@ const rows = computed<AdminTableRow[]>(() =>
     }),
   ),
 );
+
+watch(
+  () =>
+    (props.orders as Array<{ id?: number }>)
+      .map((order) => order.id)
+      .filter((id): id is number => typeof id === "number"),
+  (ids) => {
+    const known = new Set(ids);
+    selectedOrderIds.value = selectedOrderIds.value.filter((id) => known.has(Number(id)));
+  },
+);
+
+const ask = (action: "archive" | "delete", row: AdminTableRow) => {
+  bulkMode.value = false;
+  pendingAction.value = action;
+  pendingOrderId.value = Number(row.orderId);
+  pendingOrderNumber.value = String(row.orderNumber ?? "");
+  confirmOpen.value = true;
+};
+
+const askBulk = (action: "archive" | "unarchive" | "delete") => {
+  if (!selectedOrderIds.value.length) return;
+  bulkMode.value = true;
+  pendingAction.value = action;
+  pendingOrderId.value = null;
+  pendingOrderNumber.value = "";
+  confirmOpen.value = true;
+};
+
+const dialogTitle = computed(() => {
+  if (bulkMode.value && pendingAction.value === "delete") return t("deleteSelectedTitle");
+  if (bulkMode.value && pendingAction.value === "archive") return t("archiveSelectedTitle");
+  if (bulkMode.value && pendingAction.value === "unarchive") return t("unarchiveSelectedTitle");
+  return pendingAction.value === "delete" ? t("deleteTitle") : t("archiveTitle");
+});
+
+const dialogBody = computed(() => {
+  const count = selectedOrderIds.value.length;
+  if (bulkMode.value && pendingAction.value === "delete") return t("deleteSelectedBody", { count });
+  if (bulkMode.value && pendingAction.value === "archive") return t("archiveSelectedBody", { count });
+  if (bulkMode.value && pendingAction.value === "unarchive") return t("unarchiveSelectedBody", { count });
+  if (pendingAction.value === "delete") return t("deleteBody", { order: pendingOrderNumber.value });
+  return t("archiveBody", { order: pendingOrderNumber.value });
+});
+
+const dialogAction = computed(() => {
+  if (pendingAction.value === "delete") return t("delete");
+  if (pendingAction.value === "unarchive") return t("unarchive");
+  return t("archive");
+});
+
+const confirmPending = () => {
+  if (pendingAction.value === null) return;
+  const action = pendingAction.value;
+  if (bulkMode.value) {
+    const orderIds = selectedOrderIds.value.map((id) => Number(id));
+    confirmOpen.value = false;
+    emit("bulk", { action, orderIds });
+    return;
+  }
+  if (pendingOrderId.value === null || action === "unarchive") return;
+  const orderId = pendingOrderId.value;
+  confirmOpen.value = false;
+  emit(action, orderId);
+};
 
 const searchFields = ["orderNumber", "customerName", "customerEmail", "deliveryAddress", "customerNote", "title", "artistName", "status", "paymentStatus"];
 
@@ -349,7 +499,23 @@ const issue = async (orderId: number) => {
     "invoiceFailed": "Factura nu a putut fi emisă",
     "efacturaHint": "e-Factura pleacă din SmartBill, din trimiterea automată în SPV.",
     "status": "Status",
-    "unarchive": "Scoate din arhivă"
+    "archive": "Arhivează",
+    "archiveTitle": "Arhivezi comanda?",
+    "archiveBody": "Comanda {order} iese din lista activă. O poți scoate din arhivă oricând.",
+    "unarchive": "Scoate din arhivă",
+    "delete": "Șterge",
+    "deleteTitle": "Ștergi comanda?",
+    "deleteBody": "Comanda {order} se șterge din magazin, din lista activă și din arhivă. Documentul din SmartBill, dacă există, rămâne acolo.",
+    "archiveSelected": "Arhivează ({count})",
+    "archiveSelectedTitle": "Arhivezi comenzile selectate?",
+    "archiveSelectedBody": "{count} comenzi ies din lista activă. Le poți scoate din arhivă oricând.",
+    "unarchiveSelected": "Scoate din arhivă ({count})",
+    "unarchiveSelectedTitle": "Scoți comenzile din arhivă?",
+    "unarchiveSelectedBody": "{count} comenzi revin în lista activă.",
+    "deleteSelected": "Șterge ({count})",
+    "deleteSelectedTitle": "Ștergi comenzile selectate?",
+    "deleteSelectedBody": "{count} comenzi se șterg din magazin. Documentele din SmartBill, dacă există, rămân acolo.",
+    "cancel": "Renunță"
   },
   "en": {
     "searchPlaceholder": "Search order number, customer, email, notes, or product...",
@@ -380,7 +546,23 @@ const issue = async (orderId: number) => {
     "invoiceFailed": "The invoice could not be issued",
     "efacturaHint": "e-Factura is sent by SmartBill when automatic SPV delivery is enabled.",
     "status": "Status",
-    "unarchive": "Remove from archive"
+    "archive": "Archive",
+    "archiveTitle": "Archive this order?",
+    "archiveBody": "Order {order} leaves the active list. You can restore it from the archive at any time.",
+    "unarchive": "Remove from archive",
+    "delete": "Delete",
+    "deleteTitle": "Delete this order?",
+    "deleteBody": "Order {order} is removed from the shop, including the active list and the archive. A SmartBill document, if one exists, stays in SmartBill.",
+    "archiveSelected": "Archive ({count})",
+    "archiveSelectedTitle": "Archive the selected orders?",
+    "archiveSelectedBody": "{count} orders leave the active list. You can restore them from the archive at any time.",
+    "unarchiveSelected": "Remove from archive ({count})",
+    "unarchiveSelectedTitle": "Restore the selected orders?",
+    "unarchiveSelectedBody": "{count} orders return to the active list.",
+    "deleteSelected": "Delete ({count})",
+    "deleteSelectedTitle": "Delete the selected orders?",
+    "deleteSelectedBody": "{count} orders are removed from the shop. SmartBill documents, if any exist, stay in SmartBill.",
+    "cancel": "Cancel"
   }
 }
 </i18n>

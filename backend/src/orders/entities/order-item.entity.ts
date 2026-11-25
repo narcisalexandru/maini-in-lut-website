@@ -64,6 +64,9 @@ export class OrderItem {
   @Column({ default: false })
   isUnarchived: boolean;
 
+  @Column({ default: false })
+  isManuallyArchived: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

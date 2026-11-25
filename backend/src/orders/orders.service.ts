@@ -299,46 +299,62 @@ export class OrdersService {
     item.statusUpdatedAt = new Date();
     if (previousStatus !== status) {
       item.isUnarchived = false;
+      item.isManuallyArchived = false;
     }
     return this.orderItemsRepository.save(item);
   }
 
-  async unarchiveOrder(user: User, orderId: number): Promise<Order> {
+  async archiveOrder(user: User, orderId: number): Promise<Order> {
     const order = await this.findOneForAdmin(orderId);
+    const items = await this.itemsManagedBy(
+      user,
+      order,
+      'You can only archive your own orders',
+    );
 
-    let itemsToUnarchive: OrderItem[];
-
-    if (user.role === UserRole.ARTIST) {
-      const artist = await this.artistsService.findApprovedByUserId(user.id);
-      if (!artist) {
-        throw new ForbiddenException('Approved artist profile required');
-      }
-
-      itemsToUnarchive = (order.items ?? []).filter(
-        (item) => item.artistId === artist.id,
-      );
-      if (!itemsToUnarchive.length) {
-        throw new ForbiddenException('You can only unarchive your own orders');
-      }
-    } else if (user.role === UserRole.SUPER_ADMIN) {
-      itemsToUnarchive = order.items ?? [];
-    } else {
-      throw new ForbiddenException('Insufficient permissions');
+    if (this.areItemsArchived(items)) {
+      throw new BadRequestException('Order is already archived');
     }
 
-    if (
-      !this.areAllItemsTerminal(itemsToUnarchive) ||
-      itemsToUnarchive.some((item) => item.isUnarchived)
-    ) {
+    for (const item of items) {
+      item.isManuallyArchived = true;
+      item.isUnarchived = false;
+    }
+    await this.orderItemsRepository.save(items);
+
+    return this.findOneForAdmin(orderId);
+  }
+
+  async unarchiveOrder(user: User, orderId: number): Promise<Order> {
+    const order = await this.findOneForAdmin(orderId);
+    const items = await this.itemsManagedBy(
+      user,
+      order,
+      'You can only unarchive your own orders',
+    );
+
+    if (!this.areItemsArchived(items)) {
       throw new BadRequestException('Order is not archived');
     }
 
-    for (const item of itemsToUnarchive) {
+    for (const item of items) {
+      item.isManuallyArchived = false;
       item.isUnarchived = true;
     }
-    await this.orderItemsRepository.save(itemsToUnarchive);
+    await this.orderItemsRepository.save(items);
 
     return this.findOneForAdmin(orderId);
+  }
+
+  async deleteOrder(user: User, orderId: number): Promise<Order> {
+    if (user.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+
+    const order = await this.findOneForAdmin(orderId);
+    await this.orderItemsRepository.delete({ orderId: order.id });
+    await this.ordersRepository.delete(order.id);
+    return order;
   }
 
   private normalizeCustomerNote(note?: string | null): string | null {
@@ -357,15 +373,50 @@ export class OrdersService {
     return trimmed;
   }
 
-  private areAllItemsTerminal(items: OrderItem[]): boolean {
+  private async itemsManagedBy(
+    user: User,
+    order: Order,
+    artistMessage: string,
+  ): Promise<OrderItem[]> {
+    if (user.role === UserRole.ARTIST) {
+      const artist = await this.artistsService.findApprovedByUserId(user.id);
+      if (!artist) {
+        throw new ForbiddenException('Approved artist profile required');
+      }
+
+      const items = (order.items ?? []).filter(
+        (item) => item.artistId === artist.id,
+      );
+      if (!items.length) {
+        throw new ForbiddenException(artistMessage);
+      }
+      return items;
+    }
+
+    if (user.role === UserRole.SUPER_ADMIN) {
+      return order.items ?? [];
+    }
+
+    throw new ForbiddenException('Insufficient permissions');
+  }
+
+  private areItemsArchived(items: OrderItem[]): boolean {
     if (!items.length) {
       return false;
     }
 
-    return items.every((item) =>
+    return items.every((item) => this.isItemArchived(item));
+  }
+
+  private isItemArchived(item: OrderItem): boolean {
+    if (item.isManuallyArchived) {
+      return true;
+    }
+
+    return (
       (TERMINAL_ORDER_ITEM_STATUSES as readonly OrderItemStatus[]).includes(
         item.status,
-      ),
+      ) && !item.isUnarchived
     );
   }
 

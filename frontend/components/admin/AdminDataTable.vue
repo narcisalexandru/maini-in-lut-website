@@ -31,6 +31,18 @@
         />
       </div>
 
+      <div v-if="selectable && selectedCount" class="admin-data-table__bulk">
+        <span>{{ t("selected", { count: selectedCount }) }}</span>
+        <slot name="bulk" :selected-keys="selectedKeys" :clear="clearSelection" />
+        <Button
+          size="small"
+          severity="secondary"
+          text
+          :label="t('clearSelection')"
+          @click="clearSelection"
+        />
+      </div>
+
       <div class="admin-data-table__meta">
         <span>{{ t("count", { count: visibleRows.length }) }}</span>
         <template v-if="trackChanges">
@@ -81,6 +93,30 @@
       :row-class="rowClass"
       class="text-sm admin-data-table__grid"
     >
+      <Column
+        v-if="selectable"
+        :style="{ width: '3rem', minWidth: '3rem' }"
+      >
+        <template #header>
+          <Checkbox
+            binary
+            :model-value="allVisibleSelected"
+            :indeterminate="someVisibleSelected"
+            :aria-label="t('selectVisible')"
+            @update:model-value="toggleVisible"
+            @click.stop
+          />
+        </template>
+        <template #body="{ data }">
+          <Checkbox
+            binary
+            :model-value="isRowSelected(data)"
+            :aria-label="t('selectRow')"
+            @update:model-value="toggleRow(data, $event)"
+            @click.stop
+          />
+        </template>
+      </Column>
       <Column
         v-for="column in columns"
         :key="column.field"
@@ -240,6 +276,7 @@ import Column from "primevue/column";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
 import Button from "primevue/button";
+import Checkbox from "primevue/checkbox";
 import Dialog from "primevue/dialog";
 import { useToast } from "primevue/usetoast";
 import type { AdminTableColumn, AdminTableHistory, AdminTableRow } from "~/types/admin-table";
@@ -259,6 +296,9 @@ const props = withDefaults(
     contained?: boolean;
     pinToTop?: (row: AdminTableRow) => boolean;
     rowClass?: (row: AdminTableRow) => string;
+    selectable?: boolean;
+    selectionField?: string;
+    selectedKeys?: Array<number | string>;
   }>(),
   {
     loading: false,
@@ -271,10 +311,16 @@ const props = withDefaults(
     contained: false,
     pinToTop: undefined,
     rowClass: undefined,
+    selectable: false,
+    selectionField: "id",
+    selectedKeys: () => [],
   },
 );
 
-const emit = defineEmits<{ changed: [] }>();
+const emit = defineEmits<{
+  changed: [];
+  "update:selectedKeys": [keys: Array<number | string>];
+}>();
 
 const root = ref<HTMLElement | null>(null);
 const slots = useSlots();
@@ -315,6 +361,77 @@ const history = ref<AdminTableHistory>({
 const selectColumns = computed(() =>
   props.columns.filter((column) => column.filter === "select" && column.filterOptions?.length),
 );
+
+const rowSelectionKey = (row: AdminTableRow) => row[props.selectionField];
+
+const visibleKeys = computed(() => {
+  const keys: Array<number | string> = [];
+  const seen = new Set<string>();
+  for (const row of visibleRows.value) {
+    const key = rowSelectionKey(row);
+    if (typeof key !== "number" && typeof key !== "string") continue;
+    const token = String(key);
+    if (seen.has(token)) continue;
+    seen.add(token);
+    keys.push(key);
+  }
+  return keys;
+});
+
+const selectedSet = computed(
+  () => new Set((props.selectedKeys ?? []).map((key) => String(key))),
+);
+
+const selectedCount = computed(() => selectedSet.value.size);
+
+const allVisibleSelected = computed(
+  () =>
+    visibleKeys.value.length > 0 &&
+    visibleKeys.value.every((key) => selectedSet.value.has(String(key))),
+);
+
+const someVisibleSelected = computed(
+  () =>
+    !allVisibleSelected.value &&
+    visibleKeys.value.some((key) => selectedSet.value.has(String(key))),
+);
+
+const isRowSelected = (row: AdminTableRow) => {
+  const key = rowSelectionKey(row);
+  return typeof key === "number" || typeof key === "string"
+    ? selectedSet.value.has(String(key))
+    : false;
+};
+
+const replaceSelection = (keys: Array<number | string>) => {
+  emit("update:selectedKeys", keys);
+};
+
+const clearSelection = () => {
+  replaceSelection([]);
+};
+
+const toggleVisible = (checked: boolean) => {
+  const current = new Map(
+    (props.selectedKeys ?? []).map((key) => [String(key), key] as const),
+  );
+  for (const key of visibleKeys.value) {
+    if (checked) current.set(String(key), key);
+    else current.delete(String(key));
+  }
+  replaceSelection([...current.values()]);
+};
+
+const toggleRow = (row: AdminTableRow, checked: boolean) => {
+  const key = rowSelectionKey(row);
+  if (typeof key !== "number" && typeof key !== "string") return;
+  const current = new Map(
+    (props.selectedKeys ?? []).map((item) => [String(item), item] as const),
+  );
+  if (checked) current.set(String(key), key);
+  else current.delete(String(key));
+  replaceSelection([...current.values()]);
+};
 
 const toggleSort = (column: AdminTableColumn) => {
   if (sortField.value === column.field) {
@@ -664,6 +781,18 @@ const formatWhen = (value: string) =>
   color: #4b5563;
 }
 
+.admin-data-table__bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.6rem;
+  background: #f7f8f3;
+  font-size: 0.85rem;
+}
+
 .admin-data-table__cell {
   display: flex;
   align-items: center;
@@ -762,6 +891,10 @@ const formatWhen = (value: string) =>
   "ro": {
     "searchPlaceholder": "Caută în tabel...",
     "count": "{count} rânduri",
+    "selected": "{count} selectate",
+    "clearSelection": "Deselectează",
+    "selectVisible": "Selectează rândurile vizibile",
+    "selectRow": "Selectează rândul",
     "versions": "{count}/{limit} versiuni",
     "undo": "Anulează",
     "redo": "Refă",
@@ -787,6 +920,10 @@ const formatWhen = (value: string) =>
   "en": {
     "searchPlaceholder": "Search this table...",
     "count": "{count} rows",
+    "selected": "{count} selected",
+    "clearSelection": "Clear selection",
+    "selectVisible": "Select visible rows",
+    "selectRow": "Select row",
     "versions": "{count}/{limit} versions",
     "undo": "Undo",
     "redo": "Redo",

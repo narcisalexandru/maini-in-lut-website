@@ -1,3 +1,4 @@
+import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -22,6 +23,7 @@ describe('OrdersService', () => {
       save: jest.fn(),
       create: jest.fn(),
       find: jest.fn(),
+      delete: jest.fn(),
       createQueryBuilder: jest.fn(),
     } as unknown as jest.Mocked<Repository<Order>>;
 
@@ -38,6 +40,7 @@ describe('OrdersService', () => {
             findOne: jest.fn(),
             save: jest.fn(),
             create: jest.fn(),
+            delete: jest.fn(),
           },
         },
         {
@@ -110,5 +113,51 @@ describe('OrdersService', () => {
     );
 
     expect(result.status).toBe('PROCESSING');
+  });
+
+  it('archives an artist order without deleting it', async () => {
+    const item = {
+      id: 5,
+      artistId: 2,
+      status: 'PENDING',
+      isUnarchived: false,
+      isManuallyArchived: false,
+    };
+    ordersRepository.findOne.mockResolvedValue({
+      id: 9,
+      items: [item],
+    } as unknown as Order);
+    artistsService.findApprovedByUserId.mockResolvedValue({ id: 2 });
+    const orderItemsRepository = service['orderItemsRepository'] as jest.Mocked<
+      Repository<OrderItem>
+    >;
+    orderItemsRepository.save.mockImplementation(async (value) => value as OrderItem);
+
+    await service.archiveOrder({ id: 4, role: UserRole.ARTIST } as never, 9);
+
+    expect(item.isManuallyArchived).toBe(true);
+    expect(item.isUnarchived).toBe(false);
+    expect(ordersRepository.delete).not.toHaveBeenCalled();
+  });
+
+  it('rejects order deletion for an artist', async () => {
+    await expect(
+      service.deleteOrder({ id: 4, role: UserRole.ARTIST } as never, 9),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(ordersRepository.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes an order for a super admin', async () => {
+    ordersRepository.findOne.mockResolvedValue({ id: 9, items: [] } as unknown as Order);
+    ordersRepository.delete.mockResolvedValue({ affected: 1, raw: [] });
+    const orderItemsRepository = service['orderItemsRepository'] as jest.Mocked<
+      Repository<OrderItem>
+    >;
+    orderItemsRepository.delete.mockResolvedValue({ affected: 0, raw: [] });
+
+    await service.deleteOrder({ id: 1, role: UserRole.SUPER_ADMIN } as never, 9);
+
+    expect(orderItemsRepository.delete).toHaveBeenCalledWith({ orderId: 9 });
+    expect(ordersRepository.delete).toHaveBeenCalledWith(9);
   });
 });

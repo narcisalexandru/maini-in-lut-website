@@ -117,6 +117,7 @@ const NEGATIVE_ACTIONS = new Set([
   "PRODUCT_REJECTED",
   "PRODUCT_CHANGES_REJECTED",
   "PRODUCT_DELETED",
+  "ORDER_DELETED",
 ]);
 
 const actionOptions = computed(() =>
@@ -270,6 +271,9 @@ onMounted(async () => {
     "action.PRODUCT_CHANGES_ACCEPTED": "Modificări acceptate",
     "action.PRODUCT_CHANGES_REJECTED": "Modificări respinse",
     "action.PRODUCT_DELETED": "Produs șters",
+    "action.ORDER_ARCHIVED": "Comandă arhivată",
+    "action.ORDER_UNARCHIVED": "Comandă scoasă din arhivă",
+    "action.ORDER_DELETED": "Comandă ștearsă",
     "action.ORDER_ITEM_STATUS_UPDATED": "Status comandă actualizat"
   },
   "en": {
@@ -304,6 +308,9 @@ onMounted(async () => {
     "action.PRODUCT_CHANGES_ACCEPTED": "Product changes accepted",
     "action.PRODUCT_CHANGES_REJECTED": "Product changes rejected",
     "action.PRODUCT_DELETED": "Product deleted",
+    "action.ORDER_ARCHIVED": "Order archived",
+    "action.ORDER_UNARCHIVED": "Order restored from archive",
+    "action.ORDER_DELETED": "Order deleted",
     "action.ORDER_ITEM_STATUS_UPDATED": "Order item status updated"
   }
 }

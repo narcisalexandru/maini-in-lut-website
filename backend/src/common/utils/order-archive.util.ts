@@ -17,6 +17,7 @@ export function applyActiveOrdersFilter(
         SELECT 1 FROM order_item active_item
         WHERE active_item."orderId" = "order".id
           AND active_item."artistId" = :archiveArtistId
+          AND active_item."isManuallyArchived" = false
           AND (
             active_item.status NOT IN (:...terminalStatuses)
             OR active_item."isUnarchived" = true
@@ -34,6 +35,7 @@ export function applyActiveOrdersFilter(
     `EXISTS (
       SELECT 1 FROM order_item active_item
       WHERE active_item."orderId" = "order".id
+        AND active_item."isManuallyArchived" = false
         AND (
           active_item.status NOT IN (:...terminalStatuses)
           OR active_item."isUnarchived" = true
@@ -61,6 +63,7 @@ export function applyArchivedOrdersFilter(
         SELECT 1 FROM order_item open_item
         WHERE open_item."orderId" = "order".id
           AND open_item."artistId" = :archiveArtistId
+          AND open_item."isManuallyArchived" = false
           AND (
             open_item.status NOT IN (:...terminalStatuses)
             OR open_item."isUnarchived" = true
@@ -78,6 +81,7 @@ export function applyArchivedOrdersFilter(
     `NOT EXISTS (
       SELECT 1 FROM order_item open_item
       WHERE open_item."orderId" = "order".id
+        AND open_item."isManuallyArchived" = false
         AND (
           open_item.status NOT IN (:...terminalStatuses)
           OR open_item."isUnarchived" = true

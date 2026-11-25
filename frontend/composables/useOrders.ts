@@ -54,9 +54,31 @@ export function useOrders() {
       body: JSON.stringify({ status }),
     });
 
+  const archiveOrder = (orderId: number) =>
+    apiFetch<OrderDetail>(`/admin/orders/${orderId}/archive`, {
+      method: "PATCH",
+    });
+
   const unarchiveOrder = (orderId: number) =>
     apiFetch<OrderDetail>(`/admin/orders/${orderId}/unarchive`, {
       method: "PATCH",
+    });
+
+  const deleteOrder = (orderId: number) =>
+    apiFetch<{ id: number }>(`/admin/orders/${orderId}`, {
+      method: "DELETE",
+    });
+
+  const bulkOrders = (
+    action: "archive" | "unarchive" | "delete",
+    orderIds: number[],
+  ) =>
+    apiFetch<{
+      succeeded: number[];
+      failed: { id: number; message: string }[];
+    }>("/admin/orders/bulk", {
+      method: "POST",
+      body: JSON.stringify({ action, orderIds }),
     });
 
   const issueInvoice = (orderId: number) =>
@@ -71,7 +93,10 @@ export function useOrders() {
     getAdminOrder,
     getArtistOrders,
     updateOrderItemStatus,
+    archiveOrder,
     unarchiveOrder,
+    deleteOrder,
+    bulkOrders,
     issueInvoice,
   };
 }
