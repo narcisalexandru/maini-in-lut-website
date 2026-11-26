@@ -21,3 +21,16 @@ export const COMPANY = {
 export const COMPANY_ADDRESS_RO = `${COMPANY.address.city}, ${COMPANY.address.street}, ${COMPANY.address.block}, ${COMPANY.address.apartment}, cod poștal ${COMPANY.address.postalCode}`;
 
 export const COMPANY_ADDRESS_EN = `${COMPANY.address.city}, ${COMPANY.address.street}, ${COMPANY.address.block}, apt. ${COMPANY.address.apartment.replace("ap. ", "")}, ${COMPANY.address.postalCode}`;
+
+export const SOCIAL_LINKS = [
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/maini.in.lut",
+    icon: "ph-instagram-logo",
+  },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/profile.php?id=61576573445657",
+    icon: "ph-facebook-logo",
+  },
+] as const;

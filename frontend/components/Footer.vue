@@ -119,6 +119,7 @@ import {
   COMPANY,
   COMPANY_ADDRESS_RO,
   COMPANY_ADDRESS_EN,
+  SOCIAL_LINKS,
 } from "~/constants/company";
 
 const { t, locale } = useI18n({
@@ -139,18 +140,7 @@ const infoLinks = [
   { labelKey: "contact", name: "contact" },
 ];
 
-const socialLinks = [
-  {
-    label: "Instagram",
-    href: "https://www.instagram.com/maini.in.lut",
-    icon: "ph-instagram-logo",
-  },
-  {
-    label: "Facebook",
-    href: "https://www.facebook.com/profile.php?id=61576573445657",
-    icon: "ph-facebook-logo",
-  },
-];
+const socialLinks = SOCIAL_LINKS;
 
 const anpcSalBadge = {
   href: "https://reclamatiisal.anpc.ro",

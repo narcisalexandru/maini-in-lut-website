@@ -209,7 +209,7 @@ export default defineNuxtConfig({
       const idx = pages.findIndex(
         (p) =>
           p.path === "/:pathMatch(.*)*" ||
-          (p.file && String(p.file).includes("slug"))
+          (p.file && String(p.file).includes("slug")),
       );
       if (idx > -1) {
         const [catchAll] = pages.splice(idx, 1);

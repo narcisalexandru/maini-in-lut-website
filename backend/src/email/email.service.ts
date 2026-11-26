@@ -285,6 +285,31 @@ export class EmailService {
     });
   }
 
+  async sendContactMessage(
+    to: string,
+    payload: {
+      name: string;
+      email: string;
+      phone: string | null;
+      subject: string;
+      message: string;
+    },
+  ): Promise<void> {
+    const html = await renderFile(this.templateFile('contact-message.ejs'), payload);
+    const subjectName = payload.name.replace(/[\r\n]+/g, ' ').slice(0, 80);
+    const subjectLabel = payload.subject.replace(/[\r\n]+/g, ' ').slice(0, 40);
+
+    await this.transporter.sendMail({
+      from: `"${this.configService.get(
+        'SMTP_FROM_NAME',
+      )}" <${this.configService.get('SMTP_FROM_EMAIL')}>`,
+      to,
+      replyTo: payload.email,
+      subject: `${subjectLabel} — ${subjectName}`,
+      html,
+    });
+  }
+
   async sendOrderNotificationEmail(
     to: string,
     subject: string,
