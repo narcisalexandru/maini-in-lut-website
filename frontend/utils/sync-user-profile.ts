@@ -14,7 +14,10 @@ export async function syncStoredUserProfile(): Promise<AuthUser | null> {
     const response = await apiRequest("/users/profile");
 
     if (response.status === 401) {
-      await apiRequest("/auth/logout", { method: "POST" }).catch(() => undefined);
+      void apiRequest("/auth/logout", {
+        method: "POST",
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => undefined);
       clearAuthData();
       return null;
     }

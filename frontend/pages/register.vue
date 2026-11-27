@@ -11,6 +11,7 @@
           {{ t("sub-heading") }}
         </div>
         <Button
+          type="button"
           class="maini-ui-button__google h-color-black h-bg-white w-full flex items-center justify-center gap-2"
           @click="handleGoogleLogin"
           :disabled="isLoading"
@@ -38,7 +39,12 @@
         <div class="text-left h-font-size-12 h-color-lunar-green mb-2">
           <span class="text-red-500">*</span> {{ t("required-fields") }}
         </div>
-        <form @submit.prevent="handleSubmit">
+        <form
+          data-js-submit
+          method="post"
+          novalidate
+          @submit.prevent="handleSubmit"
+        >
           <div class="flex flex-col gap-2">
             <div class="flex flex-row justify-center gap-4">
               <div class="flex flex-col w-1/2">
@@ -230,6 +236,7 @@
                 <input
                   type="checkbox"
                   id="accept_terms"
+                  name="acceptTerms"
                   class="h-font-size-14"
                   v-model="formData.acceptTerms"
                   @change="
@@ -255,13 +262,13 @@
                 </div>
               </div>
             </div>
-            <Button
-              class="maini-ui-button__primary w-full"
+            <button
+              class="p-button p-component maini-ui-button__primary h-font-size-16 w-full"
               type="submit"
               :disabled="isLoading"
             >
               {{ isLoading ? t("loading") : t("sign-up-button") }}
-            </Button>
+            </button>
           </div>
         </form>
         <div
@@ -286,6 +293,7 @@ import { useI18n } from "vue-i18n";
 import FormInput from "~/components/FormInput.vue";
 import { useAuth } from "~/composables/useAuth";
 import { useFormValidation } from "~/composables/useFormValidation";
+import { formString } from "~/utils/form-values";
 import autoAnimate from "@formkit/auto-animate";
 
 defineI18nRoute({
@@ -447,7 +455,35 @@ const passwordRequirements = computed(() => [
   },
 ]);
 
-const handleSubmit = async () => {
+const handleSubmit = async (event: Event) => {
+  const form = event.target instanceof HTMLFormElement ? event.target : null;
+  if (!form || isLoading.value) {
+    return;
+  }
+
+  const terms = form.elements.namedItem("acceptTerms");
+  formData.value = {
+    ...formData.value,
+    first_name: formString(form, "first_name", formData.value.first_name).trim(),
+    last_name: formString(form, "last_name", formData.value.last_name).trim(),
+    phone: formString(form, "phone", formData.value.phone).trim(),
+    county: formString(form, "county", formData.value.county).trim(),
+    city: formString(form, "city", formData.value.city).trim(),
+    street: formString(form, "street", formData.value.street).trim(),
+    postal_code: formString(form, "postal_code", formData.value.postal_code).trim(),
+    email: formString(form, "email", formData.value.email).trim(),
+    password: formString(form, "password", formData.value.password),
+    confirm_password: formString(
+      form,
+      "confirm_password",
+      formData.value.confirm_password,
+    ),
+    acceptTerms:
+      terms instanceof HTMLInputElement
+        ? terms.checked
+        : formData.value.acceptTerms,
+  };
+
   const formDataToValidate = {
     ...formData.value,
     acceptTerms: formData.value.acceptTerms.toString(),

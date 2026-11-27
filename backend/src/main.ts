@@ -64,8 +64,19 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  const allowedOrigins = new Set([
+    frontendOrigin,
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ]);
   app.enableCors({
-    origin: frontendOrigin,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: [

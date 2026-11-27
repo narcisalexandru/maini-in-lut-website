@@ -90,6 +90,12 @@ const visibleItems = computed(() => {
       show: isArtist.value || isSuperAdmin.value,
     },
     {
+      to: "/admin/ateliere",
+      label: t("workshops"),
+      icon: "ph-chalkboard-teacher",
+      show: isArtist.value || isSuperAdmin.value,
+    },
+    {
       to: "/admin/clienti",
       label: t("customers"),
       icon: "ph-user-circle",
@@ -154,6 +160,7 @@ const visibleItems = computed(() => {
     "artists": "Artiști",
     "customers": "Clienți",
     "products": "Produse",
+    "workshops": "Ateliere",
     "orders": "Comenzi",
     "settings": "Setări site",
     "auditLog": "Jurnal activitate",
@@ -166,6 +173,7 @@ const visibleItems = computed(() => {
     "artists": "Artists",
     "customers": "Customers",
     "products": "Products",
+    "workshops": "Workshops",
     "orders": "Orders",
     "settings": "Site settings",
     "auditLog": "Activity log",

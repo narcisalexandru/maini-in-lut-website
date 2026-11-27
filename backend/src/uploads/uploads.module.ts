@@ -9,5 +9,6 @@ import { UploadsService } from './uploads.service';
   imports: [TypeOrmModule.forFeature([Artist, Product])],
   controllers: [UploadsController],
   providers: [UploadsService],
+  exports: [UploadsService],
 })
 export class UploadsModule {}

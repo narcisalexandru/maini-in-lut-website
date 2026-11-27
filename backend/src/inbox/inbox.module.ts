@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ArtistsModule } from '../artists/artists.module';
+import { UploadsModule } from '../uploads/uploads.module';
 import { InboxMessage } from './entities/inbox-message.entity';
 import { InboxRead } from './entities/inbox-read.entity';
 import { InboxThread } from './entities/inbox-thread.entity';
@@ -11,6 +12,7 @@ import { InboxService } from './inbox.service';
   imports: [
     TypeOrmModule.forFeature([InboxThread, InboxMessage, InboxRead]),
     ArtistsModule,
+    UploadsModule,
   ],
   controllers: [InboxController],
   providers: [InboxService],

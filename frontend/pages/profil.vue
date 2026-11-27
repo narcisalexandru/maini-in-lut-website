@@ -1068,7 +1068,7 @@ const handleDeleteAccount = async () => {
     "dismissReactivationNotice": "Închide notificarea",
     "error-dismiss-reactivation": "Notificarea nu a putut fi închisă. Încearcă din nou.",
     "sellOnPlatform": "Vinde pe platformă",
-    "sellOnPlatformDesc": "Ai produse handmade? Înscrie-te ca artist și ajunge la clienții noștri.",
+    "sellOnPlatformDesc": "Ai produse handmade? Înscrie-te ca artist și ajungi la clienții noștri.",
     "becomeArtist": "Devino artist",
     "artistPanel": "Panou artist",
     "artistPending": "Cererea ta de artist este în evaluare.",

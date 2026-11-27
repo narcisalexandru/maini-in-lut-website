@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Atelier anulat</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #ece4d4;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 24px;
+        margin-top: 20px;
+      }
+      h1 {
+        color: #546a50;
+        margin-top: 0;
+      }
+      .notice {
+        background: #f7f3ea;
+        border-left: 4px solid #546a50;
+        padding: 12px 16px;
+        margin: 16px 0;
+      }
+      .footer {
+        margin-top: 24px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Atelierul a fost anulat</h1>
+      <p>Bună, <%= firstName %>,</p>
+      <p>
+        Atelierul <strong><%= title %></strong>, programat pe <%= when %> la
+        <%= location %>, a fost anulat.
+      </p>
+      <p>
+        Rezervarea <strong><%= code %></strong>, pentru <%= spots %>
+        <%= spots === 1 ? "loc" : "locuri" %>, nu mai este valabilă.
+      </p>
+      <% if (cardRefund) { %>
+        <div class="notice">
+          Plata a fost făcută cu cardul. Banii vor fi rambursați în termen de 14 zile.
+        </div>
+      <% } %>
+      <p>
+        Dacă mai ai întrebări sau nelămuriri, te așteptăm cu un mesaj la
+        <a href="mailto:maini.in.lut@gmail.com">maini.in.lut@gmail.com</a>
+        sau la
+        <a href="tel:+40771032007">0771032007</a>
+        ori
+        <a href="tel:+40751861429">0751861429</a>.
+      </p>
+      <p class="footer">Mâini în Lut</p>
+    </div>
+  </body>
+</html>

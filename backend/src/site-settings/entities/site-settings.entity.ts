@@ -18,4 +18,10 @@ export class SiteSettings {
 
   @Column({ type: 'int', default: 7 })
   deliveryDaysMax: number;
+
+  @Column({ type: 'varchar', length: 300, default: '' })
+  announcementTextRo: string;
+
+  @Column({ type: 'varchar', length: 300, default: '' })
+  announcementTextEn: string;
 }

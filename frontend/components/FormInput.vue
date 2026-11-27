@@ -9,15 +9,19 @@
       :id="id"
       :name="name"
       :autocomplete="autocomplete"
+      :autocapitalize="autocapitalize"
+      :autocorrect="autocorrect"
+      :spellcheck="spellcheck"
       :min="min"
       :max="max"
       :step="step"
       :class="[
-        'h-bg-alto h-font-weight-400 h-font-size-14 rounded-md p-1 inset-shadow-sm',
+        'h-bg-alto h-font-weight-400 h-font-size-16 rounded-md p-1 inset-shadow-sm',
         { 'border border-red-500': error },
       ]"
       :value="modelValue"
       @input="handleInput"
+      @change="handleInput"
       @blur="$emit('blur')"
     />
     <div v-if="errorMessage" class="h-font-size-12 text-red-500 text-left mt-1">
@@ -44,6 +48,9 @@ defineProps<{
   helpText?: string;
   required?: boolean;
   autocomplete?: string;
+  autocapitalize?: string;
+  autocorrect?: string;
+  spellcheck?: boolean;
   min?: string | number;
   max?: string | number;
   step?: string | number;

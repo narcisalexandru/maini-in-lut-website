@@ -159,6 +159,21 @@ const minPrice = ref(0);
 const maxPrice = ref(1000);
 const filterOpen = ref(false);
 const filterWrap = ref(null);
+const route = useRoute();
+
+function categoryFromQuery() {
+  const raw = route.query.categorie;
+  const name = Array.isArray(raw) ? raw[0] : raw;
+  return typeof name === "string" ? name : "";
+}
+
+function applyCategoryFromRoute() {
+  const name = categoryFromQuery();
+  if (!name || !categories.value.includes(name)) {
+    return;
+  }
+  selectedCategories.value = [name];
+}
 
 const { t } = useI18n({
   useScope: "local",
@@ -188,6 +203,7 @@ onMounted(async () => {
     const data = await response.json();
     products.value = data;
     categories.value = [...new Set(data.map((p) => p.category))];
+    applyCategoryFromRoute();
     const prices = data.map((p) => p.price);
     minPrice.value = Math.min(...prices);
     maxPrice.value = Math.max(...prices);
@@ -206,6 +222,15 @@ function closeFilterOnOutsideClick(event) {
 onBeforeUnmount(() => {
   document.removeEventListener("click", closeFilterOnOutsideClick);
 });
+
+watch(
+  () => route.query.categorie,
+  () => {
+    if (categories.value.length) {
+      applyCategoryFromRoute();
+    }
+  },
+);
 
 const filteredProducts = computed(() => {
   let filtered = products.value;

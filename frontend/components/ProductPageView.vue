@@ -322,6 +322,7 @@ import ProductCard from "~/components/ProductCard.vue";
 import ProductCareLabels from "~/components/ProductCareLabels.vue";
 import ProductStockStatus from "~/components/ProductStockStatus.vue";
 import { resolveProductImageUrl } from "~/utils/product-image";
+import { DEFAULT_SITE_SETTINGS } from "~/composables/useSiteSettings";
 import {
   clampQuantityToStock,
   getProductStockQuantity,
@@ -423,12 +424,7 @@ const displayDescription = computed(() => {
 const stockQuantity = computed(() => getProductStockQuantity(props.product));
 
 const isAvailable = computed(() => isProductAvailable(props.product));
-const siteSettings = ref({
-  easyboxFeeRon: 15,
-  addressFeeRon: 15,
-  deliveryDaysMin: 3,
-  deliveryDaysMax: 7,
-});
+const siteSettings = ref({ ...DEFAULT_SITE_SETTINGS });
 const { getPublicSettings } = useSiteSettings();
 const deliveryText = computed(() =>
   t("deliveryDetails", {
@@ -443,12 +439,7 @@ onMounted(async () => {
   try {
     siteSettings.value = await getPublicSettings();
   } catch {
-    siteSettings.value = {
-      easyboxFeeRon: 15,
-      addressFeeRon: 15,
-      deliveryDaysMin: 3,
-      deliveryDaysMax: 7,
-    };
+    siteSettings.value = { ...DEFAULT_SITE_SETTINGS };
   }
 });
 const imageRevealed = ref(false);

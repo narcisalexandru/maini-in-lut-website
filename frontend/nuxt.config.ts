@@ -200,6 +200,7 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    backendUrl,
     public: {
       apiBase: resolveBrowserApiBase(backendUrl),
     },

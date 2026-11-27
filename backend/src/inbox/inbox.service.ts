@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { ArtistsService } from '../artists/artists.service';
 import { ArtistStatus } from '../common/enums/artist-status.enum';
 import { UserRole } from '../common/enums/user-role.enum';
@@ -16,19 +16,25 @@ import { InboxRead } from './entities/inbox-read.entity';
 import { InboxThread } from './entities/inbox-thread.entity';
 import { inboxRecipients } from './inbox-recipients.util';
 
+const INBOX_IMAGE_PATH = /^\/uploads\/inbox\/[0-9a-f-]{36}\.webp$/;
+
 export type InboxThreadSummary = {
   id: number;
   subject: string;
-  artistId: number;
+  artistId: number | null;
   artistName: string;
+  broadcast: boolean;
+  repliesDisabled: boolean;
   lastMessageAt: string;
   preview: string;
+  hasImage: boolean;
   unread: boolean;
 };
 
 export type InboxMessageView = {
   id: number;
   body: string;
+  imageUrl: string | null;
   createdAt: string;
   senderRole: UserRole;
   mine: boolean;
@@ -37,8 +43,10 @@ export type InboxMessageView = {
 export type InboxThreadDetail = {
   id: number;
   subject: string;
-  artistId: number;
+  artistId: number | null;
   artistName: string;
+  broadcast: boolean;
+  repliesDisabled: boolean;
   messages: InboxMessageView[];
 };
 
@@ -61,15 +69,7 @@ export class InboxService {
   }> {
     const artistIds = await this.visibleArtistIds(user);
     const artists = await this.composeArtists(user);
-    if (artistIds.length === 0) {
-      return { threads: [], artists };
-    }
-
-    const threads = await this.threadsRepository.find({
-      where: { artistId: In(artistIds) },
-      relations: ['artist'],
-      order: { lastMessageAt: 'DESC' },
-    });
+    const threads = await this.visibleThreads(user, artistIds);
     if (threads.length === 0) {
       return { threads: [], artists };
     }
@@ -96,8 +96,11 @@ export class InboxService {
           subject: thread.subject,
           artistId: thread.artistId,
           artistName: thread.artist?.displayName ?? '',
+          broadcast: thread.kind === 'broadcast',
+          repliesDisabled: thread.repliesDisabled,
           lastMessageAt: thread.lastMessageAt.toISOString(),
           preview: this.preview(latest?.body ?? ''),
+          hasImage: Boolean(latest?.imageUrl),
           unread,
         };
       }),
@@ -121,9 +124,12 @@ export class InboxService {
       subject: thread.subject,
       artistId: thread.artistId,
       artistName: thread.artist?.displayName ?? '',
+      broadcast: thread.kind === 'broadcast',
+      repliesDisabled: thread.repliesDisabled,
       messages: messages.map((message) => ({
         id: message.id,
         body: message.body,
+        imageUrl: message.imageUrl,
         createdAt: message.createdAt.toISOString(),
         senderRole: message.senderRole,
         mine: message.senderId === user.id,
@@ -136,14 +142,67 @@ export class InboxService {
     dto: CreateInboxThreadDto,
   ): Promise<{ threadIds: number[] }> {
     const subject = dto.subject.trim();
-    const body = dto.body.trim();
-    if (!subject || !body) {
+    const { body, imageUrl } = this.normalizeContent(dto.body, dto.imageUrl);
+    if (subject.length < 3) {
       throw new BadRequestException('Message is empty');
     }
 
     const recipients = await this.resolveRecipients(user, dto);
     const now = new Date();
+    const repliesDisabled = user.role === UserRole.SUPER_ADMIN && dto.noReply === true;
     const threadIds = await this.dataSource.transaction(async (manager) => {
+      if (user.role === UserRole.SUPER_ADMIN && dto.audience === InboxAudience.ALL) {
+        const parent = await manager.save(
+          manager.create(InboxThread, {
+            subject,
+            artistId: null,
+            createdById: user.id,
+            lastMessageAt: now,
+            kind: 'broadcast',
+            broadcastId: null,
+            spawnedFromBroadcastId: null,
+            linkedThreadId: null,
+            repliesDisabled,
+            hiddenFromAdmin: false,
+          }),
+        );
+        await manager.save(
+          manager.create(InboxMessage, {
+            threadId: parent.id,
+            senderId: user.id,
+            senderRole: user.role,
+            body,
+            imageUrl,
+          }),
+        );
+        for (const artist of recipients) {
+          const copy = await manager.save(
+            manager.create(InboxThread, {
+              subject,
+              artistId: artist.id,
+              createdById: user.id,
+              lastMessageAt: now,
+              kind: 'broadcast_copy',
+              broadcastId: parent.id,
+              spawnedFromBroadcastId: null,
+              linkedThreadId: null,
+              repliesDisabled,
+              hiddenFromAdmin: true,
+            }),
+          );
+          await manager.save(
+            manager.create(InboxMessage, {
+              threadId: copy.id,
+              senderId: user.id,
+              senderRole: user.role,
+              body,
+              imageUrl,
+            }),
+          );
+        }
+        return [parent.id];
+      }
+
       const ids: number[] = [];
       for (const artist of recipients) {
         const thread = await manager.save(
@@ -152,6 +211,12 @@ export class InboxService {
             artistId: artist.id,
             createdById: user.id,
             lastMessageAt: now,
+            kind: 'direct',
+            broadcastId: null,
+            spawnedFromBroadcastId: null,
+            linkedThreadId: null,
+            repliesDisabled,
+            hiddenFromAdmin: false,
           }),
         );
         await manager.save(
@@ -160,6 +225,7 @@ export class InboxService {
             senderId: user.id,
             senderRole: user.role,
             body,
+            imageUrl,
           }),
         );
         ids.push(thread.id);
@@ -173,26 +239,69 @@ export class InboxService {
     return { threadIds };
   }
 
-  async reply(user: User, threadId: number, bodyInput: string): Promise<InboxThreadDetail> {
-    const body = bodyInput.trim();
-    if (!body) {
-      throw new BadRequestException('Message is empty');
-    }
+  async reply(
+    user: User,
+    threadId: number,
+    bodyInput: string | undefined,
+    imageUrlInput: string | undefined,
+  ): Promise<InboxThreadDetail> {
+    const { body, imageUrl } = this.normalizeContent(bodyInput, imageUrlInput);
     const thread = await this.requireThread(user, threadId);
+    if (thread.repliesDisabled) {
+      throw new BadRequestException(
+        'Acest mesaj este doar o notificare și nu poate primi răspuns.',
+      );
+    }
     const now = new Date();
     await this.dataSource.transaction(async (manager) => {
-      await manager.save(
-        manager.create(InboxMessage, {
-          threadId: thread.id,
-          senderId: user.id,
-          senderRole: user.role,
-          body,
-        }),
-      );
-      thread.lastMessageAt = now;
-      await manager.save(thread);
+      const targets = await this.replyTargets(manager, thread, user);
+      for (const target of targets) {
+        await manager.save(
+          manager.create(InboxMessage, {
+            threadId: target.id,
+            senderId: user.id,
+            senderRole: user.role,
+            body,
+            imageUrl,
+          }),
+        );
+        target.lastMessageAt = now;
+        await manager.save(target);
+      }
     });
     return this.getThread(user, thread.id);
+  }
+
+  async removeThread(user: User, threadId: number): Promise<{ deleted: true }> {
+    const thread = await this.requireThread(user, threadId);
+    await this.dataSource.transaction(async (manager) => {
+      if (thread.kind === 'broadcast') {
+        const copies = await manager.find(InboxThread, {
+          where: { broadcastId: thread.id, kind: 'broadcast_copy' },
+        });
+        for (const copy of copies) {
+          if (copy.linkedThreadId) {
+            copy.kind = 'direct';
+            copy.broadcastId = null;
+            copy.repliesDisabled = false;
+            copy.hiddenFromAdmin = true;
+            await manager.save(copy);
+          } else {
+            await manager.delete(InboxMessage, { threadId: copy.id });
+            await manager.delete(InboxRead, { threadId: copy.id });
+            await manager.delete(InboxThread, { id: copy.id });
+          }
+        }
+      }
+      const ids = [thread.id];
+      if (thread.linkedThreadId) {
+        ids.push(thread.linkedThreadId);
+      }
+      await manager.delete(InboxMessage, { threadId: In(ids) });
+      await manager.delete(InboxRead, { threadId: In(ids) });
+      await manager.delete(InboxThread, { id: In(ids) });
+    });
+    return { deleted: true };
   }
 
   private async resolveRecipients(user: User, dto: CreateInboxThreadDto) {
@@ -239,6 +348,118 @@ export class InboxService {
       return [];
     }
     return this.recipientArtists();
+  }
+
+  private async visibleThreads(user: User, artistIds: number[]): Promise<InboxThread[]> {
+    const query = this.threadsRepository
+      .createQueryBuilder('thread')
+      .leftJoinAndSelect('thread.artist', 'artist')
+      .orderBy('thread.lastMessageAt', 'DESC');
+
+    if (user.role === UserRole.SUPER_ADMIN) {
+      query.where('thread.kind != :copy', { copy: 'broadcast_copy' });
+      query.andWhere('thread.hiddenFromAdmin = false');
+      if (artistIds.length > 0) {
+        query.andWhere(
+          '(thread.artistId IN (:...artistIds) OR thread.kind = :broadcast)',
+          { artistIds, broadcast: 'broadcast' },
+        );
+      } else {
+        query.andWhere('thread.kind = :broadcast', { broadcast: 'broadcast' });
+      }
+      return query.getMany();
+    }
+
+    if (artistIds.length === 0) {
+      return [];
+    }
+    return query
+      .where('thread.artistId = :artistId', { artistId: artistIds[0] })
+      .andWhere('thread.kind != :broadcast', { broadcast: 'broadcast' })
+      .andWhere('thread.spawnedFromBroadcastId IS NULL')
+      .getMany();
+  }
+
+  private async replyTargets(
+    manager: EntityManager,
+    thread: InboxThread,
+    user: User,
+  ): Promise<InboxThread[]> {
+    if (
+      user.role === UserRole.ARTIST &&
+      thread.kind === 'broadcast_copy' &&
+      thread.broadcastId
+    ) {
+      const direct = await this.ensureDirectThread(manager, thread);
+      return [thread, direct];
+    }
+    if (thread.kind === 'broadcast') {
+      const copies = await manager.find(InboxThread, {
+        where: { broadcastId: thread.id, kind: 'broadcast_copy' },
+      });
+      const linkedIds = copies
+        .map((copy) => copy.linkedThreadId)
+        .filter((id): id is number => id !== null);
+      const linked = linkedIds.length
+        ? await manager.find(InboxThread, { where: { id: In(linkedIds) } })
+        : [];
+      return [thread, ...copies, ...linked];
+    }
+    if (!thread.linkedThreadId) {
+      return [thread];
+    }
+    const linked = await manager.findOne(InboxThread, {
+      where: { id: thread.linkedThreadId },
+    });
+    return linked ? [thread, linked] : [thread];
+  }
+
+  private async ensureDirectThread(
+    manager: EntityManager,
+    copy: InboxThread,
+  ): Promise<InboxThread> {
+    const existing = await manager.findOne(InboxThread, {
+      where: {
+        kind: 'direct',
+        artistId: copy.artistId ?? undefined,
+        spawnedFromBroadcastId: copy.broadcastId ?? undefined,
+      },
+    });
+    if (existing) {
+      return existing;
+    }
+    const direct = await manager.save(
+      manager.create(InboxThread, {
+        subject: copy.subject,
+        artistId: copy.artistId,
+        createdById: copy.createdById,
+        lastMessageAt: copy.lastMessageAt,
+        kind: 'direct',
+        broadcastId: null,
+        spawnedFromBroadcastId: copy.broadcastId,
+        linkedThreadId: copy.id,
+        repliesDisabled: false,
+        hiddenFromAdmin: false,
+      }),
+    );
+    const history = await manager.find(InboxMessage, {
+      where: { threadId: copy.id },
+      order: { createdAt: 'ASC', id: 'ASC' },
+    });
+    for (const message of history) {
+      await manager.save(
+        manager.create(InboxMessage, {
+          threadId: direct.id,
+          senderId: message.senderId,
+          senderRole: message.senderRole,
+          body: message.body,
+          imageUrl: message.imageUrl,
+        }),
+      );
+    }
+    copy.linkedThreadId = direct.id;
+    await manager.save(copy);
+    return direct;
   }
 
   private async visibleArtistIds(user: User): Promise<number[]> {
@@ -294,6 +515,21 @@ export class InboxService {
     await this.readsRepository.save(
       this.readsRepository.create({ userId, threadId, lastReadAt }),
     );
+  }
+
+  private normalizeContent(
+    bodyInput: string | undefined,
+    imageUrlInput: string | undefined,
+  ): { body: string; imageUrl: string | null } {
+    const body = (bodyInput ?? '').trim();
+    const imageUrl = (imageUrlInput ?? '').trim();
+    if (imageUrl && !INBOX_IMAGE_PATH.test(imageUrl)) {
+      throw new BadRequestException('Invalid image');
+    }
+    if (!body && !imageUrl) {
+      throw new BadRequestException('Message is empty');
+    }
+    return { body, imageUrl: imageUrl || null };
   }
 
   private preview(body: string): string {

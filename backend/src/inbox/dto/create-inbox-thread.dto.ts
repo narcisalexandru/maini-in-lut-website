@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsOptional,
@@ -19,10 +20,15 @@ export class CreateInboxThreadDto {
   @MaxLength(160)
   subject: string;
 
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(4000)
-  body: string;
+  body?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  imageUrl?: string;
 
   @IsOptional()
   @IsEnum(InboxAudience)
@@ -32,4 +38,8 @@ export class CreateInboxThreadDto {
   @Type(() => Number)
   @IsInt()
   artistId?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  noReply?: boolean;
 }

@@ -39,6 +39,9 @@ export class InboxMessage {
   @Column({ type: 'text' })
   body: string;
 
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  imageUrl: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

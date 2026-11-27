@@ -9,11 +9,18 @@ import { UpdateSiteSettingsDto } from './dto/update-site-settings.dto';
 
 export type DeliveryMethod = 'EASYBOX' | 'ADDRESS';
 
+const DEFAULT_ANNOUNCEMENT_RO =
+  'Livrare estimată în {min}–{max} zile lucrătoare. Easybox {easybox} RON · livrare la adresă {address} RON.';
+const DEFAULT_ANNOUNCEMENT_EN =
+  'Estimated delivery in {min}–{max} business days. Easybox {easybox} RON · address delivery {address} RON.';
+
 export type PublicSiteSettings = {
   easyboxFeeRon: number;
   addressFeeRon: number;
   deliveryDaysMin: number;
   deliveryDaysMax: number;
+  announcementTextRo: string;
+  announcementTextEn: string;
 };
 
 @Injectable()
@@ -40,6 +47,8 @@ export class SiteSettingsService {
     settings.addressFeeRon = dto.addressFeeRon;
     settings.deliveryDaysMin = dto.deliveryDaysMin;
     settings.deliveryDaysMax = dto.deliveryDaysMax;
+    settings.announcementTextRo = dto.announcementTextRo.trim();
+    settings.announcementTextEn = dto.announcementTextEn.trim();
     const saved = await this.settingsRepository.save(settings);
     return this.toPublic(saved);
   }
@@ -63,6 +72,11 @@ export class SiteSettingsService {
       where: { id: SITE_SETTINGS_ID },
     });
     if (existing) {
+      if (!existing.announcementTextRo && !existing.announcementTextEn) {
+        existing.announcementTextRo = DEFAULT_ANNOUNCEMENT_RO;
+        existing.announcementTextEn = DEFAULT_ANNOUNCEMENT_EN;
+        return this.settingsRepository.save(existing);
+      }
       return existing;
     }
 
@@ -73,6 +87,8 @@ export class SiteSettingsService {
         addressFeeRon: 15,
         deliveryDaysMin: 3,
         deliveryDaysMax: 7,
+        announcementTextRo: DEFAULT_ANNOUNCEMENT_RO,
+        announcementTextEn: DEFAULT_ANNOUNCEMENT_EN,
       }),
     );
   }
@@ -83,6 +99,8 @@ export class SiteSettingsService {
       addressFeeRon: Number(settings.addressFeeRon),
       deliveryDaysMin: settings.deliveryDaysMin,
       deliveryDaysMax: settings.deliveryDaysMax,
+      announcementTextRo: settings.announcementTextRo ?? DEFAULT_ANNOUNCEMENT_RO,
+      announcementTextEn: settings.announcementTextEn ?? DEFAULT_ANNOUNCEMENT_EN,
     };
   }
 }

@@ -310,6 +310,30 @@ export class EmailService {
     });
   }
 
+  async sendWorkshopCancelledEmail(
+    to: string,
+    payload: {
+      firstName: string;
+      title: string;
+      when: string;
+      location: string;
+      code: string;
+      spots: number;
+      cardRefund: boolean;
+    },
+  ): Promise<void> {
+    const html = await renderFile(this.templateFile('workshop-cancelled.ejs'), payload);
+    const title = payload.title.replace(/[\r\n]+/g, ' ').slice(0, 80);
+    await this.transporter.sendMail({
+      from: `"${this.configService.get(
+        'SMTP_FROM_NAME',
+      )}" <${this.configService.get('SMTP_FROM_EMAIL')}>`,
+      to,
+      subject: `Atelier anulat: ${title}`,
+      html,
+    });
+  }
+
   async sendOrderNotificationEmail(
     to: string,
     subject: string,

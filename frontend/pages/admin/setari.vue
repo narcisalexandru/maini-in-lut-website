@@ -61,6 +61,53 @@
           />
         </div>
       </div>
+      <div>
+        <label class="block text-sm font-medium mb-1" for="announcementRo">{{ t("announcementRo") }}</label>
+        <textarea
+          id="announcementRo"
+          ref="announcementRoInput"
+          v-model="form.announcementTextRo"
+          maxlength="300"
+          rows="3"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2"
+        />
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button
+            v-for="tag in announcementTags"
+            :key="'ro-' + tag.token"
+            type="button"
+            class="announcement-tag"
+            @mousedown.prevent
+            @click="insertTag('announcementTextRo', tag.token)"
+          >
+            {{ tag.token }}
+          </button>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1" for="announcementEn">{{ t("announcementEn") }}</label>
+        <textarea
+          id="announcementEn"
+          ref="announcementEnInput"
+          v-model="form.announcementTextEn"
+          maxlength="300"
+          rows="3"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2"
+        />
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button
+            v-for="tag in announcementTags"
+            :key="'en-' + tag.token"
+            type="button"
+            class="announcement-tag"
+            @mousedown.prevent
+            @click="insertTag('announcementTextEn', tag.token)"
+          >
+            {{ tag.token }}
+          </button>
+        </div>
+        <p class="mt-2 text-sm text-gray-600">{{ t("placeholders") }}</p>
+      </div>
       <p class="text-sm text-gray-600">{{ preview }}</p>
       <Button type="submit" :label="t('save')" :loading="saving" />
     </form>
@@ -77,21 +124,54 @@ definePageMeta({
   middleware: ["auth", "super-admin"],
 });
 
-const { t } = useI18n({ useScope: "local" });
+const { t, locale } = useI18n({ useScope: "local" });
 const toast = useToast();
 const { getAdminSettings, updateAdminSettings } = useSiteSettings();
 
 const form = ref({ ...DEFAULT_SITE_SETTINGS });
 const saving = ref(false);
+const announcementRoInput = ref(null);
+const announcementEnInput = ref(null);
+const announcementTags = [
+  { token: "{min}" },
+  { token: "{max}" },
+  { token: "{easybox}" },
+  { token: "{address}" },
+];
 
-const preview = computed(() =>
-  t("preview", {
-    easybox: form.value.easyboxFeeRon,
-    address: form.value.addressFeeRon,
-    min: form.value.deliveryDaysMin,
-    max: form.value.deliveryDaysMax,
-  }),
-);
+const insertTag = (field, token) => {
+  const element =
+    field === "announcementTextRo"
+      ? announcementRoInput.value
+      : announcementEnInput.value;
+  const current = form.value[field] || "";
+  const focused = element && document.activeElement === element;
+  const start = focused ? element.selectionStart : current.length;
+  const end = focused ? element.selectionEnd : current.length;
+  const next = `${current.slice(0, start)}${token}${current.slice(end)}`;
+  if (next.length > 300) {
+    return;
+  }
+  form.value[field] = next;
+  nextTick(() => {
+    if (!element) return;
+    element.focus();
+    const caret = start + token.length;
+    element.setSelectionRange(caret, caret);
+  });
+};
+
+const preview = computed(() => {
+  const template =
+    locale.value === "en"
+      ? form.value.announcementTextEn
+      : form.value.announcementTextRo;
+  return template
+    .replaceAll("{min}", String(form.value.deliveryDaysMin))
+    .replaceAll("{max}", String(form.value.deliveryDaysMax))
+    .replaceAll("{easybox}", String(form.value.easyboxFeeRon))
+    .replaceAll("{address}", String(form.value.addressFeeRon));
+});
 
 const save = async () => {
   if (form.value.deliveryDaysMin > form.value.deliveryDaysMax) {
@@ -132,12 +212,14 @@ onMounted(async () => {
 {
   "ro": {
     "title": "Setări site",
-    "subtitle": "Costurile de livrare și termenul afișat în magazin, coș și termeni.",
+    "subtitle": "Costurile de livrare și textul barei de sub navbar.",
     "easyboxFee": "Livrare Easybox (RON)",
     "addressFee": "Livrare la adresă (RON)",
     "daysMin": "Zile minime",
     "daysMax": "Zile maxime",
-    "preview": "Clienții văd: Easybox {easybox} RON, adresă {address} RON, livrare în {min}–{max} zile lucrătoare.",
+    "announcementRo": "Text bară (română)",
+    "announcementEn": "Text bară (engleză)",
+    "placeholders": "Apasă un tag ca să îl pui în text, la cursor. Se înlocuiește cu valoarea de mai sus.",
     "save": "Salvează",
     "saved": "Setările au fost salvate",
     "daysOrder": "Termenul minim nu poate fi mai mare decât cel maxim.",
@@ -145,12 +227,14 @@ onMounted(async () => {
   },
   "en": {
     "title": "Site settings",
-    "subtitle": "Delivery prices and the time shown in the shop, cart, and terms.",
+    "subtitle": "Delivery prices and the text in the bar under the navigation.",
     "easyboxFee": "Easybox delivery (RON)",
     "addressFee": "Address delivery (RON)",
     "daysMin": "Minimum days",
     "daysMax": "Maximum days",
-    "preview": "Customers see: Easybox {easybox} RON, address {address} RON, delivery in {min}–{max} business days.",
+    "announcementRo": "Bar text (Romanian)",
+    "announcementEn": "Bar text (English)",
+    "placeholders": "Press a tag to insert it at the cursor. It is replaced with the value above.",
     "save": "Save",
     "saved": "Settings saved",
     "daysOrder": "The minimum time cannot be greater than the maximum.",
@@ -158,3 +242,20 @@ onMounted(async () => {
   }
 }
 </i18n>
+
+<style scoped>
+.announcement-tag {
+  border: 1px solid #6f825d;
+  border-radius: 999px;
+  background: #f4f7f2;
+  color: #3f5134;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.4rem 0.7rem;
+}
+
+.announcement-tag:hover {
+  background: #e7efe2;
+}
+</style>

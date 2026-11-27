@@ -384,7 +384,7 @@ onMounted(async () => {
 {
   "ro": {
     "title": "Vinde cu noi",
-    "subtitle": "Ai produse handmade? Înscrie-te ca artist și ajunge la clienții noștri.",
+    "subtitle": "Ai produse handmade? Înscrie-te ca artist și ajungi la clienții noștri.",
     "sectionCompany": "Date firmă",
     "sectionContact": "Date contact",
     "companyCui": "CUI firmă",

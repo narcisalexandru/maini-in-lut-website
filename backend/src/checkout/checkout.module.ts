@@ -25,5 +25,6 @@ import { InvoicesModule } from '../invoices/invoices.module';
   ],
   controllers: [CheckoutController],
   providers: [CheckoutService],
+  exports: [CheckoutService],
 })
 export class CheckoutModule {}

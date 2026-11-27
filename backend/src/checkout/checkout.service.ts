@@ -1769,4 +1769,118 @@ export class CheckoutService {
       await this.invoicesService.issuePaidOrderSafely(paidOrder.id);
     }
   }
+
+  async startExternalCardPayment(payload: {
+    orderId: string;
+    description: string;
+    amountRon: number;
+    productName: string;
+    productCode: string;
+    notifyPath: string;
+    customer: {
+      email: string;
+      phone: string;
+      firstName: string;
+      lastName: string;
+      city: string;
+      county: string;
+      street: string;
+      postalCode: string;
+    };
+    successUrl: string;
+    cancelUrl: string;
+  }): Promise<{ url: string; ntpId: string | null }> {
+    const amountRon = Number(payload.amountRon.toFixed(2));
+    const contact = this.wrapNetopiaContact(
+      this.toNetopiaContact(payload.customer),
+    );
+    const { paymentURL } = await this.startNetopiaPayment({
+      configData: {
+        emailTemplate: '',
+        emailSubject: '',
+        cancelUrl: payload.cancelUrl,
+        notifyUrl: `${this.getBackendUrl()}${payload.notifyPath}`,
+        redirectUrl: payload.successUrl,
+        language: 'ro',
+      },
+      paymentData: {
+        options: { installments: 0, bonus: 0, split: [] },
+        instrument: {
+          type: 'card',
+          account: '',
+          expMonth: 0,
+          expYear: 0,
+          secretCode: '',
+          token: '',
+          clientID: '',
+        },
+        data: {},
+      },
+      orderData: {
+        ntpID: '',
+        posSignature: '',
+        orderID: payload.orderId,
+        description: payload.description,
+        amount: amountRon,
+        currency: 'RON',
+        dateTime: this.formatNetopiaDateTime(),
+        billing: contact,
+        shipping: contact,
+        products: [
+          {
+            name: payload.productName,
+            code: payload.productCode,
+            category: 'Ateliere',
+            price: amountRon,
+            vat: 0,
+          },
+        ],
+        installments: { selected: 0, available: [0] },
+        data: { source: 'workshop' },
+      },
+    });
+
+    let ntpId: string | null = null;
+    try {
+      const startedNtpId = new URL(paymentURL).searchParams.get('p')?.trim();
+      if (startedNtpId) {
+        ntpId = await this.resolveNetopiaNtpId(payload.orderId, startedNtpId);
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Nu am putut citi ntpID pentru ${payload.orderId}: ${error}`,
+      );
+    }
+    return { url: paymentURL, ntpId };
+  }
+
+  async externalCardPaymentIsPaid(
+    charge: {
+      orderId: string;
+      totalRon: number | string;
+      netopiaNtpId: string | null;
+    },
+    hintedNtpId?: string,
+  ): Promise<boolean> {
+    return this.netopiaPaymentIsPaid(
+      {
+        publicOrderNumber: charge.orderId,
+        totalRon: charge.totalRon,
+        netopiaNtpId: charge.netopiaNtpId,
+      },
+      hintedNtpId,
+    );
+  }
+
+  async verifyNetopiaNotification(
+    verificationToken: string,
+    rawData: string,
+  ): Promise<{ signatureOk: boolean; status: number; errorMessage: string }> {
+    const verified = await this.getIpn().verify(verificationToken, rawData);
+    return {
+      signatureOk: verified.errorType === 0,
+      status: Number(verified.status),
+      errorMessage: verified.errorMessage || '',
+    };
+  }
 }

@@ -1,4 +1,4 @@
-import { IsInt, IsNumber, Max, Min } from 'class-validator';
+import { IsInt, IsNumber, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class UpdateSiteSettingsDto {
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -20,4 +20,12 @@ export class UpdateSiteSettingsDto {
   @Min(1)
   @Max(60)
   deliveryDaysMax: number;
+
+  @IsString()
+  @MaxLength(300)
+  announcementTextRo: string;
+
+  @IsString()
+  @MaxLength(300)
+  announcementTextEn: string;
 }

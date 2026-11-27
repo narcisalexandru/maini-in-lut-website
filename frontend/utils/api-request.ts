@@ -12,7 +12,10 @@ export function apiRequest(path: string, init: RequestInit = {}): Promise<Respon
   }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return fetch(`${getApiBaseUrl()}${normalizedPath}`, {
+  const url = import.meta.client
+    ? `/api${normalizedPath}`
+    : `${getApiBaseUrl()}${normalizedPath}`;
+  return fetch(url, {
     ...init,
     headers,
     credentials: "include",

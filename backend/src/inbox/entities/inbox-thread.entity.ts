@@ -22,12 +22,30 @@ export class InboxThread {
   subject: string;
 
   @Index()
-  @Column()
-  artistId: number;
+  @Column({ type: 'int', nullable: true })
+  artistId: number | null;
 
-  @ManyToOne(() => Artist, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Artist, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'artistId' })
-  artist: Artist;
+  artist: Artist | null;
+
+  @Column({ type: 'varchar', length: 32, default: 'direct' })
+  kind: 'direct' | 'broadcast' | 'broadcast_copy';
+
+  @Column({ type: 'int', nullable: true })
+  broadcastId: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  spawnedFromBroadcastId: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  linkedThreadId: number | null;
+
+  @Column({ default: false })
+  repliesDisabled: boolean;
+
+  @Column({ default: false })
+  hiddenFromAdmin: boolean;
 
   @Column()
   createdById: number;

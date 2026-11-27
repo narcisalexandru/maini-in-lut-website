@@ -1,4 +1,5 @@
 import { apiRequest } from "~/utils/api-request";
+import { getApiBaseUrl } from "~/utils/api-base";
 
 type ApiErrorBody = {
   message?: string | string[] | { message?: string };
@@ -30,10 +31,7 @@ type ApiFetchOptions = RequestInit & {
 };
 
 export function useApi() {
-  const config = useRuntimeConfig();
-
-  const getBaseUrl = () =>
-    String(config.public.apiBase || "").replace(/\/$/, "");
+  const getBaseUrl = () => getApiBaseUrl();
 
   const getToken = () => {
     if (!import.meta.client) {

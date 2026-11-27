@@ -25,6 +25,7 @@ import {
   oauthStateCookieOptions,
 } from './auth-cookie.util';
 import { GoogleStateGuard } from './guards/google-state.guard';
+import { googleCallbackUrl } from './google-callback-url';
 
 @Controller('auth')
 export class AuthController {
@@ -86,7 +87,7 @@ export class AuthController {
   @Get('google')
   googleAuth(@Req() req: Request, @Res() res: Response) {
     const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-    const callbackUrl = this.configService.get<string>('GOOGLE_CALLBACK_URL');
+    const callbackUrl = googleCallbackUrl(this.configService);
     if (!clientId || !callbackUrl) {
       throw new BadRequestException('Google auth is not configured');
     }

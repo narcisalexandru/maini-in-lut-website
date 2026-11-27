@@ -10,7 +10,12 @@
         >
           {{ t("sub-heading") }}
         </div>
-        <form @submit.prevent="handleSubmit">
+        <form
+          data-js-submit
+          method="post"
+          novalidate
+          @submit.prevent="handleSubmit"
+        >
           <FormInput
             id="email"
             name="email"
@@ -19,7 +24,10 @@
             v-model="formData.email"
             :error="showError"
             :error-message="errorMessage"
-            autocomplete="email"
+            autocomplete="username"
+            autocapitalize="none"
+            autocorrect="off"
+            :spellcheck="false"
             @blur="() => validateField('email', formData.email)"
           />
           <FormInput
@@ -34,18 +42,20 @@
             @blur="() => validateField('password', formData.password)"
           />
           <div class="flex justify-start mt-1">
-            <NuxtLink
-              to="#"
+            <button
+              type="button"
               class="h-font-weight-400 h-font-size-12 h-color-lunar-green underline"
-              >{{ t("forgot-password") }}</NuxtLink
             >
+              {{ t("forgot-password") }}
+            </button>
           </div>
-          <Button
-            class="maini-ui-button__primary h-font-size-14 mt-4 w-full"
+          <button
+            class="p-button p-component maini-ui-button__primary h-font-size-16 mt-4 w-full"
             type="submit"
+            :disabled="isLoading"
           >
-            {{ t("sign-in-cta") }}
-          </Button>
+            {{ isLoading ? t("loading") : t("sign-in-cta") }}
+          </button>
           <p v-if="needsVerification" class="mt-3 text-sm h-color-lunar-green">
             <button type="button" class="underline" @click="resendVerificationEmail">
               {{ t("resend-verification") }}
@@ -70,6 +80,7 @@
           </div>
         </div>
         <Button
+          type="button"
           class="maini-ui-button__google h-color-black h-bg-white w-full flex items-center justify-center gap-2"
           @click="handleGoogleLogin"
           :disabled="isLoading"
@@ -104,6 +115,7 @@ import { useI18n } from "vue-i18n";
 import FormInput from "~/components/FormInput.vue";
 import { useAuth } from "~/composables/useAuth";
 import { useFormValidation } from "~/composables/useFormValidation";
+import { formString } from "~/utils/form-values";
 
 const router = useRouter();
 const route = useRoute();
@@ -152,7 +164,17 @@ const validationRules = {
 
 const { validateField, validateForm } = useFormValidation(validationRules);
 
-const handleSubmit = async () => {
+const handleSubmit = async (event: Event) => {
+  const form = event.target instanceof HTMLFormElement ? event.target : null;
+  if (!form || isLoading.value) {
+    return;
+  }
+
+  formData.value = {
+    email: formString(form, "email", formData.value.email).trim(),
+    password: formString(form, "password", formData.value.password),
+  };
+
   const formDataToValidate = {
     email: formData.value.email,
     password: formData.value.password,

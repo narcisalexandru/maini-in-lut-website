@@ -13,9 +13,11 @@ export function useInbox() {
 
   const createThread = (payload: {
     subject: string;
-    body: string;
+    body?: string;
+    imageUrl?: string;
     audience?: "all" | "direct";
     artistId?: number;
+    noReply?: boolean;
   }) =>
     apiFetch<{ threadIds: number[] }>("/admin/inbox/threads", {
       method: "POST",
@@ -23,14 +25,28 @@ export function useInbox() {
       body: JSON.stringify(payload),
     });
 
-  const reply = (id: number, body: string) =>
+  const uploadImage = (file: File) => {
+    const form = new FormData();
+    form.append("image", file);
+    return apiFetch<{ url: string }>("/admin/inbox/images", {
+      method: "POST",
+      body: form,
+    });
+  };
+
+  const reply = (id: number, payload: { body?: string; imageUrl?: string }) =>
     apiFetch<InboxThreadDetail>(`/admin/inbox/threads/${id}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
+      body: JSON.stringify(payload),
     });
 
-  return { listThreads, getThread, createThread, reply };
+  const removeThread = (id: number) =>
+    apiFetch<{ deleted: boolean }>(`/admin/inbox/threads/${id}`, {
+      method: "DELETE",
+    });
+
+  return { listThreads, getThread, createThread, uploadImage, reply, removeThread };
 }
 
 export function useInboxUnread() {

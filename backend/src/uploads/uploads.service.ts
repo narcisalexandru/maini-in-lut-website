@@ -77,36 +77,88 @@ export class UploadsService {
     const urls: string[] = [];
 
     for (const file of files) {
-      const mime = file.mimetype;
-      if (mime !== 'image/jpeg' && mime !== 'image/png' && mime !== 'image/webp') {
-        throw new BadRequestException('Only JPEG, PNG, and WebP images are allowed');
-      }
-      if (!hasAllowedMagicBytes(file.buffer)) {
-        throw new BadRequestException('Only JPEG, PNG, and WebP images are allowed');
-      }
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        throw new BadRequestException('Each image must be under 10MB');
-      }
+      const optimized = await this.toWebp(file);
+      const filename = `${randomUUID()}.webp`;
+      await writeFile(join(this.uploadsDir, filename), optimized);
+      urls.push(`/uploads/products/${filename}`);
+    }
 
+    return { urls };
+  }
+
+  async saveInboxImage(file: Express.Multer.File | undefined): Promise<{ url: string }> {
+    if (!file) {
+      throw new BadRequestException('Image is required');
+    }
+    const optimized = await this.toInboxWebp(file);
+    const directory = join(process.cwd(), 'uploads', 'inbox');
+    await mkdir(directory, { recursive: true });
+    const filename = `${randomUUID()}.webp`;
+    await writeFile(join(directory, filename), optimized);
+    return { url: `/uploads/inbox/${filename}` };
+  }
+
+  private async toWebp(file: Express.Multer.File): Promise<Buffer> {
+    const mime = file.mimetype;
+    if (mime !== 'image/jpeg' && mime !== 'image/png' && mime !== 'image/webp') {
+      throw new BadRequestException('Only JPEG, PNG, and WebP images are allowed');
+    }
+    if (!hasAllowedMagicBytes(file.buffer)) {
+      throw new BadRequestException('Only JPEG, PNG, and WebP images are allowed');
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      throw new BadRequestException('Each image must be under 10MB');
+    }
+
+    const image = sharp(file.buffer, {
+      limitInputPixels: MAX_INPUT_PIXELS,
+      failOn: 'error',
+      animated: false,
+      pages: 1,
+    });
+    const metadata = await image.metadata();
+    if (
+      !metadata.format ||
+      !['jpeg', 'png', 'webp'].includes(metadata.format) ||
+      (metadata.width ?? 0) > MAX_SOURCE_DIMENSION ||
+      (metadata.height ?? 0) > MAX_SOURCE_DIMENSION
+    ) {
+      throw new BadRequestException('Only JPEG, PNG, and WebP images are allowed');
+    }
+
+    return image
+      .rotate()
+      .resize({
+        width: MAX_WIDTH,
+        height: MAX_WIDTH,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+  }
+
+  private async toInboxWebp(file: Express.Multer.File): Promise<Buffer> {
+    if (!file.buffer?.length) {
+      throw new BadRequestException('Image is required');
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      throw new BadRequestException('Each image must be under 10MB');
+    }
+
+    try {
       const image = sharp(file.buffer, {
-        limitInputPixels: MAX_INPUT_PIXELS,
-        failOn: 'error',
+        limitInputPixels: 150_000_000,
+        failOn: 'none',
         animated: false,
         pages: 1,
       });
       const metadata = await image.metadata();
-      if (
-        !metadata.format ||
-        !['jpeg', 'png', 'webp'].includes(metadata.format) ||
-        (metadata.width ?? 0) > MAX_SOURCE_DIMENSION ||
-        (metadata.height ?? 0) > MAX_SOURCE_DIMENSION
-      ) {
-        throw new BadRequestException('Only JPEG, PNG, and WebP images are allowed');
+      if (!metadata.format || !metadata.width || !metadata.height) {
+        throw new BadRequestException('File could not be read as an image');
       }
 
-      const filename = `${randomUUID()}.webp`;
-      const outputPath = join(this.uploadsDir, filename);
-      const optimized = await image
+      return await image
         .rotate()
         .resize({
           width: MAX_WIDTH,
@@ -116,11 +168,11 @@ export class UploadsService {
         })
         .webp({ quality: WEBP_QUALITY })
         .toBuffer();
-
-      await writeFile(outputPath, optimized);
-      urls.push(`/uploads/products/${filename}`);
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('File could not be read as an image');
     }
-
-    return { urls };
   }
 }
