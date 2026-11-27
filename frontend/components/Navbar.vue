@@ -242,20 +242,11 @@ const menuItems = computed(() => {
       icon: "ph-paint-brush",
     },
     {
-      label: t("sellWithUs"),
-      to: "/vinde-cu-noi",
-      icon: "ph-handshake",
-    },
-    {
       label: t("contact"),
       to: "/contact",
       icon: "ph-envelope",
     },
   ];
-
-  if (showAdminLink.value) {
-    return items.filter((item) => item.to !== "/vinde-cu-noi");
-  }
 
   return items;
 });
@@ -387,7 +378,6 @@ const menuItems = computed(() => {
     "home": "Home",
     "products": "Products",
     "workshops": "Workshops",
-    "sellWithUs": "Sell with us",
     "contact": "Contact",
     "admin": "Admin",
     "openMenu": "Open menu",
@@ -397,7 +387,6 @@ const menuItems = computed(() => {
     "home": "Acasă",
     "products": "Produse",
     "workshops": "Ateliere",
-    "sellWithUs": "Vinde cu noi",
     "contact": "Contact",
     "admin": "Admin",
     "openMenu": "Deschide meniul",

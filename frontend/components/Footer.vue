@@ -33,7 +33,7 @@
             <ul class="site-footer__links">
               <li v-for="link in infoLinks" :key="link.labelKey">
                 <NuxtLink
-                  :to="$localePath({ name: link.name })"
+                  :to="link.to ? $localePath(link.to) : $localePath({ name: link.name })"
                   class="site-footer__link"
                 >
                   {{ t(link.labelKey) }}
@@ -138,6 +138,7 @@ const infoLinks = [
   { labelKey: "privacy", name: "privacy-policy" },
   { labelKey: "cookies", name: "cookie-policy" },
   { labelKey: "contact", name: "contact" },
+  { labelKey: "sellWithUs", to: "/vinde-cu-noi" },
 ];
 
 const socialLinks = SOCIAL_LINKS;
@@ -539,6 +540,7 @@ watch(netopiaBadgeRef, (container) => {
     "privacy": "Prelucrarea datelor cu caracter personal",
     "cookies": "Politica de utilizare Cookie-uri",
     "contact": "Contact",
+    "sellWithUs": "Vinde cu noi",
     "anpcSal": "ANPC – Soluționarea alternativă a litigiilor",
     "paymentsHeading": "Metode de plată acceptate",
     "netopiaPayments": "NETOPIA Payments",
@@ -555,6 +557,7 @@ watch(netopiaBadgeRef, (container) => {
     "privacy": "Personal data processing",
     "cookies": "Cookie Policy",
     "contact": "Contact",
+    "sellWithUs": "Sell with us",
     "anpcSal": "ANPC – Alternative dispute resolution",
     "paymentsHeading": "Accepted payment methods",
     "netopiaPayments": "NETOPIA Payments",
