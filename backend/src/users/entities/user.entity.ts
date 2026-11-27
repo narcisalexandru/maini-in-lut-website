@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { UserRole } from '../../common/enums/user-role.enum';
 
 @Entity()
 export class User {
@@ -14,7 +15,7 @@ export class User {
   @Column()
   first_name: string;
 
-  @Column()
+  @Column({ unique: true })
   email: string;
 
   @Column()
@@ -33,13 +34,29 @@ export class User {
   postal_code: string;
 
   @Column({ type: 'text', nullable: true })
-  phone: string;
+  phone: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  secondary_addresses: {
+    label?: string;
+    county: string;
+    city: string;
+    street: string;
+    postal_code: string;
+  }[];
 
   @Column({ nullable: true })
   picture?: string;
 
   @Column()
   password: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.CLIENT,
+  })
+  role: UserRole;
 
   @Column({ default: false })
   is_email_verified: boolean;

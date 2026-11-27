@@ -46,6 +46,15 @@
           >
             {{ t("sign-in-cta") }}
           </Button>
+          <p v-if="needsVerification" class="mt-3 text-sm h-color-lunar-green">
+            <button type="button" class="underline" @click="resendVerificationEmail">
+              {{ t("resend-verification") }}
+            </button>
+            <span v-if="resendMessage"> {{ resendMessage }}</span>
+          </p>
+          <p v-if="route.query.error === 'oauth'" class="mt-3 text-sm text-red-600">
+            {{ t("oauth-failed") }}
+          </p>
         </form>
         <div class="my-6">
           <div class="relative">
@@ -97,6 +106,7 @@ import { useAuth } from "~/composables/useAuth";
 import { useFormValidation } from "~/composables/useFormValidation";
 
 const router = useRouter();
+const route = useRoute();
 
 defineI18nRoute({
   paths: {
@@ -109,7 +119,9 @@ const { t } = useI18n({
   useScope: "local",
 });
 
-const { login, googleAuth, isLoading, error } = useAuth();
+const { login, googleAuth, isLoading, resendVerification } = useAuth();
+const { mergeGuestFavorites } = useFavorites();
+const { mergeGuestCart } = useCart();
 
 const formData = ref({
   email: "",
@@ -118,6 +130,8 @@ const formData = ref({
 
 const showError = ref(false);
 const errorMessage = ref("");
+const needsVerification = ref(false);
+const resendMessage = ref("");
 
 const validationRules = {
   email: [
@@ -155,16 +169,36 @@ const handleSubmit = async () => {
 
     if (!result.success) {
       showError.value = true;
-      errorMessage.value = t("invalid-credentials");
+      needsVerification.value = result.error?.message === "EMAIL_NOT_VERIFIED";
+      errorMessage.value = needsVerification.value
+        ? t("email-not-verified")
+        : result.error?.message || t("invalid-credentials");
       return;
     }
 
     showError.value = false;
-    router.push("/");
+    needsVerification.value = false;
+    await mergeGuestFavorites();
+    await mergeGuestCart();
+    const redirect =
+      typeof route.query.redirect === "string" ? route.query.redirect : "/";
+    const safeRedirect =
+      redirect.startsWith("/") &&
+      !redirect.startsWith("//") &&
+      !redirect.startsWith("/\\")
+        ? redirect
+        : "/";
+    router.push(safeRedirect);
   } catch (error) {
     showError.value = true;
     errorMessage.value = t("invalid-credentials");
   }
+};
+
+const resendVerificationEmail = async () => {
+  resendMessage.value = "";
+  const sent = await resendVerification(formData.value.email);
+  resendMessage.value = sent ? t("verification-sent") : t("verification-failed");
 };
 
 const handleGoogleLogin = () => {
@@ -188,7 +222,12 @@ const handleGoogleLogin = () => {
     "loading": "Loading...",
     "invalid-email": "Please enter a valid email address",
     "password-too-short": "Password must be at least 8 characters long",
-    "invalid-credentials": "Invalid email or password"
+    "invalid-credentials": "Invalid email or password",
+    "email-not-verified": "Confirm your email before signing in.",
+    "resend-verification": "Send the confirmation email again",
+    "verification-sent": "If the account exists, a new email is on its way.",
+    "verification-failed": "The email could not be sent. Try again in a minute.",
+    "oauth-failed": "Google sign-in was cancelled. Try again."
   },
   "ro": {
     "heading": "Bine ai revenit!",
@@ -204,7 +243,12 @@ const handleGoogleLogin = () => {
     "loading": "Se încarcă...",
     "invalid-email": "Vă rugăm să introduceți o adresă de email validă",
     "password-too-short": "Parola trebuie să aibă cel puțin 8 caractere",
-    "invalid-credentials": "Adresa de email sau parola gresite"
+    "invalid-credentials": "Adresa de email sau parola gresite",
+    "email-not-verified": "Confirmă adresa de email înainte de autentificare.",
+    "resend-verification": "Trimite din nou emailul de confirmare",
+    "verification-sent": "Dacă există un cont, un email nou este pe drum.",
+    "verification-failed": "Emailul nu a putut fi trimis. Încearcă din nou peste un minut.",
+    "oauth-failed": "Autentificarea Google a fost întreruptă. Încearcă din nou."
   }
 }
 </i18n>

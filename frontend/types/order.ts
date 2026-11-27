@@ -1,0 +1,78 @@
+export type OrderItemStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED";
+
+export type OrderPaymentStatus = "PENDING" | "AWAITING_CASH" | "PAID" | "FAILED";
+export type PaymentMethod = "CARD" | "CASH";
+
+export interface ArtistOrderStatus {
+  artistId: number;
+  artistDisplayName: string;
+  status: OrderItemStatus;
+}
+
+export interface OrderInvoice {
+  status: "ISSUING" | "ISSUED" | "FAILED";
+  series: string | null;
+  number: string | null;
+  viewUrl: string | null;
+  documentUrl: string | null;
+  isDraft: boolean;
+  errorMessage: string | null;
+  issuedAt: string | null;
+}
+
+export interface OrderSummary {
+  id: number;
+  publicOrderNumber: string;
+  userId: number | null;
+  paymentMethod: PaymentMethod;
+  paymentStatus: OrderPaymentStatus;
+  totalRon: number;
+  itemCount: number;
+  artistStatuses: ArtistOrderStatus[];
+  createdAt: string;
+}
+
+export interface OrderItem {
+  id: number;
+  productId: number;
+  artistId: number;
+  artistDisplayName: string;
+  title: string;
+  image: string | null;
+  quantity: number;
+  unitPriceRon: number;
+  lineTotalRon: number;
+  status: OrderItemStatus;
+  statusUpdatedAt: string | null;
+  isUnarchived?: boolean;
+}
+
+export interface OrderDetail extends OrderSummary {
+  customer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  };
+  delivery: {
+    county: string;
+    city: string;
+    street: string;
+    postalCode: string;
+    recipientName: string | null;
+    recipientPhone: string | null;
+  };
+  billingDetails: Record<string, unknown> | null;
+  customerNote: string | null;
+  subtotalRon: number;
+  deliveryFeeRon: number;
+  cashOperationalFeeRon: number;
+  items: OrderItem[];
+  invoice: OrderInvoice | null;
+  updatedAt: string;
+}

@@ -2,12 +2,29 @@
   <div
     class="bg-white flex flex-col flex-1 shrink rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative"
   >
-    <div class="relative h-48">
+    <component
+      :is="preview ? 'div' : NuxtLink"
+      v-bind="preview ? {} : { to: $localePath(`/produs/${product.id}`) }"
+      class="group/photo block relative aspect-square md:aspect-auto md:h-48 bg-[#f4f1ee]"
+    >
       <img
-        :src="product.image"
+        :src="getProductPrimaryImageUrl(product)"
         :alt="product.title"
-        class="w-full h-full object-cover"
+        class="w-full h-full object-cover transition-[filter] duration-300"
+        :class="{
+          'brightness-[0.62] group-hover/photo:brightness-100': !available,
+        }"
       />
+      <div
+        v-if="!available"
+        class="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none transition-opacity duration-300 group-hover/photo:opacity-0"
+      >
+        <span
+          class="bg-black/80 text-white text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-full"
+        >
+          {{ t("outOfStock") }}
+        </span>
+      </div>
       <span
         v-if="product.discount > 0"
         class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow"
@@ -27,18 +44,32 @@
         Popular
       </span>
       <button
+        v-if="!preview"
+        type="button"
         class="absolute bottom-2 right-2 h-font-size-20 flex items-center justify-center transition-all duration-300 w-10 h-10 h-bg-white rounded-full group hover:scale-110"
+        :aria-label="
+          isFavorite(product.id) ? 'Elimină din favorite' : 'Adaugă în favorite'
+        "
+        @click.prevent="toggleFavorite(product.id)"
       >
         <i
+          v-show="!isFavorite(product.id)"
           class="ph ph-heart transition-all duration-300 group-hover:hidden h-color-primary"
         ></i>
         <i
-          class="ph ph-fill transition-all duration-300 ph-heart hidden group-hover:block h-color-primary"
+          :class="[
+            'ph ph-heart ph-fill transition-all duration-300 h-color-primary',
+            isFavorite(product.id) ? 'block' : 'hidden group-hover:block',
+          ]"
         ></i>
       </button>
-    </div>
-    <div class="flex flex-col h-36 p-2 md:p-3">
-      <h3 class="flex flex-1 text-sm font-semibold text-gray-800 mb-1">
+    </component>
+    <component
+      :is="preview ? 'div' : NuxtLink"
+      v-bind="preview ? {} : { to: $localePath(`/produs/${product.id}`) }"
+      class="flex flex-col p-2 md:p-3 md:h-36 flex-1 hover:opacity-90 transition-opacity no-underline text-inherit"
+    >
+      <h3 class="text-sm font-semibold text-gray-800 mb-1 line-clamp-2 min-h-10">
         {{ product.title }}
       </h3>
       <div class="flex items-center space-x-2 mb-1">
@@ -51,26 +82,59 @@
           >{{ product.price }} RON</span
         >
       </div>
-      <div class="flex w-full">
-        <Button
+      <div class="flex w-full mt-auto">
+        <button
+          type="button"
           class="maini-ui-button__buy w-full flex justify-center items-center border-none"
+          :class="
+            preview || !available
+              ? 'pointer-events-none opacity-50 cursor-not-allowed'
+              : 'cursor-pointer'
+          "
+          :disabled="preview || !available"
+          :aria-label="preview ? undefined : available ? t('addToCart') : t('outOfStock')"
+          @click.prevent.stop="!preview && handleAddToCart()"
         >
-          Adaugă în coș
-        </Button>
+          {{ available ? t("addToCart") : t("outOfStock") }}
+        </button>
       </div>
-    </div>
+    </component>
   </div>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, resolveComponent } from "vue";
+import { getProductPrimaryImageUrl } from "~/utils/product-image";
+import {
+  getProductStockQuantity,
+  isProductAvailable,
+} from "~/utils/product-stock";
 
-const { product } = defineProps({
+const NuxtLink = resolveComponent("NuxtLink");
+
+const { product, preview = false } = defineProps({
   product: {
     type: Object,
     required: true,
   },
+  preview: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const { t } = useI18n({ useScope: "local" });
+const { toggleFavorite, isFavorite } = useFavorites();
+const { addToCart } = useCart();
+
+const available = computed(() => isProductAvailable(product));
+
+function handleAddToCart() {
+  if (!isProductAvailable(product)) {
+    return;
+  }
+  addToCart(product.id, 1, getProductStockQuantity(product));
+}
 
 const isNew = computed(() => {
   const now = new Date();
@@ -79,3 +143,16 @@ const isNew = computed(() => {
   // return diffDays <= 7;
 });
 </script>
+
+<i18n lang="json">
+{
+  "en": {
+    "addToCart": "Add to cart",
+    "outOfStock": "Out of stock"
+  },
+  "ro": {
+    "addToCart": "Adaugă în coș",
+    "outOfStock": "Stoc epuizat"
+  }
+}
+</i18n>

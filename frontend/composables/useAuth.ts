@@ -1,24 +1,8 @@
-import { ref } from "vue";
-import { useRouter } from "vue-router";
-import { useI18n } from "vue-i18n";
-
-interface User {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  county: string;
-  locality: string;
-  street: string;
-  street_number: string;
-  phone: string;
-  picture?: string;
-}
-
-interface AuthResponse {
-  access_token: string;
-  user: User;
-}
+import { computed } from "vue";
+import type { AuthUser } from "~/types/user";
+import { useAuthState } from "./useAuthState";
+import { apiRequest } from "~/utils/api-request";
+import { getApiBaseUrl } from "~/utils/api-base";
 
 interface AuthError {
   message: string;
@@ -28,37 +12,29 @@ interface AuthError {
 export const useAuth = () => {
   const router = useRouter();
   const { locale, t } = useI18n();
-  const isLoading = ref(false);
-  const error = ref<AuthError | null>(null);
+  const {
+    isLoading,
+    error,
+    user,
+    isAuthenticated,
+    syncFromStorage,
+    setAuthData,
+    clearAuthData,
+  } = useAuthState();
 
-  const user = ref<User>({
-    id: "",
-    email: "",
-    first_name: "",
-    last_name: "",
-    county: "",
-    locality: "",
-    street: "",
-    street_number: "",
-    phone: "",
-    picture: "",
-  });
+  const userRole = computed(() => user.value.role || "CLIENT");
+  const isSuperAdmin = computed(() => userRole.value === "SUPER_ADMIN");
+  const isArtist = computed(() => userRole.value === "ARTIST");
+  const canAccessAdmin = computed(
+    () => isSuperAdmin.value || isArtist.value,
+  );
 
-  const isAuthenticated = ref(false);
-
-  const setAuthData = (data: AuthResponse) => {
-    if (data.access_token) {
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      user.value = data.user;
-      isAuthenticated.value = true;
-    }
-  };
-
-  const handleAuthError = (err: any): AuthError => {
+  const handleAuthError = (err: unknown): AuthError => {
     console.error("Authentication error:", err);
     const errorMessage =
-      err.message || "An error occurred during authentication";
+      err instanceof Error
+        ? err.message
+        : "An error occurred during authentication";
     error.value = { message: errorMessage };
     return error.value;
   };
@@ -68,30 +44,29 @@ export const useAuth = () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/auth/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        }
-      );
+      const response = await apiRequest("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.message === "EMAIL_NOT_VERIFIED") {
+          throw new Error("EMAIL_NOT_VERIFIED");
+        }
         throw new Error(data.message || "Login failed");
       }
 
-      if (!data.access_token) {
-        throw new Error("No access token received");
+      if (!data.user?.id) {
+        throw new Error("No user received");
       }
 
-      setAuthData(data);
-      return { success: true, data };
+      setAuthData(data.user);
+      return { success: true as const, data };
     } catch (err) {
-      const error = handleAuthError(err);
-      return { success: false, error };
+      const authError = handleAuthError(err);
+      return { success: false as const, error: authError };
     } finally {
       isLoading.value = false;
     }
@@ -112,14 +87,10 @@ export const useAuth = () => {
       isLoading.value = true;
       error.value = null;
 
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/auth/register`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(userData),
-        }
-      );
+      const response = await apiRequest("/auth/register", {
+        method: "POST",
+        body: JSON.stringify(userData),
+      });
 
       const data = await response.json();
 
@@ -141,13 +112,12 @@ export const useAuth = () => {
         throw new Error(data.message || "Registration failed");
       }
 
-      setAuthData(data);
       router.push(
         locale.value === "en"
           ? "/en/auth/email-verification"
-          : "/auth/email-verification"
+          : "/auth/email-verification",
       );
-      return data;
+      return { success: true as const, data };
     } catch (err) {
       if (err instanceof Error) {
         return handleAuthError(err);
@@ -158,17 +128,20 @@ export const useAuth = () => {
     }
   };
 
+  const resendVerification = async (email: string) => {
+    const response = await apiRequest("/auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+    return response.ok;
+  };
+
   const googleAuth = () => {
-    window.location.href = `${import.meta.env.VITE_BACKEND_URL}/auth/google`;
+    window.location.href = `${getApiBaseUrl()}/auth/google`;
   };
 
   const checkAuth = () => {
-    const token = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-
-    if (token && storedUser) {
-      isAuthenticated.value = true;
-      user.value = JSON.parse(storedUser);
+    if (syncFromStorage()) {
       return true;
     }
 
@@ -180,60 +153,51 @@ export const useAuth = () => {
 
   const loadUser = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
+      const response = await apiRequest("/users/profile");
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          await apiRequest("/auth/logout", { method: "POST" }).catch(() => undefined);
+          clearAuthData();
+        }
         return;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/users/profile`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to load user data");
-      }
-
       const userData = await response.json();
-      user.value = userData;
-      localStorage.setItem("user", JSON.stringify(userData));
-    } catch (error) {
-      console.error("Error loading user data:", error);
+      setAuthData(userData);
+    } catch (loadError) {
+      console.error("Error loading user data:", loadError);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const logout = async () => {
+    try {
+      await apiRequest("/auth/logout", { method: "POST" });
+    } catch {
+      // The local session is cleared even if the API is unreachable.
+    }
+    clearAuthData();
+    const { loadFavorites } = useFavorites();
+    const { clearCart } = useCart();
+    loadFavorites();
+    clearCart();
     const loginPath = locale.value === "en" ? "/en/login" : "/login";
     router.push(loginPath);
   };
 
-  const updateProfile = async (updateData: Partial<User>) => {
+  const updateProfile = async (updateData: Partial<AuthUser>) => {
     try {
       isLoading.value = true;
       error.value = null;
 
-      const token = localStorage.getItem("token");
-      if (!token) {
+      if (!isAuthenticated.value) {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/users/profile`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updateData),
-        }
-      );
+      const response = await apiRequest("/users/profile", {
+        method: "PUT",
+        body: JSON.stringify(updateData),
+      });
 
       const data = await response.json();
 
@@ -242,13 +206,12 @@ export const useAuth = () => {
       }
 
       const updatedUser = { ...user.value, ...data };
-      user.value = updatedUser;
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setAuthData(updatedUser);
 
-      return { success: true, data: updatedUser };
+      return { success: true as const, data: updatedUser };
     } catch (err) {
-      const error = handleAuthError(err);
-      return { success: false, error };
+      const authError = handleAuthError(err);
+      return { success: false as const, error: authError };
     } finally {
       isLoading.value = false;
     }
@@ -257,12 +220,18 @@ export const useAuth = () => {
   return {
     user,
     isAuthenticated,
+    userRole,
+    isSuperAdmin,
+    isArtist,
+    canAccessAdmin,
+    syncFromStorage,
     checkAuth,
     loadUser,
     logout,
     login,
     register,
     googleAuth,
+    resendVerification,
     isLoading,
     error,
     updateProfile,

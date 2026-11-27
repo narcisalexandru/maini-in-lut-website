@@ -1,0 +1,1 @@
+export const STOCK_RESERVATION_TTL_MS = 10 * 60 * 1000;

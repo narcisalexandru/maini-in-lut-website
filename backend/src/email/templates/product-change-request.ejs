@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Modificări produs de validat</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #ece4d4;
+        line-height: 1.6;
+        color: #333;
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .container {
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 24px;
+        margin-top: 20px;
+      }
+      h1 {
+        color: #546a50;
+        margin-top: 0;
+      }
+      .meta {
+        margin: 0 0 20px;
+      }
+      .change-card {
+        border: 1px solid #f0e4c8;
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 12px;
+        background: #fffaf0;
+      }
+      .change-label {
+        font-weight: bold;
+        color: #546a50;
+        margin: 0 0 10px;
+      }
+      .diff-row {
+        display: block;
+        margin-bottom: 8px;
+      }
+      .diff-tag {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .diff-before {
+        color: #b45309;
+      }
+      .diff-after {
+        color: #15803d;
+      }
+      .diff-box {
+        display: block;
+        padding: 8px 10px;
+        border-radius: 6px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .diff-box.before {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+      }
+      .diff-box.after {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 20px;
+        background-color: #546a50;
+        color: #ece4d4 !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 24px 0 8px;
+        font-weight: bold;
+      }
+      .footer {
+        margin-top: 24px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Modificări produs de validat</h1>
+      <p class="meta">
+        Artistul <strong><%= artistName %></strong> a trimis modificări pentru produsul
+        <strong><%= productTitle %></strong>.
+      </p>
+
+      <% if (changeItems.length === 0) { %>
+      <p>Nu există detalii despre modificări.</p>
+      <% } else { %>
+      <% changeItems.forEach(function(item) { %>
+      <div class="change-card">
+        <p class="change-label"><%= item.label %></p>
+        <div class="diff-row">
+          <span class="diff-tag diff-before">Înainte</span>
+          <span class="diff-box before"><%= item.before %></span>
+        </div>
+        <div class="diff-row">
+          <span class="diff-tag diff-after">După</span>
+          <span class="diff-box after"><%= item.after %></span>
+        </div>
+      </div>
+      <% }) %>
+      <% } %>
+
+      <a href="<%= adminUrl %>" class="button">Vezi în panoul de administrare</a>
+
+      <div class="footer">
+        <p>Poți aproba sau respinge modificările din secțiunea „De validat”.</p>
+      </div>
+    </div>
+  </body>
+</html>

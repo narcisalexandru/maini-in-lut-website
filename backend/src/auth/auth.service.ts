@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { User, UserWithoutPassword } from '../users/entities/user.entity';
+import { toUserResponse } from '../common/utils/user-response.util';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { EmailService } from '../email/email.service';
@@ -30,9 +31,6 @@ export class AuthService {
   ): Promise<UserWithoutPassword | null> {
     const user = await this.usersService.findOneByEmail(email);
     if (user && (await bcrypt.compare(password, user.password))) {
-      if (!user.is_email_verified) {
-        throw new UnauthorizedException('Please verify your email first');
-      }
       const { password, ...result } = user;
       return result;
     }
@@ -43,18 +41,7 @@ export class AuthService {
     const payload = { email: user.email, sub: user.id };
     return {
       access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        phone: user.phone,
-        county: user.county,
-        city: user.city,
-        street: user.street,
-        postal_code: user.postal_code,
-        picture: user.picture,
-      },
+      user: toUserResponse(user),
     };
   }
 
@@ -113,12 +100,6 @@ export class AuthService {
       return {
         message:
           'Registration successful. Please check your email to verify your account.',
-        user: {
-          id: user.id,
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-        },
       };
     } catch (error) {
       this.logger.error('Registration failed', error);
@@ -148,6 +129,29 @@ export class AuthService {
     return { message: 'Email verified successfully' };
   }
 
+  async resendVerification(email: string): Promise<{ success: true }> {
+    const user = await this.usersService.findOneByEmail(email);
+    if (user && !user.is_email_verified) {
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationTokenExpires = new Date();
+      verificationTokenExpires.setHours(verificationTokenExpires.getHours() + 24);
+      await this.usersService.update(user.id, {
+        email_verification_token: verificationToken,
+        email_verification_token_expires: verificationTokenExpires,
+      });
+      const verificationLink = `${this.configService.get(
+        'FRONTEND_URL',
+      )}/auth/verify-email?token=${verificationToken}`;
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        user.first_name,
+        user.last_name,
+        verificationLink,
+      );
+    }
+    return { success: true };
+  }
+
   async googleLogin(req) {
     if (!req.user) {
       return 'No user from google';
@@ -156,16 +160,27 @@ export class AuthService {
     let user = await this.usersService.findOneByEmail(req.user.email);
 
     if (!user) {
-      const randomPassword = Math.random().toString(36).slice(-8);
+      const randomPassword = crypto.randomBytes(24).toString('hex');
       const hashedPassword = await bcrypt.hash(randomPassword, 10);
+      const name = String(req.user.name || '').trim();
+      const [firstName, ...rest] = name.split(' ');
 
       user = await this.usersService.create({
-        email: req.user.email,
-        first_name: req.user.name.split(' ')[0],
-        last_name: req.user.name.split(' ')[1] || '',
-        picture: req.user.picture,
+        email: String(req.user.email || '').trim().toLowerCase(),
+        first_name: firstName || 'Google',
+        last_name: rest.join(' '),
         password: hashedPassword,
+      });
+      user = await this.usersService.update(user.id, {
+        picture: req.user.picture,
         is_email_verified: true,
+      });
+    } else if (!user.is_email_verified) {
+      user = await this.usersService.update(user.id, {
+        picture: req.user.picture,
+        is_email_verified: true,
+        email_verification_token: null,
+        email_verification_token_expires: null,
       });
     } else {
       user = await this.usersService.update(user.id, {

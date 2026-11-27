@@ -1,0 +1,141 @@
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { InvoiceStatus } from '../../common/enums/invoice-status.enum';
+import {
+  OrderPaymentStatus,
+  PaymentMethod,
+} from '../../common/enums/order-status.enum';
+import { User } from '../../users/entities/user.entity';
+import { OrderItem } from './order-item.entity';
+
+export type OrderBillingDetails = Record<string, unknown>;
+
+@Entity()
+export class Order {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ unique: true })
+  publicOrderNumber: string;
+
+  @Column({ type: 'int', nullable: true })
+  userId: number | null;
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'userId' })
+  user: User | null;
+
+  @Column()
+  customerFirstName: string;
+
+  @Column()
+  customerLastName: string;
+
+  @Column()
+  customerEmail: string;
+
+  @Column()
+  customerPhone: string;
+
+  @Column()
+  deliveryCounty: string;
+
+  @Column()
+  deliveryCity: string;
+
+  @Column({ length: 500 })
+  deliveryStreet: string;
+
+  @Column()
+  deliveryPostalCode: string;
+
+  @Column({ type: 'text', nullable: true })
+  deliveryRecipientName: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  deliveryRecipientPhone: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  customerNote: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  billingDetails: OrderBillingDetails | null;
+
+  @Column({ type: 'enum', enum: PaymentMethod })
+  paymentMethod: PaymentMethod;
+
+  @Column({
+    type: 'enum',
+    enum: OrderPaymentStatus,
+    default: OrderPaymentStatus.PENDING,
+  })
+  paymentStatus: OrderPaymentStatus;
+
+  @Column({ type: 'text', nullable: true })
+  netopiaNtpId: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  stockFulfilledAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  confirmationSentAt: Date | null;
+
+  @Column({ type: 'enum', enum: InvoiceStatus, nullable: true })
+  invoiceStatus: InvoiceStatus | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  invoiceSeries: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  invoiceNumber: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  invoiceDocumentId: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  invoiceDocumentUrl: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  invoiceViewUrl: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  invoiceError: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  invoiceIssuedAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  invoiceAttemptAt: Date | null;
+
+  @Column({ type: 'boolean', default: false })
+  invoiceIsDraft: boolean;
+
+  @Column('decimal', { precision: 10, scale: 2 })
+  subtotalRon: number;
+
+  @Column('decimal', { precision: 10, scale: 2 })
+  deliveryFeeRon: number;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  cashOperationalFeeRon: number;
+
+  @Column('decimal', { precision: 10, scale: 2 })
+  totalRon: number;
+
+  @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
+  items: OrderItem[];
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+}

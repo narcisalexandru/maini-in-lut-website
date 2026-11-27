@@ -5,7 +5,6 @@ import {
   Matches,
   IsNotEmpty,
   IsOptional,
-  IsBoolean,
   Validate,
   ValidationArguments,
   ValidatorConstraint,
@@ -80,15 +79,4 @@ export class CreateUserDto {
   @IsOptional()
   @Matches(/^[0-9]{6}$/, { message: 'Postal code must be exactly 6 digits' })
   postal_code?: string;
-
-  @IsBoolean()
-  @IsOptional()
-  is_email_verified?: boolean;
-
-  @IsString()
-  @IsOptional()
-  email_verification_token?: string;
-
-  @IsOptional()
-  email_verification_token_expires?: Date;
 }

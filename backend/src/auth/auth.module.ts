@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { GoogleStateGuard } from './guards/google-state.guard';
 import { UsersModule } from '../users/users.module';
 import { EmailModule } from '../email/email.module';
 
@@ -16,6 +17,7 @@ import { EmailModule } from '../email/email.module';
     EmailModule,
     PassportModule,
     JwtModule.registerAsync({
+      global: true,
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
@@ -25,7 +27,7 @@ import { EmailModule } from '../email/email.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, GoogleStateGuard],
   exports: [AuthService],
 })
 export class AuthModule {}

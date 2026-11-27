@@ -14,12 +14,24 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     });
   }
 
-  async validate(accessToken: string, refreshToken: string, profile: any) {
+  async validate(
+    _accessToken: string,
+    _refreshToken: string,
+    profile: {
+      name?: { givenName?: string; familyName?: string };
+      emails?: { value?: string }[];
+      photos?: { value?: string }[];
+    },
+  ) {
     const { name, emails, photos } = profile;
+    const email = emails?.[0]?.value?.trim().toLowerCase();
+    if (!email) {
+      return null;
+    }
     return {
-      email: emails[0].value,
-      name: name.givenName + ' ' + name.familyName,
-      picture: photos[0].value,
+      email,
+      name: `${name?.givenName || ''} ${name?.familyName || ''}`.trim(),
+      picture: photos?.[0]?.value,
     };
   }
 }

@@ -1,34 +1,39 @@
 <script setup lang="ts">
+import { apiRequest } from "~/utils/api-request";
+
 definePageMeta({
   layout: "empty",
 });
 
 const route = useRoute();
 const router = useRouter();
-const config = useRuntimeConfig();
 
 const isLoading = ref(true);
 const isVerified = ref(false);
 const error = ref<string | null>(null);
 
 onMounted(async () => {
-  try {
-    const token = route.query.token as string;
-    if (!token) {
-      throw new Error("Token-ul lipsește");
-    }
+  const token = typeof route.query.token === "string" ? route.query.token : "";
+  if (!token) {
+    error.value = "Token-ul lipsește";
+    isLoading.value = false;
+    return;
+  }
 
-    const response = await fetch(
-      `${config.public.apiBase}/auth/verify-email?token=${token}`
-    );
+  try {
+    const response = await apiRequest("/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
 
     if (!response.ok) {
       throw new Error("Verificarea email-ului a eșuat");
     }
 
     isVerified.value = true;
+    await router.replace({ path: route.path, query: {} });
     setTimeout(() => {
-      router.push("/");
+      router.push("/login");
     }, 3000);
   } catch (e) {
     error.value =

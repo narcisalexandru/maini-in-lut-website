@@ -1,0 +1,24 @@
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { AuditLogService } from './audit-log.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../common/enums/user-role.enum';
+import { ListAuditLogsQueryDto } from './dto/list-audit-logs-query.dto';
+
+@Controller('admin/audit-logs')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.SUPER_ADMIN)
+export class AdminAuditLogController {
+  constructor(private readonly auditLogService: AuditLogService) {}
+
+  @Get('filter-options')
+  getFilterOptions() {
+    return this.auditLogService.getFilterOptions();
+  }
+
+  @Get()
+  findAll(@Query() query: ListAuditLogsQueryDto) {
+    return this.auditLogService.findAll(query);
+  }
+}

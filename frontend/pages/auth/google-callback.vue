@@ -10,35 +10,30 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { useRouter, useRoute } from "vue-router";
-
-const router = useRouter();
-const route = useRoute();
-
 definePageMeta({
   layout: "empty",
+  ssr: false,
 });
 
-onMounted(() => {
-  try {
-    const tokenParam = route.query.token as string;
-    if (!tokenParam) {
-      throw new Error("No token found in URL");
-    }
+const router = useRouter();
+const localePath = useLocalePath();
+const { loadUser, isAuthenticated } = useAuth();
 
-    const data = JSON.parse(decodeURIComponent(tokenParam));
-    if (data.access_token) {
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      router.push("/");
-    } else {
-      console.error("No access token found in response");
-      router.push("/login");
+onMounted(async () => {
+  try {
+    await loadUser();
+    if (!isAuthenticated.value) {
+      await router.push(localePath("/login"));
+      return;
     }
+    const { mergeGuestFavorites } = useFavorites();
+    const { mergeGuestCart } = useCart();
+    await mergeGuestFavorites();
+    await mergeGuestCart();
+    await router.push(localePath("/"));
   } catch (error) {
     console.error("Failed to process Google login:", error);
-    router.push("/login");
+    await router.push(localePath("/login"));
   }
 });
 </script>
