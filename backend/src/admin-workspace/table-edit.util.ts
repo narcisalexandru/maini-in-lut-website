@@ -14,11 +14,12 @@ export type AdminTableKey = (typeof ADMIN_TABLE_KEYS)[number];
 export type TableEditKind =
   | 'order-item-status'
   | 'order-delivery'
+  | 'order-note'
   | 'product-fields'
   | 'customer-fields';
 
 const KINDS_BY_TABLE: Record<AdminTableKey, readonly TableEditKind[]> = {
-  'admin-orders': ['order-item-status', 'order-delivery'],
+  'admin-orders': ['order-item-status', 'order-delivery', 'order-note'],
   'admin-customers': ['customer-fields'],
   'admin-products': ['product-fields'],
 };
@@ -119,6 +120,14 @@ export function normalizeTableFieldValue(
     return trimmed;
   }
 
+  if (field === 'customerNote') {
+    const trimmed = raw.trim();
+    if (trimmed.length > 1000) {
+      throw new BadRequestException('Mentiunea poate avea maxim 1000 de caractere.');
+    }
+    return trimmed || null;
+  }
+
   if (field === 'first_name' || field === 'last_name') {
     const trimmed = raw.trim();
     if (trimmed.length < 2 || trimmed.length > 80) {
@@ -144,9 +153,10 @@ export function valuesMatch(
   if (field === 'inStock') {
     return Boolean(current) === Boolean(expected);
   }
-  if (field === 'phone') {
+  if (field === 'phone' || field === 'customerNote') {
     const left = current == null || current === '' ? null : String(current);
-    return left === expected;
+    const right = expected == null || expected === '' ? null : String(expected);
+    return left === right;
   }
   return String(current ?? '') === String(expected ?? '');
 }

@@ -1,4 +1,10 @@
-import { composeDeliveryAddress, sequencesToDrop, valuesMatch } from './table-edit.util';
+import { BadRequestException } from '@nestjs/common';
+import {
+  composeDeliveryAddress,
+  normalizeTableFieldValue,
+  sequencesToDrop,
+  valuesMatch,
+} from './table-edit.util';
 
 describe('sequencesToDrop', () => {
   it('keeps every sequence until the cap is passed', () => {
@@ -39,5 +45,19 @@ describe('valuesMatch', () => {
     expect(valuesMatch('phone', null, null)).toBe(true);
     expect(valuesMatch('phone', '', null)).toBe(true);
     expect(valuesMatch('phone', '0712345678', null)).toBe(false);
+  });
+
+  it('treats a blank order note as cleared', () => {
+    expect(normalizeTableFieldValue('customerNote', '  ')).toBeNull();
+    expect(normalizeTableFieldValue('customerNote', '  Lasă la ușă  ')).toBe('Lasă la ușă');
+    expect(valuesMatch('customerNote', null, null)).toBe(true);
+    expect(valuesMatch('customerNote', '', null)).toBe(true);
+    expect(valuesMatch('customerNote', 'Lasă la ușă', null)).toBe(false);
+  });
+
+  it('rejects an order note longer than 1000 characters', () => {
+    expect(() => normalizeTableFieldValue('customerNote', 'a'.repeat(1001))).toThrow(
+      BadRequestException,
+    );
   });
 });

@@ -48,6 +48,16 @@
     <template #cell-orderNumber="{ row }">
       <span class="font-semibold">{{ row.orderNumber }}</span>
     </template>
+    <template #cell-customerPhone="{ row }">
+      <a
+        v-if="row.customerPhone"
+        :href="`tel:${String(row.customerPhone).replace(/\s/g, '')}`"
+        class="whitespace-nowrap text-blue-600 hover:underline"
+      >
+        {{ row.customerPhone }}
+      </a>
+      <span v-else>—</span>
+    </template>
     <template #cell-customerName="{ row }">
       <NuxtLink
         v-if="showCustomerLinks && row.customerUserId"
@@ -60,11 +70,6 @@
     </template>
     <template #cell-deliveryMethod="{ row }">
       {{ row.deliveryMethod === "EASYBOX" ? t("easybox") : t("address") }}
-    </template>
-    <template #cell-customerNote="{ row }">
-      <span class="block truncate" :title="String(row.customerNote || '')">
-        {{ row.customerNote || "—" }}
-      </span>
     </template>
     <template #cell-paymentStatus="{ row }">
       <Tag :value="paymentStatusLabel(row.paymentStatus)" severity="info" />
@@ -164,6 +169,7 @@ type OrderLine = {
   createdAt: string;
   customerName: string;
   customerEmail: string;
+  customerPhone: string;
   customerUserId: number | null;
   deliveryMethod: "EASYBOX" | "ADDRESS";
   deliveryAddress: string;
@@ -247,7 +253,7 @@ type IncomingOrder = {
     errorMessage?: string | null;
   } | null;
   customerNote?: string | null;
-  customer?: { firstName?: string; lastName?: string; email?: string };
+  customer?: { firstName?: string; lastName?: string; email?: string; phone?: string };
   delivery?: { street?: string; city?: string; county?: string; postalCode?: string };
   items?: IncomingItem[];
 };
@@ -283,6 +289,7 @@ const rows = computed<AdminTableRow[]>(() =>
         createdAt: order.createdAt,
         customerName,
         customerEmail: order.customer?.email || "",
+        customerPhone: order.customer?.phone?.trim() || "",
         customerUserId: order.userId ?? null,
         deliveryMethod: /^easybox\b/i.test(street) ? "EASYBOX" : "ADDRESS",
         deliveryAddress: deliveryAddressOf(order.delivery),
@@ -371,7 +378,7 @@ const confirmPending = () => {
   emit(action, orderId);
 };
 
-const searchFields = ["orderNumber", "customerName", "customerEmail", "deliveryAddress", "customerNote", "title", "artistName", "status", "paymentStatus"];
+const searchFields = ["orderNumber", "customerName", "customerEmail", "customerPhone", "deliveryAddress", "customerNote", "title", "artistName", "status", "paymentStatus"];
 
 const columns = computed<AdminTableColumn[]>(() => {
   const statusOptions = props.statusOptions as Array<{ label: string; value: string }>;
@@ -381,6 +388,7 @@ const columns = computed<AdminTableColumn[]>(() => {
     { field: "createdAt", header: t("date"), minWidth: "8rem" },
     { field: "customerName", header: t("customer"), minWidth: "11rem" },
     { field: "customerEmail", header: t("email"), minWidth: "12rem" },
+    { field: "customerPhone", header: t("phone"), minWidth: "9rem" },
     {
       field: "deliveryMethod",
       header: t("deliveryMethod"),
@@ -401,7 +409,14 @@ const columns = computed<AdminTableColumn[]>(() => {
       cellClass: deliveryTone,
       minWidth: "16rem",
     },
-    { field: "customerNote", header: t("customerNote"), minWidth: "14rem" },
+    {
+      field: "customerNote",
+      header: t("customerNote"),
+      editable: "textarea",
+      editKind: "order-note",
+      editIdField: "orderId",
+      minWidth: "14rem",
+    },
     { field: "title", header: t("product"), minWidth: "12rem" },
   ];
   if (props.showArtistColumn) {
@@ -471,13 +486,14 @@ const issue = async (orderId: number) => {
 <i18n lang="json">
 {
   "ro": {
-    "searchPlaceholder": "Caută număr, client, email, mențiuni sau produs...",
+    "searchPlaceholder": "Caută număr, client, email, telefon, mențiuni sau produs...",
     "emptyActive": "Nicio comandă activă nu corespunde filtrelor.",
     "emptyArchived": "Nicio comandă arhivată nu corespunde filtrelor.",
     "order": "Comandă",
     "date": "Data",
     "customer": "Client",
     "email": "Email",
+    "phone": "Telefon",
     "deliveryMethod": "Livrare",
     "easybox": "Easybox",
     "address": "Adresă",
@@ -518,13 +534,14 @@ const issue = async (orderId: number) => {
     "cancel": "Renunță"
   },
   "en": {
-    "searchPlaceholder": "Search order number, customer, email, notes, or product...",
+    "searchPlaceholder": "Search order number, customer, email, phone, notes, or product...",
     "emptyActive": "No active orders match the current filters.",
     "emptyArchived": "No archived orders match the current filters.",
     "order": "Order",
     "date": "Date",
     "customer": "Customer",
     "email": "Email",
+    "phone": "Phone",
     "deliveryMethod": "Delivery",
     "easybox": "Easybox",
     "address": "Address",

@@ -1,6 +1,7 @@
 export type AdminTableEditKind =
   | "order-item-status"
   | "order-delivery"
+  | "order-note"
   | "product-fields"
   | "customer-fields";
 
@@ -19,7 +20,7 @@ export type AdminTableColumn = {
   sortable?: boolean;
   filter?: "text" | "select";
   filterOptions?: AdminTableOption[];
-  editable?: "text" | "number" | "select";
+  editable?: "text" | "number" | "textarea" | "select";
   editKind?: AdminTableEditKind;
   editOptions?: AdminTableOption[];
   canEdit?: (row: AdminTableRow) => boolean;

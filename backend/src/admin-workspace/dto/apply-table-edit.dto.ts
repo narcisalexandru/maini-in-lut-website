@@ -1,8 +1,13 @@
 import { IsIn, IsInt, IsString, MaxLength, Min } from 'class-validator';
 
 export class ApplyTableEditDto {
-  @IsIn(['order-item-status', 'order-delivery', 'product-fields', 'customer-fields'])
-  kind: 'order-item-status' | 'order-delivery' | 'product-fields' | 'customer-fields';
+  @IsIn(['order-item-status', 'order-delivery', 'order-note', 'product-fields', 'customer-fields'])
+  kind:
+    | 'order-item-status'
+    | 'order-delivery'
+    | 'order-note'
+    | 'product-fields'
+    | 'customer-fields';
 
   @IsInt()
   @Min(1)
@@ -21,10 +26,10 @@ export class ApplyTableEditDto {
   rowLabel: string;
 
   @IsString()
-  @MaxLength(500)
+  @MaxLength(1000)
   previousValue: string;
 
   @IsString()
-  @MaxLength(500)
+  @MaxLength(1000)
   nextValue: string;
 }

@@ -1,10 +1,11 @@
 import type {
   AdminSearchResponse,
+  AdminTableEditKind,
   AdminTableHistory,
 } from "~/types/admin-table";
 
 export type AdminTableEditPayload = {
-  kind: "order-item-status" | "product-fields" | "customer-fields";
+  kind: AdminTableEditKind;
   targetId: number;
   field: string;
   fieldLabel: string;

@@ -6,71 +6,60 @@
       <UserRoleBadge variant="admin" />
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <NuxtLink
-        v-if="isSuperAdmin"
-        :to="$localePath('/admin/artisti')"
-        class="h-bg-white rounded-xl shadow p-6 hover:shadow-md transition-shadow"
-      >
-        <i class="ph ph-users-three text-2xl h-color-palm-leaf mb-3 block"></i>
-        <h2 class="font-semibold h-color-lunar-green">{{ t("artists") }}</h2>
-        <p class="text-sm h-color-lunar-green mt-1">{{ t("artistsDesc") }}</p>
-      </NuxtLink>
-
-      <NuxtLink
-        v-if="isArtist || isSuperAdmin"
-        :to="$localePath('/admin/produse')"
-        class="h-bg-white rounded-xl shadow p-6 hover:shadow-md transition-shadow"
-      >
-        <i class="ph ph-package text-2xl h-color-palm-leaf mb-3 block"></i>
-        <h2 class="font-semibold h-color-lunar-green">{{ t("products") }}</h2>
-        <p class="text-sm h-color-lunar-green mt-1">{{ t("productsDesc") }}</p>
-      </NuxtLink>
-
-      <NuxtLink
-        v-if="isSuperAdmin"
-        :to="$localePath('/admin/setari')"
-        class="h-bg-white rounded-xl shadow p-6 hover:shadow-md transition-shadow"
-      >
-        <i class="ph ph-gear text-2xl h-color-palm-leaf mb-3 block"></i>
-        <h2 class="font-semibold h-color-lunar-green">{{ t("settings") }}</h2>
-        <p class="text-sm h-color-lunar-green mt-1">{{ t("settingsDesc") }}</p>
-      </NuxtLink>
-
-      <NuxtLink
-        v-if="isSuperAdmin"
-        :to="$localePath('/admin/clienti')"
-        class="h-bg-white rounded-xl shadow p-6 hover:shadow-md transition-shadow"
-      >
-        <i class="ph ph-user-circle text-2xl h-color-palm-leaf mb-3 block"></i>
-        <h2 class="font-semibold h-color-lunar-green">{{ t("customers") }}</h2>
-        <p class="text-sm h-color-lunar-green mt-1">{{ t("customersDesc") }}</p>
-      </NuxtLink>
-
-      <NuxtLink
-        v-if="isArtist || isSuperAdmin"
-        :to="$localePath('/admin/comenzi')"
-        class="h-bg-white rounded-xl shadow p-6 hover:shadow-md transition-shadow"
-      >
-        <i class="ph ph-receipt text-2xl h-color-palm-leaf mb-3 block"></i>
-        <h2 class="font-semibold h-color-lunar-green">{{ t("orders") }}</h2>
-        <p class="text-sm h-color-lunar-green mt-1">{{ t("ordersDesc") }}</p>
-      </NuxtLink>
-    </div>
+    <section class="mb-10" aria-live="polite">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-4">
+        <div>
+          <h2 class="text-lg font-semibold h-color-lunar-green">
+            {{ t("salesTitle") }}
+          </h2>
+        </div>
+      </div>
+      <p v-if="loading && !stats" class="h-color-lunar-green">{{ t("loading") }}</p>
+      <p v-else-if="loadError && !stats" class="h-color-lunar-green">
+        {{ t("loadError") }}
+      </p>
+      <AdminSalesDashboard
+        v-if="stats"
+        :stats="stats"
+        :user-id="user.id"
+        :class="{ 'opacity-60': loading }"
+      />
+    </section>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { SalesDashboard } from "~/types/dashboard";
+
 definePageMeta({
   layout: "admin",
   middleware: ["auth", "admin"],
 });
 
 const { t } = useI18n({ useScope: "local" });
-const { isSuperAdmin, isArtist, loadUser } = useAuth();
+const { user, loadUser } = useAuth();
+const { getArtistSales } = useDashboard();
+
+const stats = ref<SalesDashboard | null>(null);
+const loading = ref(true);
+const loadError = ref(false);
+async function loadSales() {
+  loading.value = true;
+  loadError.value = false;
+  try {
+    stats.value = await getArtistSales();
+  } catch {
+    if (!stats.value) {
+      loadError.value = true;
+    }
+  } finally {
+    loading.value = false;
+  }
+}
 
 onMounted(() => {
   loadUser();
+  loadSales();
 });
 </script>
 
@@ -79,30 +68,16 @@ onMounted(() => {
   "ro": {
     "title": "Dashboard",
     "subtitle": "Gestionează platforma din panoul de administrare.",
-    "artists": "Artiști",
-    "artistsDesc": "Aprobă cereri de înscriere și gestionează artiștii.",
-    "products": "Produse",
-    "productsDesc": "Publică și validează produsele.",
-    "customers": "Clienți",
-    "customersDesc": "Caută clienții și actualizează datele de contact direct din tabel.",
-    "orders": "Comenzi",
-    "ordersDesc": "Urmărește și actualizează statusul comenzilor.",
-    "settings": "Setări site",
-    "settingsDesc": "Costuri de livrare Easybox și la adresă."
+    "salesTitle": "Vânzările tale",
+    "loading": "Se încarcă statisticile...",
+    "loadError": "Nu am putut încărca statisticile de vânzări."
   },
   "en": {
     "title": "Dashboard",
     "subtitle": "Manage the platform from the admin panel.",
-    "artists": "Artists",
-    "artistsDesc": "Approve applications and manage artists.",
-    "products": "Products",
-    "productsDesc": "Publish and review products.",
-    "customers": "Customers",
-    "customersDesc": "Find customers and update contact details directly in the table.",
-    "orders": "Orders",
-    "ordersDesc": "Track and update order status.",
-    "settings": "Site settings",
-    "settingsDesc": "Easybox and address delivery prices."
+    "salesTitle": "Your sales",
+    "loading": "Loading statistics...",
+    "loadError": "Sales statistics could not be loaded."
   }
 }
 </i18n>

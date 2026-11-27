@@ -361,6 +361,7 @@ onMounted(async () => {
     "action.ORDER_DELETED": "Comandă ștearsă",
     "action.ORDER_ITEM_STATUS_UPDATED": "Status comandă actualizat",
     "action.ORDER_DELIVERY_UPDATED": "Adresă de livrare actualizată",
+    "action.ORDER_NOTE_UPDATED": "Mențiuni actualizate",
     "action.CUSTOMER_UPDATED": "Date client actualizate"
   },
   "en": {
@@ -407,6 +408,7 @@ onMounted(async () => {
     "action.ORDER_DELETED": "Order deleted",
     "action.ORDER_ITEM_STATUS_UPDATED": "Order item status updated",
     "action.ORDER_DELIVERY_UPDATED": "Delivery address updated",
+    "action.ORDER_NOTE_UPDATED": "Order notes updated",
     "action.CUSTOMER_UPDATED": "Customer details updated"
   }
 }

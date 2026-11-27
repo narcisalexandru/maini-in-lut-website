@@ -1,7 +1,7 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { OrdersService } from './orders.service';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
@@ -46,6 +46,10 @@ describe('OrdersService', () => {
         {
           provide: ArtistsService,
           useValue: artistsService,
+        },
+        {
+          provide: DataSource,
+          useValue: { transaction: jest.fn() },
         },
       ],
     }).compile();
@@ -138,6 +142,72 @@ describe('OrdersService', () => {
     expect(item.isManuallyArchived).toBe(true);
     expect(item.isUnarchived).toBe(false);
     expect(ordersRepository.delete).not.toHaveBeenCalled();
+  });
+
+  it('lets an artist update the note on their own order', async () => {
+    const order = {
+      id: 9,
+      customerNote: 'veche',
+      items: [{ id: 5, artistId: 2 }],
+    } as unknown as Order;
+    ordersRepository.findOne.mockResolvedValue(order);
+    ordersRepository.save.mockImplementation(async (value) => value as Order);
+    artistsService.findApprovedByUserId.mockResolvedValue({ id: 2 });
+
+    const saved = await service.updateCustomerNote(
+      { id: 4, role: UserRole.ARTIST } as never,
+      9,
+      '  Sună înainte  ',
+    );
+
+    expect(saved.customerNote).toBe('Sună înainte');
+  });
+
+  it('lets a super admin clear an order note', async () => {
+    const order = {
+      id: 9,
+      customerNote: 'veche',
+      items: [{ id: 5, artistId: 2 }],
+    } as unknown as Order;
+    ordersRepository.findOne.mockResolvedValue(order);
+    ordersRepository.save.mockImplementation(async (value) => value as Order);
+
+    const saved = await service.updateCustomerNote(
+      { id: 1, role: UserRole.SUPER_ADMIN } as never,
+      9,
+      '   ',
+    );
+
+    expect(saved.customerNote).toBeNull();
+  });
+
+  it('rejects a note on an order that does not belong to the artist', async () => {
+    ordersRepository.findOne.mockResolvedValue({
+      id: 9,
+      items: [{ id: 5, artistId: 8 }],
+    } as unknown as Order);
+    artistsService.findApprovedByUserId.mockResolvedValue({ id: 2 });
+
+    await expect(
+      service.updateCustomerNote({ id: 4, role: UserRole.ARTIST } as never, 9, 'Nu'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(ordersRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects an order note longer than 1000 characters', async () => {
+    ordersRepository.findOne.mockResolvedValue({
+      id: 9,
+      items: [],
+    } as unknown as Order);
+
+    await expect(
+      service.updateCustomerNote(
+        { id: 1, role: UserRole.SUPER_ADMIN } as never,
+        9,
+        'a'.repeat(1001),
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(ordersRepository.save).not.toHaveBeenCalled();
   });
 
   it('rejects order deletion for an artist', async () => {

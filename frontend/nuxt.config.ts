@@ -167,6 +167,8 @@ export default defineNuxtConfig({
         "primevue/accordionheader",
         "primevue/accordioncontent",
         "primevue/button",
+        "chart.js",
+        "primevue/chart",
         "primevue/checkbox",
         "primevue/column",
         "primevue/datatable",

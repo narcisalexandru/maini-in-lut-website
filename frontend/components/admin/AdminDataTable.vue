@@ -118,32 +118,59 @@
         </template>
       </Column>
       <Column
-        v-for="column in columns"
+        v-for="column in orderedColumns"
         :key="column.field"
         :field="column.field"
         :style="columnStyle(column)"
       >
         <template #header>
-          <button
-            v-if="column.sortable !== false"
-            type="button"
-            class="admin-data-table__sort"
-            :class="column.align === 'right' ? 'admin-data-table__sort--right' : ''"
-            @click="toggleSort(column)"
+          <div
+            class="admin-data-table__head"
+            :class="{ 'admin-data-table__head--drop': dropField === column.field && dragField !== column.field }"
+            @dragover.prevent="onColumnDragOver(column.field)"
+            @drop.prevent="onColumnDrop(column.field)"
           >
-            <span>{{ column.header }}</span>
-            <i
-              class="ph"
-              :class="
-                sortField === column.field
-                  ? sortOrder === 1
-                    ? 'ph-caret-up'
-                    : 'ph-caret-down'
-                  : 'ph-caret-up-down'
-              "
+            <button
+              v-if="column.sortable !== false"
+              type="button"
+              draggable="true"
+              class="admin-data-table__sort"
+              :class="column.align === 'right' ? 'admin-data-table__sort--right' : ''"
+              :title="t('moveColumn')"
+              @click="onHeaderClick(column)"
+              @dragstart="onColumnDragStart(column.field, $event)"
+              @dragend="onColumnDragEnd"
+            >
+              <span>{{ column.header }}</span>
+              <i
+                class="ph"
+                :class="
+                  sortField === column.field
+                    ? sortOrder === 1
+                      ? 'ph-caret-up'
+                      : 'ph-caret-down'
+                    : 'ph-caret-up-down'
+                "
+              />
+            </button>
+            <span
+              v-else
+              draggable="true"
+              class="admin-data-table__sort"
+              :title="t('moveColumn')"
+              @dragstart="onColumnDragStart(column.field, $event)"
+              @dragend="onColumnDragEnd"
+            >
+              {{ column.header }}
+            </span>
+            <span
+              class="admin-data-table__resizer"
+              role="separator"
+              aria-orientation="vertical"
+              :title="t('resizeColumn')"
+              @pointerdown.stop.prevent="startColumnResize(column, $event)"
             />
-          </button>
-          <span v-else>{{ column.header }}</span>
+          </div>
         </template>
         <template #body="{ data }">
           <div
@@ -153,8 +180,17 @@
               column.cellClass ? column.cellClass(data) : '',
             ]"
           >
+            <textarea
+              v-if="editingKey === cellKey(data, column) && column.editable === 'textarea'"
+              v-model="draft"
+              class="admin-data-table__input admin-data-table__input--area"
+              rows="3"
+              maxlength="1000"
+              @keydown.enter.exact.prevent="requestConfirm(data, column)"
+              @keydown.esc.prevent="cancelEdit"
+            />
             <input
-              v-if="editingKey === cellKey(data, column) && column.editable !== 'select'"
+              v-else-if="editingKey === cellKey(data, column) && column.editable !== 'select'"
               v-model="draft"
               class="admin-data-table__input"
               type="text"
@@ -181,6 +217,7 @@
               v-else-if="isEditable(column, data)"
               type="button"
               class="admin-data-table__value"
+              :title="formatCell(column, data)"
               @click="beginEdit(data, column)"
             >
               {{ formatCell(column, data) }}
@@ -218,11 +255,11 @@
       <p class="text-sm h-color-lunar-green m-0 mb-3">
         {{ t("confirmBody", { row: pending?.rowLabel || "" }) }}
       </p>
-      <p class="text-sm m-0">
+      <p class="admin-data-table__diff text-sm m-0">
         <span class="font-medium">{{ pending?.fieldLabel }}</span>
-        <span class="mx-2 text-gray-400">{{ pending?.previousLabel }}</span>
+        <span class="admin-data-table__diff-value text-gray-400">{{ pending?.previousLabel }}</span>
         <i class="ph ph-arrow-right text-gray-400"></i>
-        <span class="ml-2 font-semibold h-color-lunar-green">{{ pending?.nextLabel }}</span>
+        <span class="admin-data-table__diff-value font-semibold h-color-lunar-green">{{ pending?.nextLabel }}</span>
       </p>
       <template #footer>
         <Button severity="secondary" :label="t('cancel')" :disabled="busy" @click="confirmOpen = false" />
@@ -334,6 +371,7 @@ const selectFilters = reactive<Record<string, string>>({});
 const sortField = ref<string | null>(null);
 const sortOrder = ref<1 | -1>(1);
 const editingKey = ref("");
+const editingTarget = ref<{ row: AdminTableRow; column: AdminTableColumn } | null>(null);
 const draft = ref("");
 const confirmOpen = ref(false);
 const historyOpen = ref(false);
@@ -507,11 +545,130 @@ watch(() => props.rows, () => {
   loadHistory();
 });
 
-const columnStyle = (column: AdminTableColumn) => ({
-  width: column.width,
-  minWidth: column.minWidth || "8rem",
-  textAlign: column.align || "left",
-});
+const { layout, update: updateLayout } = useAdminTableLayout(() => props.tableKey);
+
+const dragField = ref("");
+const dropField = ref("");
+let headerDragged = false;
+
+const orderedColumns = computed(() => mergeColumnOrder(props.columns, layout.value.order));
+
+const mergeColumnOrder = (columns: AdminTableColumn[], saved: string[]) => {
+  if (!saved.length) return columns;
+  const known = new Set(columns.map((column) => column.field));
+  const result = saved.filter((field) => known.has(field));
+  const placed = new Set(result);
+  columns.forEach((column, index) => {
+    if (placed.has(column.field)) return;
+    let insertAt = result.length;
+    for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+      const previous = result.indexOf(columns[cursor].field);
+      if (previous !== -1) {
+        insertAt = previous + 1;
+        break;
+      }
+    }
+    result.splice(insertAt, 0, column.field);
+    placed.add(column.field);
+  });
+  const byField = new Map(columns.map((column) => [column.field, column]));
+  return result.map((field) => byField.get(field)!);
+};
+
+const columnStyle = (column: AdminTableColumn) => {
+  const width = layout.value.widths[column.field];
+  const textAlign = column.align || "left";
+  if (width) {
+    return {
+      width: `${width}px`,
+      minWidth: `${width}px`,
+      maxWidth: `${width}px`,
+      textAlign,
+    };
+  }
+  return {
+    width: column.width,
+    minWidth: column.minWidth || "8rem",
+    textAlign,
+  };
+};
+
+const clampColumnWidth = (width: number) => Math.min(720, Math.max(72, Math.round(width)));
+
+const onColumnDragStart = (field: string, event: DragEvent) => {
+  headerDragged = false;
+  dragField.value = field;
+  dropField.value = field;
+  event.dataTransfer?.setData("text/plain", field);
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+};
+
+const onColumnDragOver = (field: string) => {
+  headerDragged = true;
+  if (dropField.value !== field) dropField.value = field;
+};
+
+const onColumnDrop = (field: string) => {
+  const from = dragField.value;
+  dragField.value = "";
+  dropField.value = "";
+  if (!from || from === field) return;
+  const current = orderedColumns.value.map((column) => column.field);
+  const fromIndex = current.indexOf(from);
+  const toIndex = current.indexOf(field);
+  if (fromIndex < 0 || toIndex < 0) return;
+  const next = [...current];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  updateLayout((state) => {
+    state.order = next;
+  });
+};
+
+const onColumnDragEnd = () => {
+  dragField.value = "";
+  dropField.value = "";
+  window.setTimeout(() => {
+    headerDragged = false;
+  }, 0);
+};
+
+const onHeaderClick = (column: AdminTableColumn) => {
+  if (headerDragged) {
+    headerDragged = false;
+    return;
+  }
+  toggleSort(column);
+};
+
+const startColumnResize = (column: AdminTableColumn, event: PointerEvent) => {
+  const handle = event.currentTarget;
+  const headerCell = handle instanceof HTMLElement ? handle.closest("th") : null;
+  if (!(handle instanceof HTMLElement) || !headerCell) return;
+  const startX = event.clientX;
+  const startWidth = headerCell.getBoundingClientRect().width;
+  handle.setPointerCapture(event.pointerId);
+  const applyWidth = (width: number) => {
+    const next = `${clampColumnWidth(width)}px`;
+    headerCell.style.width = next;
+    headerCell.style.minWidth = next;
+    headerCell.style.maxWidth = next;
+  };
+  const move = (pointerEvent: PointerEvent) => {
+    applyWidth(startWidth + pointerEvent.clientX - startX);
+  };
+  const end = (pointerEvent: PointerEvent) => {
+    handle.removeEventListener("pointermove", move);
+    handle.removeEventListener("pointerup", end);
+    handle.removeEventListener("pointercancel", end);
+    updateLayout((state) => {
+      state.widths[column.field] = clampColumnWidth(startWidth + pointerEvent.clientX - startX);
+    });
+  };
+  handle.addEventListener("pointermove", move);
+  handle.addEventListener("pointerup", end);
+  handle.addEventListener("pointercancel", end);
+};
 
 const cellKey = (row: AdminTableRow, column: AdminTableColumn) => `${row.id}:${column.field}`;
 
@@ -556,10 +713,13 @@ const isEditable = (column: AdminTableColumn, row: AdminTableRow) => {
 };
 
 const beginEdit = (row: AdminTableRow, column: AdminTableColumn) => {
+  editingTarget.value = { row, column };
   editingKey.value = cellKey(row, column);
   draft.value = toEditString(row[column.field]);
   nextTick(() => {
-    const input = root.value?.querySelector<HTMLInputElement>("input.admin-data-table__input");
+    const input = root.value?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+      "input.admin-data-table__input, textarea.admin-data-table__input",
+    );
     if (!input) return;
     input.focus();
     const end = input.value.length;
@@ -569,6 +729,7 @@ const beginEdit = (row: AdminTableRow, column: AdminTableColumn) => {
 
 const cancelEdit = () => {
   editingKey.value = "";
+  editingTarget.value = null;
   draft.value = "";
 };
 
@@ -600,6 +761,35 @@ const requestConfirm = (row: AdminTableRow, column: AdminTableColumn) => {
   }
   confirmOpen.value = true;
 };
+
+const onOutsidePointerDown = (event: PointerEvent) => {
+  const current = editingTarget.value;
+  if (!current || confirmOpen.value) return;
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  const element = target instanceof Element ? target : target.parentElement;
+  if (element?.closest(".admin-data-table__input, .p-dialog, .p-dialog-mask, .p-toast")) {
+    return;
+  }
+
+  const previous = toEditString(current.row[current.column.field]);
+  if (previous === draft.value.trim()) {
+    cancelEdit();
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  requestConfirm(current.row, current.column);
+};
+
+const listenForOutsideEdit = (active: boolean) => {
+  document.removeEventListener("pointerdown", onOutsidePointerDown, true);
+  if (active) document.addEventListener("pointerdown", onOutsidePointerDown, true);
+};
+
+watch(editingKey, (key) => listenForOutsideEdit(Boolean(key)));
+onBeforeUnmount(() => listenForOutsideEdit(false));
 
 const showError = (error: unknown) => {
   toast.add({
@@ -678,7 +868,12 @@ const formatWhen = (value: string) =>
 
 <style scoped>
 .admin-data-table :deep(.p-datatable-table) {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
+}
+
+.admin-data-table :deep(.p-datatable-table-container) {
+  overflow-x: auto;
 }
 
 .admin-data-table :deep(th),
@@ -696,14 +891,55 @@ const formatWhen = (value: string) =>
   justify-content: flex-start;
   gap: 0.3rem;
   width: 100%;
+  min-width: 0;
   border: 0;
   background: transparent;
   padding: 0;
   font: inherit;
   font-weight: 600;
   color: inherit;
-  cursor: pointer;
+  cursor: grab;
   text-align: left;
+}
+
+.admin-data-table__head {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-data-table__head--drop {
+  outline: 2px solid #5c6b4a;
+  outline-offset: -2px;
+  border-radius: 0.3rem;
+}
+
+.admin-data-table__resizer {
+  position: absolute;
+  top: 0;
+  right: -0.45rem;
+  z-index: 1;
+  width: 0.7rem;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.admin-data-table__resizer::after {
+  content: "";
+  position: absolute;
+  top: 18%;
+  bottom: 18%;
+  left: 0.28rem;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+}
+
+.admin-data-table__head:hover .admin-data-table__resizer::after {
+  background: #c5cbb8;
 }
 
 .admin-data-table__sort--right {
@@ -862,6 +1098,26 @@ const formatWhen = (value: string) =>
   outline: none;
 }
 
+.admin-data-table__input--area {
+  height: auto;
+  min-height: 4.5rem;
+  padding: 0.35rem 0.45rem;
+  line-height: 1.4;
+  resize: vertical;
+  white-space: pre-wrap;
+}
+
+.admin-data-table__diff {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-data-table__diff-value {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .admin-data-table__version {
   width: 100%;
   display: flex;
@@ -915,7 +1171,9 @@ const formatWhen = (value: string) =>
     "restore": "Revino aici",
     "current": "Versiunea curentă",
     "yes": "Da",
-    "no": "Nu"
+    "no": "Nu",
+    "moveColumn": "Trage coloana pentru a-i schimba locul",
+    "resizeColumn": "Trage pentru a schimba lățimea"
   },
   "en": {
     "searchPlaceholder": "Search this table...",
@@ -944,7 +1202,9 @@ const formatWhen = (value: string) =>
     "restore": "Restore",
     "current": "Current version",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "moveColumn": "Drag to move this column",
+    "resizeColumn": "Drag to resize this column"
   }
 }
 </i18n>

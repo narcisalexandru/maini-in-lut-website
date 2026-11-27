@@ -21,6 +21,7 @@ import { SiteSettingsModule } from './site-settings/site-settings.module';
 import { AdminWorkspaceModule } from './admin-workspace/admin-workspace.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { ContactModule } from './contact/contact.module';
+import { InboxModule } from './inbox/inbox.module';
 
 const PUBLIC_RATE_LIMIT = 120;
 const ADMIN_RATE_LIMIT = 3000;
@@ -94,6 +95,7 @@ function isAdminRequest(context: ExecutionContext): boolean {
     AdminWorkspaceModule,
     InvoicesModule,
     ContactModule,
+    InboxModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

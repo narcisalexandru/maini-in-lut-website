@@ -386,6 +386,7 @@ export class AdminWorkspaceService {
     const allowed: Record<TableEditKind, string[]> = {
       'order-item-status': ['status'],
       'order-delivery': ['deliveryAddress'],
+      'order-note': ['customerNote'],
       'product-fields': ['price', 'stockQuantity', 'inStock'],
       'customer-fields': ['first_name', 'last_name', 'phone'],
     };
@@ -447,6 +448,29 @@ export class AdminWorkspaceService {
         targetType: AuditTargetType.ORDER,
         targetId: order.id,
         targetLabel: order.publicOrderNumber,
+        metadata: { field, fromHistory },
+      });
+      return;
+    }
+
+    if (kind === 'order-note') {
+      const order = await this.ordersRepository.findOne({ where: { id: targetId } });
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
+      if (!valuesMatch(field, order.customerNote, expectedCurrent)) {
+        throw new ConflictException('The value changed before it could be saved. Refresh and try again.');
+      }
+      const saved = await this.ordersService.updateCustomerNote(
+        user,
+        targetId,
+        value === null ? null : String(value),
+      );
+      await this.auditLogService.record(user, {
+        action: AuditAction.ORDER_NOTE_UPDATED,
+        targetType: AuditTargetType.ORDER,
+        targetId: saved.id,
+        targetLabel: saved.publicOrderNumber,
         metadata: { field, fromHistory },
       });
       return;

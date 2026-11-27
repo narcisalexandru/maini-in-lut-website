@@ -18,7 +18,13 @@
         active-class="admin-sidebar__link--active"
       >
         <i :class="['ph', item.icon, 'mr-2']"></i>
-        {{ item.label }}
+        <span class="flex-1">{{ item.label }}</span>
+        <span
+          v-if="item.badge"
+          class="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-[#144111] px-1.5 text-xs text-white"
+        >
+          {{ item.badge }}
+        </span>
       </NuxtLink>
     </nav>
     <div class="mt-8 pt-4 border-t border-gray-200">
@@ -36,6 +42,13 @@
 <script setup lang="ts">
 const { t } = useI18n({ useScope: "local" });
 const { isSuperAdmin, isArtist } = useAuth();
+const { count: inboxUnread, refresh: refreshInboxUnread } = useInboxUnread();
+
+onMounted(() => {
+  if (isArtist.value || isSuperAdmin.value) {
+    refreshInboxUnread();
+  }
+});
 
 const visibleItems = computed(() => {
   const items = [
@@ -51,6 +64,18 @@ const visibleItems = computed(() => {
       label: t("dashboard"),
       icon: "ph-house",
       show: true,
+    },
+    {
+      to: "/admin/inbox",
+      label: t("inbox"),
+      icon: "ph-envelope",
+      show: isArtist.value || isSuperAdmin.value,
+      badge:
+        inboxUnread.value > 0
+          ? inboxUnread.value > 9
+            ? "9+"
+            : String(inboxUnread.value)
+          : "",
     },
     {
       to: "/admin/artisti",
@@ -89,6 +114,8 @@ const visibleItems = computed(() => {
 
 <style scoped>
 .admin-sidebar__link {
+  display: flex;
+  align-items: center;
   color: var(--color-lunar-green, #4a5d3b);
 }
 
@@ -123,6 +150,7 @@ const visibleItems = computed(() => {
   "ro": {
     "panelTitle": "Panou admin",
     "dashboard": "Dashboard",
+    "inbox": "Inbox",
     "artists": "Artiști",
     "customers": "Clienți",
     "products": "Produse",
@@ -134,6 +162,7 @@ const visibleItems = computed(() => {
   "en": {
     "panelTitle": "Admin panel",
     "dashboard": "Dashboard",
+    "inbox": "Inbox",
     "artists": "Artists",
     "customers": "Customers",
     "products": "Products",
