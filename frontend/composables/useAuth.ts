@@ -2,7 +2,6 @@ import { computed } from "vue";
 import type { AuthUser } from "~/types/user";
 import { useAuthState } from "./useAuthState";
 import { apiRequest } from "~/utils/api-request";
-import { getApiBaseUrl } from "~/utils/api-base";
 
 interface AuthError {
   message: string;
@@ -77,11 +76,11 @@ export const useAuth = () => {
     password: string;
     first_name: string;
     last_name: string;
-    county: string;
-    city: string;
-    street: string;
-    postal_code: string;
-    phone: string;
+    county?: string;
+    city?: string;
+    street?: string;
+    postal_code?: string;
+    phone?: string;
   }) => {
     try {
       isLoading.value = true;
@@ -137,7 +136,7 @@ export const useAuth = () => {
   };
 
   const googleAuth = () => {
-    window.location.href = `${getApiBaseUrl()}/auth/google`;
+    window.location.href = "/api/auth/google";
   };
 
   const checkAuth = () => {

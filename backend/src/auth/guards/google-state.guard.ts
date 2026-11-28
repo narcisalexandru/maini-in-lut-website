@@ -6,6 +6,7 @@ import {
   OAUTH_STATE_COOKIE,
   oauthStateCookieOptions,
 } from '../auth-cookie.util';
+import { browserOrigin } from '../google-callback-url';
 
 @Injectable()
 export class GoogleStateGuard implements CanActivate {
@@ -21,10 +22,7 @@ export class GoogleStateGuard implements CanActivate {
       oauthStateCookieOptions(this.configService, req),
     );
     if (!this.matches(expected, actual)) {
-      const frontend = (
-        this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000'
-      ).replace(/\/$/, '');
-      res.redirect(`${frontend}/login?error=oauth`);
+      res.redirect(`${browserOrigin(this.configService, req)}/login?error=oauth`);
       return false;
     }
     return true;

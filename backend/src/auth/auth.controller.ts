@@ -16,7 +16,6 @@ import { Request, Response } from 'express';
 import { randomBytes } from 'crypto';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { LoginDto, ResendVerificationDto, VerifyEmailDto } from './dto/login.dto';
 import {
   ACCESS_TOKEN_COOKIE,
@@ -24,8 +23,9 @@ import {
   accessTokenCookieOptions,
   oauthStateCookieOptions,
 } from './auth-cookie.util';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { GoogleStateGuard } from './guards/google-state.guard';
-import { googleCallbackUrl } from './google-callback-url';
+import { browserOrigin, googleCallbackUrl } from './google-callback-url';
 
 @Controller('auth')
 export class AuthController {
@@ -87,7 +87,7 @@ export class AuthController {
   @Get('google')
   googleAuth(@Req() req: Request, @Res() res: Response) {
     const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-    const callbackUrl = googleCallbackUrl(this.configService);
+    const callbackUrl = googleCallbackUrl(this.configService, req);
     if (!clientId || !callbackUrl) {
       throw new BadRequestException('Google auth is not configured');
     }
@@ -107,14 +107,14 @@ export class AuthController {
   }
 
   @Get('google/callback')
-  @UseGuards(GoogleStateGuard, AuthGuard('google'))
-  async googleAuthRedirect(@Req() req, @Res() res: Response) {
-    const frontend = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+  @UseGuards(GoogleStateGuard, GoogleAuthGuard)
+  async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
+    const frontend = browserOrigin(this.configService, req);
     const result = await this.authService.googleLogin(req);
     if (!result || typeof result === 'string') {
       return res.redirect(`${frontend}/login`);
     }
-    this.attachSession(res.req, res, result.access_token);
+    this.attachSession(req, res, result.access_token);
     return res.redirect(`${frontend}/auth/google-callback`);
   }
 

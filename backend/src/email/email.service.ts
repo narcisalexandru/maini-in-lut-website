@@ -310,6 +310,41 @@ export class EmailService {
     });
   }
 
+  async sendWorkshopConfirmationEmail(
+    to: string,
+    payload: {
+      firstName: string;
+      title: string;
+      when: string;
+      location: string;
+      code: string;
+      spots: number;
+      paidByCard: boolean;
+      invoiceAttached: boolean;
+    },
+    invoicePdf?: Buffer,
+  ): Promise<void> {
+    const html = await renderFile(this.templateFile('workshop-confirmed.ejs'), payload);
+    const title = payload.title.replace(/[\r\n]+/g, ' ').slice(0, 80);
+    await this.transporter.sendMail({
+      from: `"${this.configService.get(
+        'SMTP_FROM_NAME',
+      )}" <${this.configService.get('SMTP_FROM_EMAIL')}>`,
+      to,
+      subject: `Loc confirmat: ${title}`,
+      html,
+      attachments: invoicePdf
+        ? [
+            {
+              filename: `Factura-${payload.code}.pdf`,
+              content: invoicePdf,
+              contentType: 'application/pdf',
+            },
+          ]
+        : undefined,
+    });
+  }
+
   async sendWorkshopCancelledEmail(
     to: string,
     payload: {

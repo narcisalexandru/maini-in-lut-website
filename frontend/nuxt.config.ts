@@ -158,6 +158,9 @@ export default defineNuxtConfig({
 
   vite: {
     cacheDir: "node_modules/.vite_cache",
+    server: {
+      allowedHosts: [".trycloudflare.com"],
+    },
     plugins: [tailwindcss()],
     optimizeDeps: {
       exclude: ["primevue/menubar"],
@@ -203,6 +206,7 @@ export default defineNuxtConfig({
     backendUrl,
     public: {
       apiBase: resolveBrowserApiBase(backendUrl),
+      backendUrl,
     },
   },
 

@@ -99,6 +99,70 @@ function lineAmount(quantity: number, unitPrice: number): number {
   return money(quantity * unitPrice);
 }
 
+export type WorkshopInvoiceSource = {
+  code: string;
+  title: string;
+  spots: number;
+  totalRon: number | string;
+  customerFirstName: string;
+  customerLastName: string;
+  customerEmail: string;
+  customerPhone: string;
+  location: string;
+};
+
+export function buildWorkshopSmartbillInvoice(
+  source: WorkshopInvoiceSource,
+  config: SmartbillInvoiceConfig,
+  issueDate: string,
+): SmartbillInvoicePayload {
+  const total = money(source.totalRon);
+  const seatLabel = source.spots === 1 ? '1 loc' : `${source.spots} locuri`;
+  const name = `Participare atelier ${source.title} (${seatLabel})`.slice(0, 200);
+  const payload: SmartbillInvoicePayload = {
+    companyVatCode: config.companyVatCode,
+    client: {
+      name: `${source.customerFirstName} ${source.customerLastName}`.trim().slice(0, 200),
+      isTaxPayer: false,
+      address: (source.location.trim() || 'Sibiu').slice(0, 500),
+      city: 'Sibiu',
+      county: 'Sibiu',
+      country: COUNTRY,
+      email: source.customerEmail.trim(),
+      saveToDb: false,
+    },
+    issueDate,
+    seriesName: config.seriesName,
+    isDraft: false,
+    dueDate: issueDate,
+    deliveryDate: issueDate,
+    products: [
+      {
+        name,
+        code: source.code.slice(0, 50),
+        isDiscount: false,
+        measuringUnitName: config.measuringUnitName,
+        currency: CURRENCY,
+        quantity: 1,
+        price: total,
+        ...taxFields(config),
+        saveToDb: false,
+        isService: true,
+      },
+    ],
+    payment: {
+      value: total,
+      type: CARD_PAYMENT_TYPE,
+      isCash: false,
+    },
+  };
+  const phone = source.customerPhone.trim();
+  if (phone && phone !== '-') {
+    payload.client.phone = phone.slice(0, 30);
+  }
+  return payload;
+}
+
 export function buildSmartbillInvoice(
   order: SmartbillInvoiceSource,
   config: SmartbillInvoiceConfig,

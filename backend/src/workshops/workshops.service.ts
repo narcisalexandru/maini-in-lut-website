@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { ArtistStatus } from '../common/enums/artist-status.enum';
@@ -13,6 +14,11 @@ import { User } from '../users/entities/user.entity';
 import { ArtistsService } from '../artists/artists.service';
 import { CheckoutService } from '../checkout/checkout.service';
 import { EmailService } from '../email/email.service';
+import {
+  SmartbillInvoiceConfig,
+  buildWorkshopSmartbillInvoice,
+} from '../invoices/smartbill-invoice.builder';
+import { SmartbillClient } from '../invoices/smartbill.client';
 import { slugify } from '../common/utils/slug.util';
 import {
   NETOPIA_STATUS_CONFIRMED,
@@ -48,6 +54,8 @@ export class WorkshopsService {
     private readonly artistsService: ArtistsService,
     private readonly checkoutService: CheckoutService,
     private readonly emailService: EmailService,
+    private readonly smartbillClient: SmartbillClient,
+    private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -429,41 +437,137 @@ export class WorkshopsService {
   }
 
   private async sendConfirmation(booking: WorkshopBooking, workshop: Workshop) {
-    const artist = await this.artistsService.findByIdWithUser(workshop.artistId);
-    const method =
-      booking.paymentMethod === WorkshopPaymentMethod.CARD
-        ? 'card'
-        : 'numerar la locație';
-    const status =
-      booking.paymentStatus === WorkshopPaymentStatus.PAID
-        ? 'plătită'
-        : 'rezervată, de achitat la locație';
-    const html = `
-      <h2>Rezervare atelier ${this.escape(booking.publicCode)}</h2>
-      <p><strong>${this.escape(workshop.title)}</strong></p>
-      <p>Locuri: ${booking.spots}<br/>Total: ${booking.amount} RON<br/>Plată: ${method} (${status})</p>
-      <p>${this.escape(booking.customerFirstName)} ${this.escape(booking.customerLastName)}<br/>
-      ${this.escape(booking.customerEmail)}<br/>${this.escape(booking.customerPhone)}</p>
-    `;
+    const paidByCard = booking.paymentMethod === WorkshopPaymentMethod.CARD;
+    const invoicePdf = paidByCard ? await this.cardInvoicePdf(booking, workshop) : null;
+    const payload = {
+      firstName: booking.customerFirstName,
+      title: workshop.title,
+      when: this.formatWhen(workshop.startsAt),
+      location: workshop.location,
+      code: booking.publicCode,
+      spots: booking.spots,
+      paidByCard,
+      invoiceAttached: Boolean(invoicePdf),
+    };
     try {
-      await this.emailService.sendOrderNotificationEmail(
+      await this.emailService.sendWorkshopConfirmationEmail(
         booking.customerEmail,
-        `Rezervare atelier ${booking.publicCode}`,
-        html,
+        payload,
+        invoicePdf ?? undefined,
       );
-      const artistEmail = artist?.contactEmail || artist?.user?.email;
-      if (artistEmail) {
-        await this.emailService.sendOrderNotificationEmail(
-          artistEmail,
-          `Rezervare nouă ${booking.publicCode}`,
-          html,
-        );
-      }
       booking.confirmationSent = true;
       await this.bookingsRepository.save(booking);
     } catch (error) {
-      this.logger.warn(`Email rezervare ${booking.publicCode} eșuat: ${error}`);
+      this.logger.warn(
+        `Email rezervare ${booking.publicCode} eșuat: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+      return;
     }
+
+    const artist = await this.artistsService.findByIdWithUser(workshop.artistId);
+    const artistEmail = artist?.contactEmail || artist?.user?.email;
+    if (!artistEmail || artistEmail.toLowerCase() === booking.customerEmail.toLowerCase()) {
+      return;
+    }
+    try {
+      await this.emailService.sendWorkshopConfirmationEmail(artistEmail, {
+        ...payload,
+        firstName: artist?.displayName || 'Artist',
+        invoiceAttached: false,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Email artist ${booking.publicCode} eșuat: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+    }
+  }
+
+  private async cardInvoicePdf(
+    booking: WorkshopBooking,
+    workshop: Workshop,
+  ): Promise<Buffer | null> {
+    const config = this.invoiceConfig();
+    if (!config) {
+      this.logger.warn(`Factura ${booking.publicCode} nu a fost emisă: SmartBill nu este configurat.`);
+      return null;
+    }
+    try {
+      let series = booking.invoiceSeries;
+      let number = booking.invoiceNumber;
+      if (!series || !number) {
+        const issued = await this.smartbillClient.createInvoice(
+          buildWorkshopSmartbillInvoice(
+            {
+              code: booking.publicCode,
+              title: workshop.title,
+              spots: booking.spots,
+              totalRon: booking.amount,
+              customerFirstName: booking.customerFirstName,
+              customerLastName: booking.customerLastName,
+              customerEmail: booking.customerEmail,
+              customerPhone: booking.customerPhone,
+              location: workshop.location,
+            },
+            config,
+            this.invoiceIssueDate(),
+          ),
+        );
+        if (!issued.series || !issued.number) {
+          this.logger.warn(`Factura ${booking.publicCode} nu are număr și nu poate fi atașată.`);
+          return null;
+        }
+        series = issued.series;
+        number = issued.number;
+        booking.invoiceSeries = series;
+        booking.invoiceNumber = number;
+        await this.bookingsRepository.save(booking);
+      }
+      return await this.smartbillClient.downloadInvoicePdf(series, number);
+    } catch (error) {
+      this.logger.warn(
+        `Factura ${booking.publicCode} nu a putut fi atașată: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+      return null;
+    }
+  }
+
+  private invoiceConfig(): SmartbillInvoiceConfig | null {
+    const companyVatCode = this.configService.get<string>('SMARTBILL_COMPANY_VAT_CODE')?.trim();
+    const seriesName = this.configService.get<string>('SMARTBILL_SERIES')?.trim();
+    const email = this.configService.get<string>('SMARTBILL_EMAIL')?.trim();
+    const token = this.configService.get<string>('SMARTBILL_TOKEN')?.trim();
+    if (!companyVatCode || !seriesName || !email || !token) {
+      return null;
+    }
+    const vatPayer = this.configService.get<string>('SMARTBILL_VAT_PAYER')?.trim() !== 'false';
+    const taxPercentage = Number(this.configService.get<string>('SMARTBILL_TAX_PERCENTAGE') ?? '21');
+    return {
+      companyVatCode,
+      seriesName,
+      vatPayer,
+      draft: false,
+      taxName: this.configService.get<string>('SMARTBILL_TAX_NAME')?.trim() || 'Normala',
+      taxPercentage: Number.isFinite(taxPercentage) ? taxPercentage : 0,
+      measuringUnitName: this.configService.get<string>('SMARTBILL_MEASURING_UNIT')?.trim() || 'buc',
+      sendEmail: false,
+    };
+  }
+
+  private invoiceIssueDate(): string {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Bucharest',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  }
+
+  private formatWhen(value: Date): string {
+    return new Intl.DateTimeFormat('ro-RO', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+      timeZone: 'Europe/Bucharest',
+    }).format(new Date(value));
   }
 
   private async publishedWorkshops(): Promise<Workshop[]> {
@@ -673,11 +777,4 @@ export class WorkshopsService {
     return next.toString();
   }
 
-  private escape(value: string): string {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
 }

@@ -2,7 +2,9 @@ import { PaymentMethod } from '../common/enums/order-status.enum';
 import {
   SmartbillInvoiceConfig,
   SmartbillInvoiceSource,
+  WorkshopInvoiceSource,
   buildSmartbillInvoice,
+  buildWorkshopSmartbillInvoice,
 } from './smartbill-invoice.builder';
 
 const config: SmartbillInvoiceConfig = {
@@ -135,6 +137,36 @@ describe('buildSmartbillInvoice', () => {
     expect(payload.products[0]).not.toHaveProperty('isTaxIncluded');
     expect(payload.products[1]).not.toHaveProperty('taxPercentage');
     expect(payload.payment.value).toBe(115);
+  });
+
+  it('builds a paid workshop invoice without asking SmartBill to email it', () => {
+    const source: WorkshopInvoiceSource = {
+      code: 'ATL-7',
+      title: 'Lut pentru începători',
+      spots: 2,
+      totalRon: '160.00',
+      customerFirstName: 'Ana',
+      customerLastName: 'Pop',
+      customerEmail: 'ana@example.com',
+      customerPhone: '0700000000',
+      location: 'Strada Lalelelor 1, Sibiu',
+    };
+
+    const payload = buildWorkshopSmartbillInvoice(
+      source,
+      { ...config, vatPayer: false, draft: true, sendEmail: true },
+      '2026-11-27',
+    );
+
+    expect(payload.isDraft).toBe(false);
+    expect(payload.sendEmail).toBeUndefined();
+    expect(payload.payment).toEqual({ value: 160, type: 'Card', isCash: false });
+    expect(payload.products[0]).toMatchObject({
+      quantity: 1,
+      price: 160,
+      isService: true,
+    });
+    expect(payload.client.email).toBe('ana@example.com');
   });
 
   it('marks a non-VAT invoice as a draft', () => {

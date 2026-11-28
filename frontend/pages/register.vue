@@ -262,10 +262,14 @@
                 </div>
               </div>
             </div>
+            <p v-if="formError" class="text-sm text-red-600 text-left">
+              {{ formError }}
+            </p>
             <button
               class="p-button p-component maini-ui-button__primary h-font-size-16 w-full"
+              :class="{ 'opacity-60 pointer-events-none': isLoading }"
               type="submit"
-              :disabled="isLoading"
+              :aria-disabled="isLoading"
             >
               {{ isLoading ? t("loading") : t("sign-up-button") }}
             </button>
@@ -312,6 +316,7 @@ const { register, googleAuth, isLoading, error } = useAuth();
 
 const isAddressCollapsed = ref(true);
 const addressSection = ref();
+const formError = ref("");
 
 const formData = ref({
   first_name: "",
@@ -364,7 +369,7 @@ const validationRules = {
       message: t("password-uppercase"),
     },
     {
-      pattern: /[0-9]/,
+      pattern: /^(?=(?:.*\d){2,}).+$/,
       message: t("password-numbers"),
     },
     {
@@ -421,7 +426,9 @@ const hasMinLength = computed(
 const hasUppercase = computed(() =>
   /[A-Z]/.test(formData.value.password || "")
 );
-const hasNumber = computed(() => /[0-9]/.test(formData.value.password || ""));
+const hasNumber = computed(
+  () => (formData.value.password.match(/\d/g) || []).length >= 2,
+);
 const hasSpecialChar = computed(() =>
   /[!@#$%^&*]/.test(formData.value.password || "")
 );
@@ -456,10 +463,12 @@ const passwordRequirements = computed(() => [
 ]);
 
 const handleSubmit = async (event: Event) => {
+  event.preventDefault();
   const form = event.target instanceof HTMLFormElement ? event.target : null;
   if (!form || isLoading.value) {
     return;
   }
+  formError.value = "";
 
   const terms = form.elements.namedItem("acceptTerms");
   formData.value = {
@@ -505,12 +514,28 @@ const handleSubmit = async (event: Event) => {
     return;
   }
 
-  const { confirm_password, acceptTerms, ...registerData } = formData.value;
+  const registerData = {
+    email: formData.value.email,
+    password: formData.value.password,
+    first_name: formData.value.first_name,
+    last_name: formData.value.last_name,
+    ...(formData.value.phone ? { phone: formData.value.phone } : {}),
+    ...(formData.value.county ? { county: formData.value.county } : {}),
+    ...(formData.value.city ? { city: formData.value.city } : {}),
+    ...(formData.value.street ? { street: formData.value.street } : {}),
+    ...(formData.value.postal_code
+      ? { postal_code: formData.value.postal_code }
+      : {}),
+  };
   const result = await register(registerData);
 
-  if (result && "field" in result) {
+  if (result && "field" in result && result.field) {
     formErrors.value[result.field] = true;
     errorMessages.value[result.field] = result.message;
+    return;
+  }
+  if (result && "message" in result && result.message && !("success" in result)) {
+    formError.value = result.message;
   }
 };
 
@@ -545,7 +570,7 @@ const handleGoogleLogin = () => {
     "password-too-short": "Password must be at least 8 characters long",
     "password-characters": "Password must be at least 8 characters long",
     "password-uppercase": "Password must contain at least one uppercase letter",
-    "password-numbers": "Password must contain at least one number",
+    "password-numbers": "Password must contain at least two numbers",
     "password-special-characters": "Password must contain at least one special character",
     "passwords-do-not-match": "Password confirmation should match the password",
     "accept-terms-message": "By registering, you agree to the",
@@ -586,7 +611,7 @@ const handleGoogleLogin = () => {
     "password-too-short": "Parola trebuie să aibă cel puțin 8 caractere",
     "password-characters": "Parola trebuie să aibă cel puțin 8 caractere",
     "password-uppercase": "Parola trebuie să conțină cel puțin o literă mare",
-    "password-numbers": "Parola trebuie să conțină cel puțin un număr",
+    "password-numbers": "Parola trebuie să conțină cel puțin două cifre",
     "password-special-characters": "Parola trebuie să conțină cel puțin un caracter special",
     "passwords-do-not-match": "Confirmarea parolei trebuie sa coincida cu parola",
     "accept-terms-message": "Prin înregistrare, accepți",

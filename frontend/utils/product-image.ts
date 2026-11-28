@@ -1,12 +1,23 @@
-import { getApiBaseUrl } from "./api-base";
+function uploadPath(src: string): string | null {
+  if (src.startsWith("/uploads/")) {
+    return src;
+  }
+  try {
+    const pathname = new URL(src).pathname;
+    if (pathname.startsWith("/uploads/")) {
+      return pathname;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 export function resolveProductImageUrl(src: string | null | undefined): string {
   if (!src) return "";
-  if (src.startsWith("http://") || src.startsWith("https://")) {
-    return src;
-  }
-  if (src.startsWith("/uploads/")) {
-    return `${getApiBaseUrl()}${src}`;
+  const path = uploadPath(src);
+  if (path) {
+    return `/api${path}`;
   }
   return src;
 }

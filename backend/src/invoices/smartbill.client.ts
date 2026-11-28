@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { SmartbillInvoicePayload } from './smartbill-invoice.builder';
 
 const SMARTBILL_INVOICE_URL = 'https://ws.smartbill.ro/SBORO/api/invoice/v2';
+const SMARTBILL_INVOICE_PDF_URL = 'https://ws.smartbill.ro/SBORO/api/invoice/pdf';
 const REQUEST_TIMEOUT_MS = 20_000;
 
 export type SmartbillIssuedInvoice = {
@@ -84,5 +85,38 @@ export class SmartbillClient {
       documentViewUrl,
       draft: payload.isDraft,
     };
+  }
+
+  async downloadInvoicePdf(series: string, number: string): Promise<Buffer> {
+    const email = this.configService.get<string>('SMARTBILL_EMAIL')?.trim() ?? '';
+    const token = this.configService.get<string>('SMARTBILL_TOKEN')?.trim() ?? '';
+    const cif = this.configService.get<string>('SMARTBILL_COMPANY_VAT_CODE')?.trim() ?? '';
+    if (!email || !token || !cif) {
+      throw new SmartbillRequestError('SmartBill nu este configurat.');
+    }
+
+    const url = new URL(SMARTBILL_INVOICE_PDF_URL);
+    url.searchParams.set('cif', cif);
+    url.searchParams.set('seriesname', series);
+    url.searchParams.set('number', number);
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`,
+          Accept: 'application/octet-stream',
+        },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      throw new SmartbillRequestError('SmartBill nu a răspuns.');
+    }
+
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (!response.ok || bytes.subarray(0, 4).toString('ascii') !== '%PDF') {
+      throw new SmartbillRequestError('SmartBill nu a întors factura PDF.');
+    }
+    return bytes;
   }
 }

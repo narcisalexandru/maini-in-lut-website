@@ -71,6 +71,12 @@ export class WorkshopBooking {
   @Column({ default: false })
   confirmationSent: boolean;
 
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  invoiceSeries: string | null;
+
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  invoiceNumber: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

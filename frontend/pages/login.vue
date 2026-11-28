@@ -51,8 +51,9 @@
           </div>
           <button
             class="p-button p-component maini-ui-button__primary h-font-size-16 mt-4 w-full"
+            :class="{ 'opacity-60 pointer-events-none': isLoading }"
             type="submit"
-            :disabled="isLoading"
+            :aria-disabled="isLoading"
           >
             {{ isLoading ? t("loading") : t("sign-in-cta") }}
           </button>
@@ -165,6 +166,7 @@ const validationRules = {
 const { validateField, validateForm } = useFormValidation(validationRules);
 
 const handleSubmit = async (event: Event) => {
+  event.preventDefault();
   const form = event.target instanceof HTMLFormElement ? event.target : null;
   if (!form || isLoading.value) {
     return;

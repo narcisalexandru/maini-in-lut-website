@@ -11,6 +11,6 @@ import { SmartbillClient } from './smartbill.client';
   imports: [TypeOrmModule.forFeature([Order]), EmailModule, AuditLogModule],
   controllers: [AdminInvoicesController],
   providers: [InvoicesService, SmartbillClient],
-  exports: [InvoicesService],
+  exports: [InvoicesService, SmartbillClient],
 })
 export class InvoicesModule {}
